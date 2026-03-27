@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tintoreria Telas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/style.css">
+    <script defer src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script defer src="./js/config.js"></script>
+    <script defer src="./js/login.js"></script>
+    <script defer src="./js/utils.js"></script>
+    <script defer src="./js/api.js"></script>
+    <script defer src="./js/app.js"></script>
+    <script defer src="./js/maestro.js"></script>
+    <script defer src="./js/plegado.js"></script>
+    <script defer src="./js/process-view-base.js"></script>
+    <script defer src="./js/rama-crudo.js"></script>
+    <script defer src="./js/preparado.js"></script>
+    <script defer src="./js/tenido.js"></script>
+    <script defer src="./js/abridora.js"></script>
+    <script defer src="./js/rama-tenido.js"></script>
+    <script defer src="./js/acab-espec.js"></script>
+    <script defer src="./js/calidad.js"></script>
+    <script defer src="./js/embalaje.js"></script>
+</head>
+<body class="auth-locked">
+    <section class="login-screen" id="login-screen" aria-labelledby="login-title">
+        <div class="login-panel">
+            <div class="login-copy">
+                <span class="login-kicker">COFACO Industries</span>
+                <h1 id="login-title">Control de Tintoreria</h1>
+                <p class="login-text">
+                    Ingresa con tu usuario autorizado para acceder a la programacion, seguimiento y control de las vistas de planta.
+                </p>
+            </div>
+
+            <form class="login-form" id="login-form" novalidate>
+                <label class="login-field">
+                    <span>Usuario</span>
+                    <input
+                        id="login-username"
+                        name="username"
+                        type="text"
+                        autocomplete="username"
+                        spellcheck="false"
+                        placeholder="Ingresa tu usuario"
+                        required
+                    >
+                </label>
+
+                <label class="login-field">
+                    <span>Contraseña</span>
+                    <input
+                        id="login-password"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="Ingresa tu contraseña"
+                        required
+                    >
+                </label>
+
+                <p class="login-feedback hidden" id="login-feedback" role="alert" aria-live="polite"></p>
+
+                <button class="login-submit" id="login-submit" type="submit">
+                    Ingresar
+                </button>
+            </form>
+        </div>
+
+        <div class="login-hero" aria-hidden="true">
+            <div class="login-hero-badge">Innovacion textil en cada fibra</div>
+            <div class="login-hero-card">
+                <img
+                    class="login-hero-image"
+                    src="https://www.cofaco.com/es/img/logo-marco-verde.png"
+                    alt="COFACO Industries"
+                >
+            </div>
+            <p class="login-hero-text">
+                Plataforma interna para el seguimiento operativo de tintoreria de telas.
+            </p>
+        </div>
+    </section>
+
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="header-left">
+                <div class="brand">
+                    <button class="brand-logo-button" type="button" data-view-target="maestro" aria-label="Ir a Maestro">
+                        <i class="ph ph-drop-half-bottom" aria-hidden="true"></i>
+                    </button>
+                    <span>Tintoreria Telas</span>
+                </div>
+            </div>
+
+            <form class="header-search" id="op-search-form" role="search" aria-label="Buscar OP-PTDA">
+                <input
+                    class="header-search-input"
+                    id="op-search-input"
+                    type="search"
+                    inputmode="search"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Buscar OP-PTDA"
+                    aria-label="Buscar OP-PTDA"
+                >
+            </form>
+
+            <nav class="main-tabs" aria-label="Procesos de tintoreria">
+                <button class="main-tab active" type="button" data-view-target="plegado">
+                    <span>Plegado</span>
+                    <span class="count-pill" id="count-plegado">0</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="rama-crudo">
+                    <span>Rama Crudo</span>
+                    <span class="count-pill" id="count-rama-crudo">0</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="preparado">
+                    <span>Preparado</span>
+                    <span class="count-pill" id="count-preparado">0</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="tenido">
+                    <span>Tenido</span>
+                    <span class="count-pill" id="count-tenido">0</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="abridora">
+                    <span>Abridora</span>
+                    <span class="count-pill" id="count-abridora">0</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="rama-tenido">
+                    <span>Rama Tenido</span>
+                    <span class="count-pill" id="count-rama-tenido">0</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="acab-espec">
+                    <span>Acab Espec.</span>
+                    <span class="count-pill" id="count-acab-espec">0</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="calidad">
+                    <span>Calidad</span>
+                    <span class="count-pill" id="count-calidad">0</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="embalaje">
+                    <span>Embalaje</span>
+                    <span class="count-pill" id="count-embalaje">0</span>
+                </button>
+            </nav>
+
+            <div class="topbar-actions">
+                <div class="user-session hidden" id="auth-session">
+                    <div class="user-session-copy">
+                        <strong id="auth-user-name">-</strong>
+                        <span id="auth-user-access">Sesion inactiva</span>
+                    </div>
+                    <button class="ghost-button" id="btn-logout" type="button">
+                        <i class="ph ph-sign-out"></i>
+                        Salir
+                    </button>
+                </div>
+                <button class="ghost-button icon-only-button" id="btn-refresh-data" type="button" title="Recargar" aria-label="Recargar">
+                    <i class="ph ph-arrows-clockwise"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="config-banner hidden" id="config-banner"></div>
+
+        <main class="content">
+            <section id="view-maestro" class="view-section">
+                <div class="panel-header panel-header-maestro">
+                    <div>
+                        <h2>Ingreso Tela Cruda</h2>
+                    </div>
+
+                    <div class="panel-actions">
+                        <input type="file" id="excel-input" accept=".xls,.xlsx" hidden>
+                        <div class="metric-grid" aria-label="Resumen de maestro">
+                            <article class="metric-card">
+                                <strong id="metric-total-records">0 Partidas</strong>
+                            </article>
+                            <article class="metric-card">
+                                <strong id="metric-total-weight">0.00kg</strong>
+                            </article>
+                        </div>
+                        <button class="primary-button" id="btn-open-excel" type="button">
+                            <i class="ph ph-file-xls"></i>
+                            Excel
+                        </button>
+                        <button class="ghost-button icon-only-button" id="btn-sync-maestro" type="button" title="Refrescar" aria-label="Refrescar">
+                            <i class="ph ph-database"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table maestro-table">
+                            <thead>
+                                <tr>
+                                    <th>F.ing</th>
+                                    <th>Cliente</th>
+                                    <th>Tipo</th>
+                                    <th>OP-PTDA</th>
+                                    <th>cod_art</th>
+                                    <th>articulo</th>
+                                    <th>cod_color</th>
+                                    <th>color</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Rollos/und</th>
+                                    <th>Guia</th>
+                                    <th>Motivo</th>
+                                    <th>RSV</th>
+                                    <th>CERTF</th>
+                                    <th>ruta</th>
+                                    <th>cm(crudo)</th>
+                                    <th>g/m2(crudo)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-maestro"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-plegado" class="view-section active">
+                <div class="subtabs" aria-label="Estado de plegado">
+                    <button class="subtab active" type="button" data-plegado-filter="X PROG">
+                        Por Programar
+                        <span class="count-pill" id="count-plegado-xprog">0</span>
+                        <span class="subtab-summary" id="summary-plegado-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-plegado-filter="PROG">
+                        Programado
+                        <span class="count-pill" id="count-plegado-prog">0</span>
+                        <span class="subtab-summary" id="summary-plegado-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table plegado-table">
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>ruta</th>
+                                    <th>Turno</th>
+                                    <th>Equipo</th>
+                                    <th>status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-plegado"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-rama-crudo" class="view-section">
+                <div class="subtabs" aria-label="Estado de rama crudo">
+                    <button class="subtab active" type="button" data-rama-crudo-filter="X PROG">
+                        Por Programar
+                        <span class="count-pill" id="count-rama-crudo-xprog">0</span>
+                        <span class="subtab-summary" id="summary-rama-crudo-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-rama-crudo-filter="PROG">
+                        Programado
+                        <span class="count-pill" id="count-rama-crudo-prog">0</span>
+                        <span class="subtab-summary" id="summary-rama-crudo-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table rama-crudo-table">
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>cod_art</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th>Oper</th>
+                                    <th>MAQ</th>
+                                    <th>ruta</th>
+                                    <th>Insp</th>
+                                    <th>Superv</th>
+                                    <th>Inico</th>
+                                    <th>Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-rama-crudo"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-preparado" class="view-section">
+                <div class="subtabs" aria-label="Estado de preparado">
+                    <button class="subtab active" type="button" data-preparado-filter="X PROG">
+                        Por Programar
+                        <span class="count-pill" id="count-preparado-xprog">0</span>
+                        <span class="subtab-summary" id="summary-preparado-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-preparado-filter="PROG">
+                        Programado
+                        <span class="count-pill" id="count-preparado-prog">0</span>
+                        <span class="subtab-summary" id="summary-preparado-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table preparado-table">
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>ruta</th>
+                                    <th>Turno</th>
+                                    <th>Equipo</th>
+                                    <th>Tipo</th>
+                                    <th>Inicio</th>
+                                    <th>Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-preparado"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-tenido" class="view-section">
+                <div class="subtabs" aria-label="Estado de tenido">
+                    <button class="subtab active" type="button" data-tenido-filter="X PROG">
+                        Por Programar
+                        <span class="count-pill" id="count-tenido-xprog">0</span>
+                        <span class="subtab-summary" id="summary-tenido-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-tenido-filter="PROG">
+                        Programado
+                        <span class="count-pill" id="count-tenido-prog">0</span>
+                        <span class="subtab-summary" id="summary-tenido-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table tenido-table">
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>cod_color</th>
+                                    <th>color</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th>Oper</th>
+                                    <th>MAQ</th>
+                                    <th>Proceso</th>
+                                    <th>Tipo_proceso</th>
+                                    <th>Kg(teñido)</th>
+                                    <th>Control@</th>
+                                    <th>Superv</th>
+                                    <th>Inicio</th>
+                                    <th>Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-tenido"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-abridora" class="view-section">
+                <div class="subtabs" aria-label="Estado de abridora">
+                    <button class="subtab active" type="button" data-abridora-filter="X PROG">
+                        Por Programar
+                        <span class="count-pill" id="count-abridora-xprog">0</span>
+                        <span class="subtab-summary" id="summary-abridora-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-abridora-filter="PROG">
+                        Programado
+                        <span class="count-pill" id="count-abridora-prog">0</span>
+                        <span class="subtab-summary" id="summary-abridora-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table abridora-table">
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th>Oper</th>
+                                    <th>Inicio</th>
+                                    <th>Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-abridora"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-rama-tenido" class="view-section">
+                <div class="subtabs" aria-label="Estado de rama tenido">
+                    <button class="subtab active" type="button" data-rama-tenido-filter="X PROG">
+                        Por Programar
+                        <span class="count-pill" id="count-rama-tenido-xprog">0</span>
+                        <span class="subtab-summary" id="summary-rama-tenido-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-rama-tenido-filter="PROG">
+                        Programado
+                        <span class="count-pill" id="count-rama-tenido-prog">0</span>
+                        <span class="subtab-summary" id="summary-rama-tenido-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table rama-tenido-table">
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>cod_art</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th>Oper</th>
+                                    <th>MAQ</th>
+                                    <th>Proceso</th>
+                                    <th>Insp@</th>
+                                    <th>Superv</th>
+                                    <th>Inicio</th>
+                                    <th>Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-rama-tenido"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-acab-espec" class="view-section">
+                <div class="subtabs" aria-label="Estado de acabado especial">
+                    <button class="subtab active" type="button" data-acab-espec-filter="X PROG">
+                        Por Programar
+                        <span class="count-pill" id="count-acab-espec-xprog">0</span>
+                        <span class="subtab-summary" id="summary-acab-espec-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-acab-espec-filter="PROG">
+                        Programado
+                        <span class="count-pill" id="count-acab-espec-prog">0</span>
+                        <span class="subtab-summary" id="summary-acab-espec-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table acab-espec-table">
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Tipo</th>
+                                    <th>Turno</th>
+                                    <th>MAQ</th>
+                                    <th>Status</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-acab-espec"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-calidad" class="view-section">
+                <div class="subtabs" aria-label="Estado de calidad">
+                    <button class="subtab active" type="button" data-calidad-filter="X PROG">
+                        Por Programar
+                        <span class="count-pill" id="count-calidad-xprog">0</span>
+                        <span class="subtab-summary" id="summary-calidad-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-calidad-filter="PROG">
+                        Programado
+                        <span class="count-pill" id="count-calidad-prog">0</span>
+                        <span class="subtab-summary" id="summary-calidad-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table quality-table">
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>cod_color</th>
+                                    <th>color</th>
+                                    <th>cod_art</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Auditor</th>
+                                    <th>Turno</th>
+                                    <th>Inicio</th>
+                                    <th>Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-calidad"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-embalaje" class="view-section">
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table embalaje-table">
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-embalaje"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="loader hidden" id="app-loader">
+        <div class="spinner"></div>
+        <span>Cargando informacion...</span>
+    </div>
+
+    <div class="toast-root" id="toast-root"></div>
+
+    <div class="modal-backdrop hidden" id="rama-crudo-detail-modal">
+        <div class="modal-card modal-card-form">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="rama-crudo-detail-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="rama-crudo-detail-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="rama-crudo-detail-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="rama-crudo-detail-form">
+                <div class="form-field">
+                    <label for="rama-crudo-ancho">Ancho</label>
+                    <input class="table-input" id="rama-crudo-ancho" name="rama_crudo_ancho" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-densidad">Densidad</label>
+                    <input class="table-input" id="rama-crudo-densidad" name="rama_crudo_densidad" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-temperatura">Temperatura</label>
+                    <input class="table-input" id="rama-crudo-temperatura" name="rama_crudo_temperatura" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-velocidad">Velocidad</label>
+                    <input class="table-input" id="rama-crudo-velocidad" name="rama_crudo_velocidad" type="text" inputmode="decimal">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-alimentacion">Alimentacion</label>
+                    <input class="table-input" id="rama-crudo-alimentacion" name="rama_crudo_alimentacion" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-ancho-cadena">Ancho de cadena</label>
+                    <input class="table-input" id="rama-crudo-ancho-cadena" name="rama_crudo_ancho_de_cadena" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-orillo-derecho">Orillo derecho</label>
+                    <input class="table-input" id="rama-crudo-orillo-derecho" name="rama_crudo_orillo_derecho" type="text" inputmode="decimal">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-orillo-izquierdo">Orillo izquierdo</label>
+                    <input class="table-input" id="rama-crudo-orillo-izquierdo" name="rama_crudo_orillo_izquierdo" type="text" inputmode="decimal">
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="rama-crudo-observaciones">Observaciones</label>
+                    <textarea class="table-textarea" id="rama-crudo-observaciones" name="rama_crudo_observaciones" rows="3"></textarea>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="rama-crudo-detail-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="rama-crudo-detail-save" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="rama-tenido-detail-modal">
+        <div class="modal-card modal-card-form">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="rama-tenido-detail-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="rama-tenido-detail-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="rama-tenido-detail-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="rama-tenido-detail-form">
+                <div class="form-field">
+                    <label for="rama-tenido-ancho">Ancho</label>
+                    <input class="table-input" id="rama-tenido-ancho" name="rama_tenido_ancho" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-densidad">Densidad</label>
+                    <input class="table-input" id="rama-tenido-densidad" name="rama_tenido_densidad" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-temperatura">Temperatura</label>
+                    <input class="table-input" id="rama-tenido-temperatura" name="rama_tenido_temperatura" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-velocidad">Velocidad</label>
+                    <input class="table-input" id="rama-tenido-velocidad" name="rama_tenido_velocidad" type="text" inputmode="decimal">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-alimentacion">Alimentacion</label>
+                    <input class="table-input" id="rama-tenido-alimentacion" name="rama_tenido_alimentacion" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-ancho-cadena">Ancho de cadena</label>
+                    <input class="table-input" id="rama-tenido-ancho-cadena" name="rama_tenido_ancho_de_cadena" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-orillo-derecho">Orillo derecho</label>
+                    <input class="table-input" id="rama-tenido-orillo-derecho" name="rama_tenido_orillo_derecho" type="text" inputmode="decimal">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-orillo-izquierdo">Orillo izquierdo</label>
+                    <input class="table-input" id="rama-tenido-orillo-izquierdo" name="rama_tenido_orillo_izquierdo" type="text" inputmode="decimal">
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="rama-tenido-observaciones">Observaciones</label>
+                    <textarea class="table-textarea" id="rama-tenido-observaciones" name="rama_tenido_observaciones" rows="3"></textarea>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="rama-tenido-detail-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="rama-tenido-detail-save" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="tenido-detail-modal">
+        <div class="modal-card modal-card-form">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="tenido-detail-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="tenido-detail-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="tenido-detail-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="tenido-detail-form">
+                <div class="form-field">
+                    <label for="tenido-rb">RB</label>
+                    <input class="table-input" id="tenido-rb" name="tenido_rb" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="tenido-volumen">Volumen</label>
+                    <input class="table-input" id="tenido-volumen" name="tenido_volumen" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="tenido-observaciones">Observaciones</label>
+                    <textarea class="table-textarea" id="tenido-observaciones" name="tenido_observaciones" rows="3"></textarea>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="tenido-detail-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="tenido-detail-save" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="confirm-modal">
+        <div class="modal-card">
+            <h3 id="confirm-title">Confirmar accion</h3>
+            <p id="confirm-message"></p>
+            <div class="modal-actions">
+                <button class="ghost-button" id="confirm-cancel" type="button">Cancelar</button>
+                <button class="primary-button" id="confirm-accept" type="button">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
