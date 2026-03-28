@@ -126,7 +126,22 @@ const PREPARADO_TURNO_OPTIONS = ['', '1T', '2T'];
 const PREPARADO_TIPO_OPTIONS = ['', 'Descosido', 'Desc+Costura', 'Volteado'];
 const PREPARADO_ESTADO_OPTIONS = ['X PROG', 'PROG', 'OK'];
 const TENIDO_TURNO_OPTIONS = ['', '1T', '2T'];
-const TENIDO_MAQUINA_OPTIONS = [''];
+const TENIDO_MAQUINA_OPTIONS = [
+    '',
+    'THI5',
+    'SCH7',
+    'SCH9',
+    'SCH10',
+    'SCH12',
+    'BNG1',
+    'BNG2',
+    'BNG3',
+    'BNG4',
+    'BNG5',
+    'FNGS',
+    'LAB-P',
+    'BRZZ'
+];
 const TENIDO_PROCESO_OPTIONS = ['', 'Pre-tratamiento', 'Tenido', 'Post-tratamiento', 'Matizado'];
 const TENIDO_TIPO_PROCESO_OPTIONS = [
     '',
