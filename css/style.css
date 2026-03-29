@@ -478,35 +478,6 @@ body.auth-locked .login-screen {
     margin-left: auto;
 }
 
-.user-session {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    padding: 6px 10px;
-    border: 1px solid rgba(36, 85, 58, 0.14);
-    border-radius: 999px;
-    background: rgba(239, 248, 241, 0.86);
-}
-
-.user-session-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-}
-
-.user-session-copy strong {
-    font-size: 12px;
-    color: var(--cofaco-green-800);
-    line-height: 1;
-}
-
-.user-session-copy span {
-    font-size: 11px;
-    color: rgba(22, 28, 24, 0.68);
-    line-height: 1;
-}
-
 .ghost-button {
     border: 1px solid var(--gray-300);
     background: var(--white);
@@ -2109,12 +2080,6 @@ button.process-pill {
 
     .login-copy h1 {
         font-size: 30px;
-    }
-
-    .user-session {
-        width: 100%;
-        justify-content: space-between;
-        border-radius: 16px;
     }
 
     .topbar {
