@@ -74,7 +74,7 @@
         if (!filtered.length) {
             tbody.innerHTML = `
                 <tr class="empty-state">
-                    <td colspan="11">No hay filas para este subtab.</td>
+                    <td colspan="10">No hay filas para este subtab.</td>
                 </tr>
             `;
             return;
@@ -110,7 +110,6 @@
                         ${optionMarkup(normalizeAcabadoEspecialState(record), ACABADO_ESPECIAL_ESTADO_OPTIONS, 'X PROG')}
                     </select>
                 </td>
-                <td><span class="cell-text">${TintoreriaUtils.escapeHtml(record.acabado_especial_fecha || '')}</span></td>
             </tr>
         `).join('');
     }
