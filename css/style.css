@@ -1583,11 +1583,6 @@ table.acab-espec-table td:nth-child(10) {
     width: 9%;
 }
 
-table.acab-espec-table th:nth-child(11),
-table.acab-espec-table td:nth-child(11) {
-    width: 9.5%;
-}
-
 table.quality-table th:nth-child(1),
 table.quality-table td:nth-child(1) {
     width: 3%;
