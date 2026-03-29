@@ -137,27 +137,7 @@
     }
 
     function updateAuthSessionUi() {
-        const session = hasAuthController() && typeof TintoreriaAuth.getSession === 'function'
-            ? TintoreriaAuth.getSession()
-            : null;
-        const sessionContainer = document.getElementById('auth-session');
-        const userName = document.getElementById('auth-user-name');
-        const userAccess = document.getElementById('auth-user-access');
         const maestroButton = document.querySelector('.brand-logo-button');
-
-        if (sessionContainer) {
-            sessionContainer.classList.toggle('hidden', !session);
-        }
-
-        if (userName) {
-            userName.textContent = session ? session.username : '-';
-        }
-
-        if (userAccess) {
-            userAccess.textContent = session && typeof TintoreriaAuth.getAccessLabel === 'function'
-                ? TintoreriaAuth.getAccessLabel(state.activeView, getActiveSubtabFilter(state.activeView))
-                : 'Sesion inactiva';
-        }
 
         if (maestroButton) {
             maestroButton.classList.toggle('hidden', !canAccessView('maestro'));
