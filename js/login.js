@@ -300,25 +300,10 @@
         const body = document.body;
         const session = getSession();
         const sessionActive = credentialsLoaded && Boolean(session);
-        const sessionContainer = document.getElementById('auth-session');
-        const userName = document.getElementById('auth-user-name');
-        const userAccess = document.getElementById('auth-user-access');
 
         if (body) {
             body.classList.toggle('auth-locked', !sessionActive);
             body.classList.toggle('is-authenticated', sessionActive);
-        }
-
-        if (sessionContainer) {
-            sessionContainer.classList.toggle('hidden', !sessionActive);
-        }
-
-        if (userName) {
-            userName.textContent = sessionActive ? session.username : '-';
-        }
-
-        if (userAccess) {
-            userAccess.textContent = sessionActive ? 'Sesion activa' : 'Sesion inactiva';
         }
     }
 
@@ -368,14 +353,9 @@
 
     function bindEvents() {
         const form = document.getElementById('login-form');
-        const logoutButton = document.getElementById('btn-logout');
 
         if (form instanceof HTMLFormElement) {
             form.addEventListener('submit', handleLoginSubmit);
-        }
-
-        if (logoutButton instanceof HTMLButtonElement) {
-            logoutButton.addEventListener('click', handleLogoutClick);
         }
     }
 
