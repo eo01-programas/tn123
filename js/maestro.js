@@ -362,16 +362,11 @@
 
     function init() {
         const openButton = document.getElementById('btn-open-excel');
-        const syncButton = document.getElementById('btn-sync-maestro');
         const input = document.getElementById('excel-input');
         const tbody = document.getElementById('tbody-maestro');
 
         if (openButton && input) {
             openButton.addEventListener('click', () => input.click());
-        }
-
-        if (syncButton) {
-            syncButton.addEventListener('click', () => TintoreriaApp.refreshData());
         }
 
         if (input) {
