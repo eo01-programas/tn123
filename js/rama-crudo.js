@@ -5,6 +5,8 @@
     const RAMA_CRUDO_ROUTE_OPTIONS = ['', 'Termofijado', 'Humectado'];
     let detailModalRecordId = null;
     const DETAIL_FIELDS = [
+        'ancho_crudo',
+        'densidad_crudo',
         'rama_crudo_ancho',
         'rama_crudo_densidad',
         'rama_crudo_temperatura',
@@ -130,7 +132,14 @@
     }
 
     function sanitizeDetailInputValue(field, value) {
-        if (field === 'rama_crudo_ancho' || field === 'rama_crudo_densidad' || field === 'rama_crudo_temperatura' || field === 'rama_crudo_ancho_de_cadena') {
+        if (
+            field === 'ancho_crudo' ||
+            field === 'densidad_crudo' ||
+            field === 'rama_crudo_ancho' ||
+            field === 'rama_crudo_densidad' ||
+            field === 'rama_crudo_temperatura' ||
+            field === 'rama_crudo_ancho_de_cadena'
+        ) {
             return sanitizeDigitsInput(value, 3);
         }
 
@@ -188,6 +197,14 @@
     }
 
     function validateDetailValues(changes) {
+        if (changes.ancho_crudo && (!/^\d{2,3}$/.test(changes.ancho_crudo) || Number(changes.ancho_crudo) > 240)) {
+            return 'ancho_crudo solo admite 2 a 3 digitos y maximo 240.';
+        }
+
+        if (changes.densidad_crudo && !/^\d{2,3}$/.test(changes.densidad_crudo)) {
+            return 'densidad_crudo solo admite 2 a 3 digitos.';
+        }
+
         if (changes.rama_crudo_ancho && (!/^\d{2,3}$/.test(changes.rama_crudo_ancho) || Number(changes.rama_crudo_ancho) > 240)) {
             return 'rama_crudo_ancho solo admite 2 a 3 digitos y maximo 240.';
         }
@@ -275,7 +292,7 @@
                 return;
             }
 
-            const firstInput = form.elements.namedItem('rama_crudo_ancho');
+            const firstInput = form.elements.namedItem('ancho_crudo');
             if (firstInput instanceof HTMLInputElement) {
                 firstInput.focus();
                 firstInput.select();
