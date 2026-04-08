@@ -21,7 +21,8 @@
         'rama-tenido',
         'acab-espec',
         'calidad',
-        'embalaje'
+        'embalaje',
+        'stock'
     ];
 
     const PERMISSION_PROFILES = {
