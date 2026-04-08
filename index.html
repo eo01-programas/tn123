@@ -563,20 +563,32 @@
                     <div>
                         <h2>STOCK</h2>
                     </div>
+
+                    <label class="stock-filter-field" for="stock-article-type-filter">
+                        <span>tipo articulo</span>
+                        <select class="table-select stock-filter-select" id="stock-article-type-filter">
+                            <option value="all" selected>Todos</option>
+                            <option value="rectilineos">Rectilineos</option>
+                            <option value="no-rectilineos">No rectilineos</option>
+                        </select>
+                    </label>
                 </div>
 
                 <div class="table-card stock-card">
                     <div class="table-card-head stock-card-head">
-                        <span>Stock de Tintoreria de telas</span>
+                        <div class="stock-heading-group">
+                            <span class="stock-chart-title">Stock de Tintoreria de telas</span>
+                            <span class="muted-note stock-chart-subtitle" id="stock-chart-subtitle">Tipo articulo: Todos</span>
+                        </div>
 
                         <div class="stock-legend" aria-label="Leyenda del grafico">
                             <span class="stock-legend-item">
                                 <span class="stock-legend-swatch stock-legend-prog" aria-hidden="true"></span>
-                                Programado
+                                PROG
                             </span>
                             <span class="stock-legend-item">
                                 <span class="stock-legend-swatch stock-legend-xprog" aria-hidden="true"></span>
-                                Por Programar
+                                X PROG
                             </span>
                         </div>
                     </div>
@@ -590,9 +602,7 @@
                         ></svg>
                     </div>
 
-                    <p class="muted-note stock-caption">
-                        Barras apiladas por proceso, separando <strong>Programado</strong> y <strong>Por Programar</strong>.
-                    </p>
+                    <div class="stock-chart-tooltip hidden" id="stock-chart-tooltip" role="tooltip" aria-hidden="true"></div>
                 </div>
             </section>
         </main>
