@@ -3,6 +3,7 @@
         {
             id: 'plegado',
             label: 'Plegado',
+            shortLabel: 'Pleg.',
             isEligible(record) {
                 const ruta = String(record.ruta || '').trim();
                 const state = normalizeProcessState(record.plegado_estado);
@@ -15,6 +16,7 @@
         {
             id: 'rama-crudo',
             label: 'Rama Crudo',
+            shortLabel: 'R. Crudo',
             isEligible(record) {
                 return String(record.plegado_estado || '').trim() === 'OK'
                     && normalizeProcessState(record.rama_crudo_estado) !== 'OK';
@@ -26,6 +28,7 @@
         {
             id: 'preparado',
             label: 'Preparado',
+            shortLabel: 'Prepar.',
             isEligible(record) {
                 const preparadoState = normalizeProcessState(record.preparado_estado);
                 if (preparadoState === 'OK') {
@@ -42,6 +45,7 @@
         {
             id: 'tenido',
             label: 'Tenido',
+            shortLabel: 'Tenido',
             isEligible(record) {
                 return String(record.preparado_estado || '').trim() === 'OK'
                     && normalizeProcessState(record.tenido_estado) !== 'OK';
@@ -53,6 +57,7 @@
         {
             id: 'abridora',
             label: 'Abridora',
+            shortLabel: 'Abrid.',
             isEligible(record) {
                 return String(record.tenido_estado || '').trim() === 'OK'
                     && normalizeProcessState(record.abridora_estado) !== 'OK';
@@ -64,6 +69,7 @@
         {
             id: 'rama-tenido',
             label: 'Rama Tenido',
+            shortLabel: 'R. Ten.',
             isEligible(record) {
                 return String(record.abridora_estado || '').trim() === 'OK'
                     && normalizeProcessState(record.rama_tenido_estado) !== 'OK';
@@ -75,6 +81,7 @@
         {
             id: 'acab-espec',
             label: 'Acab Espec.',
+            shortLabel: 'Acab.',
             isEligible(record) {
                 const acabadoTipo = getAcabadoEspecialTipo(record);
                 if (acabadoTipo.toUpperCase() === 'NO LLEVA') {
@@ -96,6 +103,7 @@
         {
             id: 'calidad',
             label: 'Calidad',
+            shortLabel: 'Calid.',
             isEligible(record) {
                 return isReadyForCalidad(record)
                     && normalizeProcessState(record.calidad_estado) !== 'OK';
@@ -107,6 +115,7 @@
         {
             id: 'embalaje',
             label: 'Embalaje',
+            shortLabel: 'Embal.',
             isEligible(record) {
                 return String(record.calidad_estado || '').trim() === 'OK'
                     && String(record.embalaje_estado || '').trim() !== 'OK';
@@ -118,6 +127,12 @@
     ];
 
     let resizeFrame = 0;
+    let currentArticleTypeFilter = 'all';
+    let tooltipState = {
+        entries: {},
+        activeKey: ''
+    };
+    const RECTILINEAR_KEYWORDS = ['CUELLO', 'CUELLOS', 'PUNO', 'PUNOS', 'PRETINA', 'PRETINAS'];
 
     function normalizeProcessState(value, fallback = 'X PROG') {
         return String(value || fallback).trim() || fallback;
@@ -140,13 +155,96 @@
             || acabadoEstado === 'OK';
     }
 
+    function normalizeArticleText(value) {
+        return String(value === undefined || value === null ? '' : value)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase()
+            .trim();
+    }
+
+    function isRectilinearArticle(record) {
+        const normalizedArticle = normalizeArticleText(record && record.articulo);
+        if (!normalizedArticle) {
+            return false;
+        }
+
+        return RECTILINEAR_KEYWORDS.some((keyword) => normalizedArticle.includes(keyword));
+    }
+
+    function matchesArticleTypeFilter(record) {
+        if (currentArticleTypeFilter === 'rectilineos') {
+            return isRectilinearArticle(record);
+        }
+
+        if (currentArticleTypeFilter === 'no-rectilineos') {
+            return !isRectilinearArticle(record);
+        }
+
+        return true;
+    }
+
+    function getArticleTypeFilterLabel() {
+        if (currentArticleTypeFilter === 'rectilineos') {
+            return 'Rectilineos';
+        }
+
+        if (currentArticleTypeFilter === 'no-rectilineos') {
+            return 'No rectilineos';
+        }
+
+        return 'Todos';
+    }
+
+    function updateChartSubtitle() {
+        const subtitle = document.getElementById('stock-chart-subtitle');
+        if (!(subtitle instanceof HTMLElement)) {
+            return;
+        }
+
+        subtitle.textContent = `Tipo articulo: ${getArticleTypeFilterLabel()}`;
+    }
+
     function sumRecordWeight(records) {
         return (records || []).reduce((total, record) => total + TintoreriaUtils.toNumber(record.peso_kg_crudo), 0);
     }
 
+    function buildClientBreakdown(records) {
+        const totalsByClient = new Map();
+
+        (records || []).forEach((record) => {
+            const client = String(record && record.cliente || '').trim() || 'SIN CLIENTE';
+            const weight = TintoreriaUtils.toNumber(record && record.peso_kg_crudo);
+
+            if (weight <= 0) {
+                return;
+            }
+
+            totalsByClient.set(client, (totalsByClient.get(client) || 0) + weight);
+        });
+
+        const totalWeight = Array.from(totalsByClient.values()).reduce((sum, value) => sum + value, 0);
+
+        return Array.from(totalsByClient.entries())
+            .map(([client, weight]) => ({
+                client,
+                weight,
+                percentage: totalWeight > 0 ? (weight / totalWeight) * 100 : 0
+            }))
+            .sort((left, right) => {
+                if (right.weight !== left.weight) {
+                    return right.weight - left.weight;
+                }
+
+                return left.client.localeCompare(right.client, 'es');
+            });
+    }
+
     function buildStockDataset(records) {
+        const filteredByArticleType = (records || []).filter((record) => matchesArticleTypeFilter(record));
+
         return STOCK_AREAS.map((area) => {
-            const eligibleRecords = (records || []).filter((record) => area.isEligible(record));
+            const eligibleRecords = filteredByArticleType.filter((record) => area.isEligible(record));
             const porProgramarRecords = area.id === 'embalaje'
                 ? []
                 : eligibleRecords.filter((record) => !area.isProgrammed(record));
@@ -158,13 +256,22 @@
                 id: area.id,
                 label: area.label,
                 xprog: sumRecordWeight(porProgramarRecords),
-                prog: sumRecordWeight(programadoRecords)
+                prog: sumRecordWeight(programadoRecords),
+                xprogBreakdown: buildClientBreakdown(porProgramarRecords),
+                progBreakdown: buildClientBreakdown(programadoRecords)
             };
         });
     }
 
     function formatKg(value) {
         return `${TintoreriaUtils.formatNumber(value)}kg`;
+    }
+
+    function formatPercentage(value) {
+        return `${TintoreriaUtils.toNumber(value).toLocaleString('es-PE', {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1
+        })}%`;
     }
 
     function getNiceMax(value) {
@@ -207,12 +314,38 @@
         ];
     }
 
-    function renderAxisLabel(x, y, label) {
+    function formatCompactBarValue(value) {
+        const numericValue = TintoreriaUtils.toNumber(value);
+        if (numericValue >= 1000000) {
+            return `${trimCompactDecimals(numericValue / 1000000)}M`;
+        }
+
+        if (numericValue >= 1000) {
+            return `${trimCompactDecimals(numericValue / 1000)}k`;
+        }
+
+        return TintoreriaUtils.formatNumber(numericValue, 0);
+    }
+
+    function trimCompactDecimals(value) {
+        return value
+            .toFixed(value >= 10 ? 0 : 1)
+            .replace(/\.0$/, '');
+    }
+
+    function formatBarLabelValue(value, compactMode) {
+        return compactMode
+            ? formatCompactBarValue(value)
+            : TintoreriaUtils.formatNumber(value, 0);
+    }
+
+    function renderAxisLabel(x, y, label, compactMode = false) {
         const lines = splitAxisLabel(label);
         const firstLineY = y - ((lines.length - 1) * 6);
+        const className = compactMode ? 'group-label group-label-compact' : 'group-label';
 
         return `
-            <text class="group-label" text-anchor="middle">
+            <text class="${className}" text-anchor="middle">
                 ${lines.map((line, index) => `
                     <tspan x="${x}" y="${firstLineY + (index * 14)}">${TintoreriaUtils.escapeHtml(line)}</tspan>
                 `).join('')}
@@ -220,7 +353,7 @@
         `;
     }
 
-    function renderRoundedTopBar(x, y, width, height, className, title, radius = 8) {
+    function renderRoundedTopBar(x, y, width, height, className, title, radius = 8, tooltipKey = '') {
         const safeHeight = Math.max(0, height);
         const safeRadius = Math.min(radius, width / 2, safeHeight);
 
@@ -231,10 +364,10 @@
         return `
             <path
                 class="${className}"
+                ${tooltipKey ? `data-tooltip-key="${TintoreriaUtils.escapeHtml(tooltipKey)}"` : ''}
+                aria-label="${TintoreriaUtils.escapeHtml(title)}"
                 d="M ${x} ${y + safeHeight} L ${x} ${y + safeRadius} Q ${x} ${y} ${x + safeRadius} ${y} L ${x + width - safeRadius} ${y} Q ${x + width} ${y} ${x + width} ${y + safeRadius} L ${x + width} ${y + safeHeight} Z"
-            >
-                <title>${TintoreriaUtils.escapeHtml(title)}</title>
-            </path>
+            ></path>
         `;
     }
 
@@ -249,18 +382,20 @@
         const margin = {
             top: 24,
             right: 22,
-            bottom: 96,
+            bottom: 64,
             left: 28
         };
-        const minChartWidth = margin.left + margin.right + (dataset.length * 104);
-        const width = Math.max(minChartWidth, (host && host.clientWidth ? host.clientWidth : 0) - 4);
+        const hostWidth = host && host.clientWidth ? host.clientWidth : 0;
+        const width = Math.max(280, hostWidth - 4);
         const plotWidth = Math.max(180, width - margin.left - margin.right);
         const plotHeight = height - margin.top - margin.bottom;
         const maxValue = dataset.reduce((peak, item) => Math.max(peak, item.xprog + item.prog), 0);
         const yMax = getNiceMax(maxValue);
         const tickCount = 4;
         const groupWidth = plotWidth / Math.max(dataset.length, 1);
-        const barWidth = Math.max(30, Math.min(64, groupWidth - 24));
+        const compactMode = groupWidth < 64;
+        const barWidth = Math.max(18, Math.min(62, groupWidth - (compactMode ? 4 : 8)));
+        const tooltipEntries = {};
 
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
         svg.setAttribute('width', String(width));
@@ -290,41 +425,56 @@
             const totalY = axisBottom - totalHeight;
             const progTitle = `${item.label} - Programado: ${formatKg(item.prog)}`;
             const xprogTitle = `${item.label} - Por Programar: ${formatKg(item.xprog)}`;
+            const progTooltipKey = `${item.id}-prog`;
+            const xprogTooltipKey = `${item.id}-xprog`;
+
+            if (item.prog > 0) {
+                tooltipEntries[progTooltipKey] = {
+                    title: `PROG ${formatKg(item.prog)}`,
+                    breakdown: item.progBreakdown
+                };
+            }
+
+            if (item.xprog > 0) {
+                tooltipEntries[xprogTooltipKey] = {
+                    title: `X PROG ${formatKg(item.xprog)}`,
+                    breakdown: item.xprogBreakdown
+                };
+            }
 
             const progMarkup = item.prog > 0
                 ? (item.xprog > 0
                     ? `
-                        <rect class="bar-prog" x="${barX}" y="${progY}" width="${barWidth}" height="${progHeight}">
-                            <title>${TintoreriaUtils.escapeHtml(progTitle)}</title>
+                        <rect class="bar-prog" x="${barX}" y="${progY}" width="${barWidth}" height="${progHeight}" data-tooltip-key="${TintoreriaUtils.escapeHtml(progTooltipKey)}" aria-label="${TintoreriaUtils.escapeHtml(progTitle)}">
                         </rect>
                     `
-                    : renderRoundedTopBar(barX, progY, barWidth, progHeight, 'bar-prog', progTitle))
+                    : renderRoundedTopBar(barX, progY, barWidth, progHeight, 'bar-prog', progTitle, 8, progTooltipKey))
                 : '';
 
             const xprogMarkup = item.xprog > 0
-                ? renderRoundedTopBar(barX, xprogY, barWidth, xprogHeight, 'bar-xprog', xprogTitle)
+                ? renderRoundedTopBar(barX, xprogY, barWidth, xprogHeight, 'bar-xprog', xprogTitle, 8, xprogTooltipKey)
                 : '';
 
-            const progLabelMarkup = item.prog > 0 && progHeight >= 18
+            const progLabelMarkup = item.prog > 0 && progHeight >= (compactMode ? 18 : 22)
                 ? `
-                    <text class="bar-segment-label" x="${groupCenter}" y="${progY + (progHeight / 2) + 4}" text-anchor="middle">
-                        ${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatNumber(item.prog, 0))}
+                    <text class="${compactMode ? 'bar-segment-label bar-segment-label-compact' : 'bar-segment-label'}" x="${groupCenter}" y="${progY + (progHeight / 2) + 4}" text-anchor="middle">
+                        ${TintoreriaUtils.escapeHtml(formatBarLabelValue(item.prog, compactMode))}
                     </text>
                 `
                 : '';
 
-            const xprogLabelMarkup = item.xprog > 0 && xprogHeight >= 18
+            const xprogLabelMarkup = item.xprog > 0 && xprogHeight >= (compactMode ? 18 : 22)
                 ? `
-                    <text class="bar-segment-label" x="${groupCenter}" y="${xprogY + (xprogHeight / 2) + 4}" text-anchor="middle">
-                        ${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatNumber(item.xprog, 0))}
+                    <text class="${compactMode ? 'bar-segment-label bar-segment-label-compact' : 'bar-segment-label'}" x="${groupCenter}" y="${xprogY + (xprogHeight / 2) + 4}" text-anchor="middle">
+                        ${TintoreriaUtils.escapeHtml(formatBarLabelValue(item.xprog, compactMode))}
                     </text>
                 `
                 : '';
 
             const totalLabelMarkup = totalValue > 0
                 ? `
-                    <text class="bar-total-label" x="${groupCenter}" y="${totalY - 10}" text-anchor="middle">
-                        ${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatNumber(totalValue, 0))}
+                    <text class="${compactMode ? 'bar-total-label bar-total-label-compact' : 'bar-total-label'}" x="${groupCenter}" y="${totalY - 10}" text-anchor="middle">
+                        ${TintoreriaUtils.escapeHtml(formatBarLabelValue(totalValue, compactMode))}
                     </text>
                 `
                 : '';
@@ -336,21 +486,25 @@
                     ${progLabelMarkup}
                     ${xprogLabelMarkup}
                     ${totalLabelMarkup}
-                    ${renderAxisLabel(groupCenter, height - 34, item.label)}
+                    ${renderAxisLabel(groupCenter, axisBottom + 20, compactMode ? item.shortLabel || item.label : item.label, compactMode)}
                 </g>
             `;
         }).join('');
 
         svg.innerHTML = `
             <title>Stock de Tintoreria de telas</title>
-            <desc>Grafico de barras apiladas por proceso, separado entre Programado y Por Programar.</desc>
+            <desc>Grafico de barras apiladas por proceso, separado entre Programado y Por Programar, filtrado por tipo articulo.</desc>
             ${gridMarkup}
             <line class="axis-line" x1="${margin.left}" y1="${axisBottom}" x2="${width - margin.right}" y2="${axisBottom}"></line>
             ${barsMarkup}
         `;
+
+        tooltipState.entries = tooltipEntries;
     }
 
     function renderStockView(records) {
+        hideTooltip();
+        updateChartSubtitle();
         const dataset = buildStockDataset(records);
         renderChart(dataset);
     }
@@ -359,11 +513,122 @@
         TintoreriaApp.switchView('stock', { clearSearch: false });
     }
 
+    function bindArticleTypeFilter() {
+        const filterSelect = document.getElementById('stock-article-type-filter');
+        if (!(filterSelect instanceof HTMLSelectElement)) {
+            return;
+        }
+
+        filterSelect.value = currentArticleTypeFilter;
+        filterSelect.addEventListener('change', () => {
+            currentArticleTypeFilter = filterSelect.value || 'all';
+            renderStockView(TintoreriaApp.getRecords());
+        });
+    }
+
+    function renderTooltipContent(entry) {
+        if (!entry) {
+            return '';
+        }
+
+        const rowsMarkup = (entry.breakdown || []).map((item) => `
+            <div class="stock-tooltip-row">
+                <span class="stock-tooltip-client">${TintoreriaUtils.escapeHtml(item.client)}</span>
+                <span class="stock-tooltip-value">${TintoreriaUtils.escapeHtml(`${formatKg(item.weight)} (${formatPercentage(item.percentage)})`)}</span>
+            </div>
+        `).join('');
+
+        return `
+            <div class="stock-tooltip-title">${TintoreriaUtils.escapeHtml(entry.title)}</div>
+            <div class="stock-tooltip-subtitle">Por Cliente:</div>
+            <div class="stock-tooltip-list">
+                ${rowsMarkup || '<div class="stock-tooltip-row"><span class="stock-tooltip-client">Sin datos</span></div>'}
+            </div>
+        `;
+    }
+
+    function hideTooltip() {
+        const tooltip = document.getElementById('stock-chart-tooltip');
+        if (!(tooltip instanceof HTMLElement)) {
+            return;
+        }
+
+        tooltip.classList.add('hidden');
+        tooltip.setAttribute('aria-hidden', 'true');
+        tooltipState.activeKey = '';
+    }
+
+    function positionTooltip(event, tooltip) {
+        const offset = 16;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const tooltipWidth = tooltip.offsetWidth;
+        const tooltipHeight = tooltip.offsetHeight;
+        let left = event.clientX + offset;
+        let top = event.clientY + offset;
+
+        if (left + tooltipWidth > viewportWidth - 12) {
+            left = Math.max(12, event.clientX - tooltipWidth - offset);
+        }
+
+        if (top + tooltipHeight > viewportHeight - 12) {
+            top = Math.max(12, viewportHeight - tooltipHeight - 12);
+        }
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+    }
+
+    function showTooltip(event, tooltipKey) {
+        const tooltip = document.getElementById('stock-chart-tooltip');
+        const entry = tooltipState.entries[tooltipKey];
+        if (!(tooltip instanceof HTMLElement) || !entry) {
+            return;
+        }
+
+        if (tooltipState.activeKey !== tooltipKey) {
+            tooltip.innerHTML = renderTooltipContent(entry);
+            tooltipState.activeKey = tooltipKey;
+        }
+
+        tooltip.classList.remove('hidden');
+        tooltip.setAttribute('aria-hidden', 'false');
+        positionTooltip(event, tooltip);
+    }
+
+    function bindTooltipEvents() {
+        const svg = document.getElementById('stock-chart');
+        if (!(svg instanceof SVGElement)) {
+            return;
+        }
+
+        svg.addEventListener('mousemove', (event) => {
+            const target = event.target;
+            if (!(target instanceof SVGElement)) {
+                hideTooltip();
+                return;
+            }
+
+            const tooltipKey = String(target.dataset.tooltipKey || '').trim();
+            if (!tooltipKey) {
+                hideTooltip();
+                return;
+            }
+
+            showTooltip(event, tooltipKey);
+        });
+
+        svg.addEventListener('mouseleave', () => {
+            hideTooltip();
+        });
+    }
+
     function syncOnResize() {
         if (TintoreriaApp.state.activeView !== 'stock') {
             return;
         }
 
+        hideTooltip();
         window.cancelAnimationFrame(resizeFrame);
         resizeFrame = window.requestAnimationFrame(() => {
             renderStockView(TintoreriaApp.getRecords());
@@ -377,6 +642,9 @@
             openButton.addEventListener('click', goToStockView);
         }
 
+        bindArticleTypeFilter();
+        bindTooltipEvents();
+        document.addEventListener('click', hideTooltip);
         window.addEventListener('resize', syncOnResize);
     }
 
