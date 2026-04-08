@@ -67,7 +67,8 @@ body.auth-locked .app-shell,
 body.auth-locked .bg-orb,
 body.auth-locked .loader,
 body.auth-locked .toast-root,
-body.auth-locked .modal-backdrop {
+body.auth-locked .modal-backdrop,
+body.auth-locked .stock-fab {
     display: none !important;
 }
 
@@ -525,6 +526,44 @@ body.auth-locked .login-screen {
     border-color: #1d4ed8;
 }
 
+.stock-fab {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 58px;
+    height: 58px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: var(--white);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 18px 34px rgba(37, 99, 235, 0.3);
+    z-index: 110;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.stock-fab i {
+    font-size: 24px;
+}
+
+.stock-fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 38px rgba(37, 99, 235, 0.34);
+    filter: saturate(1.05);
+}
+
+.stock-fab:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.22);
+    outline-offset: 4px;
+}
+
+body[data-active-view="stock"] .stock-fab {
+    display: none;
+}
+
 .config-banner {
     margin: 12px 20px 0;
     padding: 10px 12px;
@@ -681,6 +720,117 @@ main.content {
     min-height: 0;
     flex: 1;
     min-width: 0;
+}
+
+.stock-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    padding: 16px 18px 14px;
+    min-height: 0;
+}
+
+.stock-card-head {
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.stock-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.stock-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--gray-500);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.stock-legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.stock-legend-xprog {
+    background: #ff9138;
+}
+
+.stock-legend-prog {
+    background: #3564dd;
+}
+
+.stock-chart-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    background:
+        linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98));
+    padding: 10px 10px 6px;
+}
+
+.stock-chart {
+    display: block;
+    min-height: 430px;
+}
+
+.stock-chart .grid-line {
+    stroke: #dbe3f0;
+    stroke-width: 1;
+}
+
+.stock-chart .axis-line {
+    stroke: #94a3b8;
+    stroke-width: 1.2;
+}
+
+.stock-chart .axis-text {
+    fill: #64748b;
+    font-size: 11px;
+    font-family: "Calibri", "Inter", sans-serif;
+}
+
+.stock-chart .bar-xprog {
+    fill: #ff9138;
+}
+
+.stock-chart .bar-prog {
+    fill: #3564dd;
+}
+
+.stock-chart .bar-segment-label {
+    fill: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: "Calibri", "Inter", sans-serif;
+}
+
+.stock-chart .bar-total-label {
+    fill: #0f172a;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: "Calibri", "Inter", sans-serif;
+}
+
+.stock-chart .group-label {
+    fill: #1e293b;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: "Calibri", "Inter", sans-serif;
+}
+
+.stock-caption {
+    margin: 10px 0 0;
 }
 
 .table-card-head {
@@ -2095,6 +2245,10 @@ button.process-pill {
         min-height: 36px;
         font-size: 12.5px;
     }
+
+    .stock-card {
+        padding: 14px;
+    }
 }
 
 @media (max-width: 640px) {
@@ -2189,6 +2343,13 @@ button.process-pill {
         bottom: 12px;
     }
 
+    .stock-fab {
+        right: 16px;
+        bottom: 16px;
+        width: 52px;
+        height: 52px;
+    }
+
     .toast {
         min-width: 0;
         max-width: none;
@@ -2204,6 +2365,14 @@ button.process-pill {
 
     .detail-form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .stock-card-head {
+        align-items: flex-start;
+    }
+
+    .stock-legend {
+        margin-left: 0;
     }
 }
 
