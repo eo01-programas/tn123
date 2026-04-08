@@ -26,6 +26,7 @@
     <script defer src="./js/acab-espec.js"></script>
     <script defer src="./js/calidad.js"></script>
     <script defer src="./js/embalaje.js"></script>
+    <script defer src="./js/stock.js"></script>
 </head>
 <body class="auth-locked">
     <section class="login-screen" id="login-screen" aria-labelledby="login-title">
@@ -556,8 +557,50 @@
                     </div>
                 </div>
             </section>
+
+            <section id="view-stock" class="view-section">
+                <div class="panel-header">
+                    <div>
+                        <h2>STOCK</h2>
+                    </div>
+                </div>
+
+                <div class="table-card stock-card">
+                    <div class="table-card-head stock-card-head">
+                        <span>Stock de Tintoreria de telas</span>
+
+                        <div class="stock-legend" aria-label="Leyenda del grafico">
+                            <span class="stock-legend-item">
+                                <span class="stock-legend-swatch stock-legend-prog" aria-hidden="true"></span>
+                                Programado
+                            </span>
+                            <span class="stock-legend-item">
+                                <span class="stock-legend-swatch stock-legend-xprog" aria-hidden="true"></span>
+                                Por Programar
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="stock-chart-scroll">
+                        <svg
+                            class="stock-chart"
+                            id="stock-chart"
+                            role="img"
+                            aria-label="Grafico de barras del stock de tintoreria de telas"
+                        ></svg>
+                    </div>
+
+                    <p class="muted-note stock-caption">
+                        Barras apiladas por proceso, separando <strong>Programado</strong> y <strong>Por Programar</strong>.
+                    </p>
+                </div>
+            </section>
         </main>
     </div>
+
+    <button class="stock-fab" id="btn-open-stock" type="button" title="STOCK" aria-label="Ir a STOCK">
+        <i class="ph ph-funnel" aria-hidden="true"></i>
+    </button>
 
     <div class="loader hidden" id="app-loader">
         <div class="spinner"></div>
