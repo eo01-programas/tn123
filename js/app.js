@@ -163,9 +163,14 @@
 
     function updateAuthSessionUi() {
         const maestroButton = document.querySelector('.brand-logo-button');
+        const stockButton = document.getElementById('btn-open-stock');
 
         if (maestroButton) {
             maestroButton.classList.toggle('hidden', !canAccessView('maestro'));
+        }
+
+        if (stockButton) {
+            stockButton.classList.toggle('hidden', !canAccessView('stock'));
         }
     }
 
@@ -823,6 +828,7 @@
         }
 
         state.activeView = viewId;
+        document.body.dataset.activeView = viewId;
 
         document.querySelectorAll('.view-section').forEach((section) => {
             section.classList.toggle('active', section.id === `view-${viewId}`);
