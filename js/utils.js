@@ -43,14 +43,80 @@
             .trim();
     }
 
+    function normalizeNumericString(value) {
+        const rawValue = String(value === undefined || value === null ? '' : value)
+            .replace(/\s+/g, '')
+            .trim();
+
+        if (!rawValue) {
+            return '';
+        }
+
+        const cleaned = rawValue.replace(/[^\d,.-]/g, '');
+        if (!cleaned) {
+            return '';
+        }
+
+        const lastComma = cleaned.lastIndexOf(',');
+        const lastDot = cleaned.lastIndexOf('.');
+
+        if (lastComma !== -1 && lastDot !== -1) {
+            return lastComma > lastDot
+                ? cleaned.replace(/\./g, '').replace(',', '.')
+                : cleaned.replace(/,/g, '');
+        }
+
+        if (lastComma !== -1) {
+            const decimalLength = cleaned.length - lastComma - 1;
+            return decimalLength === 3
+                ? cleaned.replace(/,/g, '')
+                : cleaned.replace(/\./g, '').replace(',', '.');
+        }
+
+        if (lastDot !== -1) {
+            const decimalLength = cleaned.length - lastDot - 1;
+            return decimalLength === 3
+                ? cleaned.replace(/\./g, '')
+                : cleaned.replace(/,/g, '');
+        }
+
+        return cleaned;
+    }
+
     function toNumber(value) {
         if (value === null || value === undefined || value === '') {
             return 0;
         }
 
-        const normalized = String(value).replace(/,/g, '').trim();
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? value : 0;
+        }
+
+        const normalized = normalizeNumericString(value);
+        if (!normalized) {
+            return 0;
+        }
+
         const parsed = Number(normalized);
         return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function parseNumericCell(value) {
+        if (value === null || value === undefined || value === '') {
+            return '';
+        }
+
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? value : '';
+        }
+
+        const normalized = normalizeNumericString(value);
+        if (!normalized) {
+            return '';
+        }
+
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : '';
     }
 
     function formatNumber(value, decimals = 2) {
@@ -467,6 +533,7 @@
         normalizeHeader,
         escapeHtml,
         formatColorLabel,
+        parseNumericCell,
         toNumber,
         formatNumber,
         parseDateish,
