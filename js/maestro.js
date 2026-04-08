@@ -32,7 +32,7 @@
             articulo: String(normalized.ARTICULO === undefined || normalized.ARTICULO === null ? '' : normalized.ARTICULO).trim(),
             cod_color: String(normalized['COD. COLOR'] === undefined || normalized['COD. COLOR'] === null ? '' : normalized['COD. COLOR']).trim(),
             color: String(normalized.COLOR === undefined || normalized.COLOR === null ? '' : normalized.COLOR).trim(),
-            peso_kg_crudo: String(normalized['PESO (KG)'] === undefined || normalized['PESO (KG)'] === null ? '' : normalized['PESO (KG)']).trim(),
+            peso_kg_crudo: TintoreriaUtils.parseNumericCell(normalized['PESO (KG)']),
             cantidad_crudo: String(normalized['CANT. (UND)'] === undefined || normalized['CANT. (UND)'] === null ? '' : normalized['CANT. (UND)']).trim(),
             tipo_guia: String(normalized['TIPO GUIA'] === undefined || normalized['TIPO GUIA'] === null ? '' : normalized['TIPO GUIA']).trim(),
             motivo_guia: String(normalized['MOTIVO TIPO GUIA'] === undefined || normalized['MOTIVO TIPO GUIA'] === null ? '' : normalized['MOTIVO TIPO GUIA']).trim(),
