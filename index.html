@@ -24,6 +24,7 @@
     <script defer src="./js/abridora.js"></script>
     <script defer src="./js/rama-tenido.js"></script>
     <script defer src="./js/acab-espec.js"></script>
+    <script defer src="./js/excel-export.js"></script>
     <script defer src="./js/calidad.js"></script>
     <script defer src="./js/embalaje.js"></script>
     <script defer src="./js/stock.js"></script>
@@ -113,6 +114,9 @@
                     placeholder="Buscar OP-PTDA"
                     aria-label="Buscar OP-PTDA"
                 >
+                <button class="ghost-button icon-only-button header-search-clear hidden" id="op-search-clear" type="button" title="Limpiar busqueda" aria-label="Limpiar busqueda">
+                    <i class="ph ph-x"></i>
+                </button>
             </form>
 
             <nav class="main-tabs" aria-label="Procesos de tintoreria">
@@ -498,16 +502,23 @@
             </section>
 
             <section id="view-calidad" class="view-section">
-                <div class="subtabs" aria-label="Estado de calidad">
-                    <button class="subtab active" type="button" data-calidad-filter="X PROG">
-                        Por Programar
-                        <span class="count-pill" id="count-calidad-xprog">0</span>
-                        <span class="subtab-summary" id="summary-calidad-xprog">[0 partidas - 0.00kg]</span>
-                    </button>
-                    <button class="subtab" type="button" data-calidad-filter="PROG">
-                        Programado
-                        <span class="count-pill" id="count-calidad-prog">0</span>
-                        <span class="subtab-summary" id="summary-calidad-prog">[0 partidas - 0.00kg]</span>
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de calidad">
+                        <button class="subtab active" type="button" data-calidad-filter="ACTIVE">
+                            En calidad
+                            <span class="count-pill" id="count-calidad-active">0</span>
+                            <span class="subtab-summary" id="summary-calidad-active">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-calidad-filter="REJECTED">
+                            PTDAS RECHAZADAS
+                            <span class="count-pill" id="count-calidad-rejected">0</span>
+                            <span class="subtab-summary" id="summary-calidad-rejected">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+
+                    <button class="quality-export-button" id="btn-export-calidad-excel" type="button" title="Descargar Excel de Calidad" aria-label="Descargar Excel de Calidad">
+                        <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        <span>Excel</span>
                     </button>
                 </div>
 
@@ -589,6 +600,10 @@
                             <span class="stock-legend-item">
                                 <span class="stock-legend-swatch stock-legend-xprog" aria-hidden="true"></span>
                                 X PROG
+                            </span>
+                            <span class="stock-legend-item">
+                                <span class="stock-legend-swatch stock-legend-rejected" aria-hidden="true"></span>
+                                Rechazos
                             </span>
                         </div>
                     </div>
