@@ -89,7 +89,7 @@
         }
 
         if (field === 'rama_tenido_alimentacion') {
-            return sanitizeDigitsInput(value, 2);
+            return TintoreriaUtils.sanitizeNumericRatio(value);
         }
 
         if (field === 'rama_tenido_velocidad') {
@@ -158,8 +158,8 @@
             return 'rama_tenido_velocidad solo admite hasta 3 digitos con un decimal opcional.';
         }
 
-        if (changes.rama_tenido_alimentacion && !/^\d{1,2}$/.test(changes.rama_tenido_alimentacion)) {
-            return 'rama_tenido_alimentacion solo admite 1 a 2 digitos.';
+        if (changes.rama_tenido_alimentacion && !TintoreriaUtils.isValidNumericRatio(changes.rama_tenido_alimentacion, 2)) {
+            return 'rama_tenido_alimentacion admite 1 a 2 digitos o formato numero/numero.';
         }
 
         if (changes.rama_tenido_ancho_de_cadena && (!/^\d{2,3}$/.test(changes.rama_tenido_ancho_de_cadena) || Number(changes.rama_tenido_ancho_de_cadena) > 240)) {
