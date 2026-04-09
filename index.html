@@ -575,21 +575,37 @@
                         <h2>STOCK</h2>
                     </div>
 
-                    <label class="stock-filter-field" for="stock-article-type-filter">
-                        <span>tipo articulo</span>
-                        <select class="table-select stock-filter-select" id="stock-article-type-filter">
-                            <option value="all" selected>Todos</option>
-                            <option value="rectilineos">Rectilineos</option>
-                            <option value="no-rectilineos">No rectilineos</option>
-                        </select>
-                    </label>
+                    <div class="stock-filters">
+                        <label class="stock-filter-field" for="stock-article-type-filter">
+                            <span>tipo articulo</span>
+                            <select class="table-select stock-filter-select" id="stock-article-type-filter">
+                                <option value="all" selected>Todos</option>
+                                <option value="rectilineos">Rectilineos</option>
+                                <option value="no-rectilineos">No rectilineos</option>
+                            </select>
+                        </label>
+
+                        <label class="stock-filter-field" for="stock-type-tela-filter">
+                            <span>tipo_tela</span>
+                            <select class="table-select stock-filter-select" id="stock-type-tela-filter">
+                                <option value="all" selected>Todos</option>
+                            </select>
+                        </label>
+
+                        <label class="stock-filter-field" for="stock-client-filter">
+                            <span>cliente</span>
+                            <select class="table-select stock-filter-select" id="stock-client-filter">
+                                <option value="all" selected>Todos</option>
+                            </select>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="table-card stock-card">
                     <div class="table-card-head stock-card-head">
                         <div class="stock-heading-group">
                             <span class="stock-chart-title">Stock de Tintoreria de telas</span>
-                            <span class="muted-note stock-chart-subtitle" id="stock-chart-subtitle">Tipo articulo: Todos</span>
+                            <span class="muted-note stock-chart-subtitle" id="stock-chart-subtitle">Tipo articulo: Todos | Tipo tela: Todos | Cliente: Todos</span>
                         </div>
 
                         <div class="stock-legend" aria-label="Leyenda del grafico">
