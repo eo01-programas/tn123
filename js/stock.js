@@ -128,6 +128,8 @@
 
     let resizeFrame = 0;
     let currentArticleTypeFilter = 'all';
+    let currentTypeTelaFilter = 'all';
+    let currentClientFilter = 'all';
     let tooltipState = {
         entries: {},
         activeKey: ''
@@ -135,6 +137,17 @@
     const RECTILINEAR_KEYWORDS = ['CUELLO', 'CUELLOS', 'PUNO', 'PUNOS', 'PRETINA', 'PRETINAS'];
     const CALIDAD_UNPROGRAMMED_STATES = new Set(['', 'X PROG']);
     const CALIDAD_REJECTED_STATE = 'RECHAZADO';
+    const TYPE_TELA_LABELS = {
+        '100': 'Produccion',
+        '102': 'Tela para Venta',
+        '103': 'Desarrollo (OF)',
+        '104': 'Prueba de lote',
+        '105': 'Prueba validacion de articulo',
+        '106': 'Prueba validacion de teñido/disperso',
+        '107': 'Muestra de Venta',
+        '108': 'Tela de relleno',
+        '109': 'Prueba de tela/Fundas'
+    };
 
     function normalizeProcessState(value, fallback = 'X PROG') {
         return String(value || fallback).trim() || fallback;
@@ -190,6 +203,34 @@
         return true;
     }
 
+    function normalizeTypeTelaValue(value) {
+        return String(value === undefined || value === null ? '' : value).trim();
+    }
+
+    function normalizeClientValue(value) {
+        return String(value === undefined || value === null ? '' : value).trim();
+    }
+
+    function matchesTypeTelaFilter(record) {
+        if (currentTypeTelaFilter === 'all') {
+            return true;
+        }
+
+        return normalizeTypeTelaValue(record && record.tipo_tela) === currentTypeTelaFilter;
+    }
+
+    function matchesClientFilter(record) {
+        if (currentClientFilter === 'all') {
+            return true;
+        }
+
+        return normalizeClientValue(record && record.cliente) === currentClientFilter;
+    }
+
+    function matchesStockFilters(record) {
+        return matchesArticleTypeFilter(record) && matchesTypeTelaFilter(record) && matchesClientFilter(record);
+    }
+
     function getArticleTypeFilterLabel() {
         if (currentArticleTypeFilter === 'rectilineos') {
             return 'Rectilineos';
@@ -202,13 +243,126 @@
         return 'Todos';
     }
 
+    function getTypeTelaFilterLabel() {
+        if (currentTypeTelaFilter === 'all') {
+            return 'Todos';
+        }
+
+        return currentTypeTelaFilter;
+    }
+
+    function getClientFilterLabel() {
+        if (currentClientFilter === 'all') {
+            return 'Todos';
+        }
+
+        return currentClientFilter;
+    }
+
+    function formatTypeTelaOptionLabel(value) {
+        const normalizedValue = normalizeTypeTelaValue(value);
+        if (!normalizedValue) {
+            return '';
+        }
+
+        const description = TYPE_TELA_LABELS[normalizedValue];
+        return description ? `${normalizedValue} → ${description}` : normalizedValue;
+    }
+
     function updateChartSubtitle() {
         const subtitle = document.getElementById('stock-chart-subtitle');
         if (!(subtitle instanceof HTMLElement)) {
             return;
         }
 
-        subtitle.textContent = `Tipo articulo: ${getArticleTypeFilterLabel()}`;
+        subtitle.textContent = `Tipo articulo: ${getArticleTypeFilterLabel()} | Tipo tela: ${getTypeTelaFilterLabel()} | Cliente: ${getClientFilterLabel()}`;
+    }
+
+    function getUniqueTypeTelaValues(records) {
+        const values = new Set();
+
+        (records || []).forEach((record) => {
+            const value = normalizeTypeTelaValue(record && record.tipo_tela);
+            if (value) {
+                values.add(value);
+            }
+        });
+
+        return Array.from(values).sort((left, right) => Number(left) - Number(right));
+    }
+
+    function getUniqueClientValues(records) {
+        const values = new Set();
+
+        (records || []).forEach((record) => {
+            const value = normalizeClientValue(record && record.cliente);
+            if (value) {
+                values.add(value);
+            }
+        });
+
+        return Array.from(values).sort((left, right) => left.localeCompare(right, 'es', {
+            numeric: true,
+            sensitivity: 'base'
+        }));
+    }
+
+    function buildTypeTelaOptionsMarkup(selectedValue, values) {
+        const optionValues = [...values];
+        if (selectedValue && selectedValue !== 'all' && !optionValues.includes(selectedValue)) {
+            optionValues.push(selectedValue);
+        }
+
+        return [
+            `<option value="all"${selectedValue === 'all' ? ' selected' : ''}>Todos</option>`,
+            ...optionValues.map((value) => `<option value="${TintoreriaUtils.escapeHtml(value)}"${selectedValue === value ? ' selected' : ''}>${TintoreriaUtils.escapeHtml(formatTypeTelaOptionLabel(value))}</option>`)
+        ].join('');
+    }
+
+    function buildClientOptionsMarkup(selectedValue, values) {
+        const optionValues = [...values];
+        if (selectedValue && selectedValue !== 'all' && !optionValues.includes(selectedValue)) {
+            optionValues.push(selectedValue);
+        }
+
+        return [
+            `<option value="all"${selectedValue === 'all' ? ' selected' : ''}>Todos</option>`,
+            ...optionValues.map((value) => `<option value="${TintoreriaUtils.escapeHtml(value)}"${selectedValue === value ? ' selected' : ''}>${TintoreriaUtils.escapeHtml(value)}</option>`)
+        ].join('');
+    }
+
+    function syncStockFilterOptions(records) {
+        const articleFilteredRecords = (records || []).filter((record) => matchesArticleTypeFilter(record));
+        const typeTelaContextRecords = articleFilteredRecords.filter((record) => matchesClientFilter(record));
+        const availableTypeTelaValues = getUniqueTypeTelaValues(typeTelaContextRecords);
+
+        if (currentTypeTelaFilter !== 'all' && !availableTypeTelaValues.includes(currentTypeTelaFilter)) {
+            currentTypeTelaFilter = 'all';
+        }
+
+        const clientContextRecords = articleFilteredRecords.filter((record) => matchesTypeTelaFilter(record));
+        const availableClientValues = getUniqueClientValues(clientContextRecords);
+
+        if (currentClientFilter !== 'all' && !availableClientValues.includes(currentClientFilter)) {
+            currentClientFilter = 'all';
+        }
+
+        const typeTelaSelect = document.getElementById('stock-type-tela-filter');
+        if (typeTelaSelect instanceof HTMLSelectElement) {
+            typeTelaSelect.innerHTML = buildTypeTelaOptionsMarkup(currentTypeTelaFilter, availableTypeTelaValues);
+            typeTelaSelect.value = currentTypeTelaFilter;
+        }
+
+        const clientSelect = document.getElementById('stock-client-filter');
+        if (clientSelect instanceof HTMLSelectElement) {
+            clientSelect.innerHTML = buildClientOptionsMarkup(currentClientFilter, availableClientValues);
+            clientSelect.value = currentClientFilter;
+        }
+
+        const articleSelect = document.getElementById('stock-article-type-filter');
+        if (articleSelect instanceof HTMLSelectElement) {
+            articleSelect.value = currentArticleTypeFilter;
+        }
     }
 
     function sumRecordWeight(records) {
@@ -247,10 +401,10 @@
     }
 
     function buildStockDataset(records) {
-        const filteredByArticleType = (records || []).filter((record) => matchesArticleTypeFilter(record));
+        const filteredByFilters = (records || []).filter((record) => matchesStockFilters(record));
 
         return STOCK_AREAS.map((area) => {
-            const eligibleRecords = filteredByArticleType.filter((record) => area.isEligible(record));
+            const eligibleRecords = filteredByFilters.filter((record) => area.isEligible(record));
             let porProgramarRecords = [];
             let programadoRecords = [];
             let rejectedRecords = [];
@@ -261,13 +415,10 @@
                 rejectedRecords = eligibleRecords.filter((record) => (
                     normalizeCalidadState(record.calidad_estado) === CALIDAD_REJECTED_STATE
                 ));
-                porProgramarRecords = eligibleRecords.filter((record) => (
-                    CALIDAD_UNPROGRAMMED_STATES.has(normalizeCalidadState(record.calidad_estado))
+                porProgramarRecords = [];
+                programadoRecords = eligibleRecords.filter((record) => (
+                    normalizeCalidadState(record.calidad_estado) !== CALIDAD_REJECTED_STATE
                 ));
-                programadoRecords = eligibleRecords.filter((record) => {
-                    const calidadState = normalizeCalidadState(record.calidad_estado);
-                    return calidadState && !CALIDAD_UNPROGRAMMED_STATES.has(calidadState) && calidadState !== CALIDAD_REJECTED_STATE;
-                });
             } else {
                 porProgramarRecords = eligibleRecords.filter((record) => !area.isProgrammed(record));
                 programadoRecords = eligibleRecords.filter((record) => area.isProgrammed(record));
@@ -565,7 +716,7 @@
 
         svg.innerHTML = `
             <title>Stock de Tintoreria de telas</title>
-            <desc>Grafico de barras apiladas por proceso, separado entre Programado, Por Programar y Rechazos en Calidad, filtrado por tipo articulo.</desc>
+            <desc>Grafico de barras apiladas por proceso, separado entre Programado, Por Programar y Rechazos en Calidad, filtrado por tipo articulo, tipo tela y cliente.</desc>
             ${gridMarkup}
             <line class="axis-line" x1="${margin.left}" y1="${axisBottom}" x2="${width - margin.right}" y2="${axisBottom}"></line>
             ${barsMarkup}
@@ -576,6 +727,7 @@
 
     function renderStockView(records) {
         hideTooltip();
+        syncStockFilterOptions(records);
         updateChartSubtitle();
         const dataset = buildStockDataset(records);
         renderChart(dataset);
@@ -594,6 +746,32 @@
         filterSelect.value = currentArticleTypeFilter;
         filterSelect.addEventListener('change', () => {
             currentArticleTypeFilter = filterSelect.value || 'all';
+            renderStockView(TintoreriaApp.getRecords());
+        });
+    }
+
+    function bindTypeTelaFilter() {
+        const filterSelect = document.getElementById('stock-type-tela-filter');
+        if (!(filterSelect instanceof HTMLSelectElement)) {
+            return;
+        }
+
+        filterSelect.value = currentTypeTelaFilter;
+        filterSelect.addEventListener('change', () => {
+            currentTypeTelaFilter = filterSelect.value || 'all';
+            renderStockView(TintoreriaApp.getRecords());
+        });
+    }
+
+    function bindClientFilter() {
+        const filterSelect = document.getElementById('stock-client-filter');
+        if (!(filterSelect instanceof HTMLSelectElement)) {
+            return;
+        }
+
+        filterSelect.value = currentClientFilter;
+        filterSelect.addEventListener('change', () => {
+            currentClientFilter = filterSelect.value || 'all';
             renderStockView(TintoreriaApp.getRecords());
         });
     }
@@ -715,6 +893,8 @@
         }
 
         bindArticleTypeFilter();
+        bindTypeTelaFilter();
+        bindClientFilter();
         bindTooltipEvents();
         document.addEventListener('click', hideTooltip);
         window.addEventListener('resize', syncOnResize);
