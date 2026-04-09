@@ -784,6 +784,15 @@ main.content {
     min-height: 0;
 }
 
+.stock-filters {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
 .stock-filter-field {
     display: inline-flex;
     align-items: center;
