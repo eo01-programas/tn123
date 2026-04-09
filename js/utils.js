@@ -378,6 +378,22 @@
             .trim();
     }
 
+    function sanitizeNumericRatio(value) {
+        return String(value === undefined || value === null ? '' : value)
+            .replace(/\s+/g, '')
+            .replace(/[^0-9/]/g, '');
+    }
+
+    function isValidNumericRatio(value, maxDigitsPerPart = 2) {
+        if (!value) {
+            return true;
+        }
+
+        const digitsPattern = new RegExp(`^\\d{1,${maxDigitsPerPart}}$`);
+        const ratioPattern = new RegExp(`^\\d{1,${maxDigitsPerPart}}\\/\\d{1,${maxDigitsPerPart}}$`);
+        return digitsPattern.test(value) || ratioPattern.test(value);
+    }
+
     function sanitizePersonName(value) {
         return String(value === undefined || value === null ? '' : value)
             .toUpperCase()
@@ -591,6 +607,8 @@
         sanitizePlegadoEquipo,
         isValidPlegadoEquipo,
         sanitizeUppercaseText,
+        sanitizeNumericRatio,
+        isValidNumericRatio,
         sanitizePersonName,
         isValidPersonName,
         formatOpPartida,
