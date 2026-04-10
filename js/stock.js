@@ -448,27 +448,29 @@
         })}%`;
     }
 
-    function getNiceMax(value) {
+    function getChartCeiling(value) {
         if (value <= 0) {
             return 1;
         }
 
-        const exponent = Math.pow(10, Math.floor(Math.log10(value)));
-        const fraction = value / exponent;
+        // Keep a small visual breathing room above the tallest bar, but avoid
+        // inflating the axis so much that the chart looks compressed.
+        const paddedValue = value * 1.05;
+        let step = 50;
 
-        if (fraction <= 1) {
-            return exponent;
+        if (paddedValue >= 100000) {
+            step = 5000;
+        } else if (paddedValue >= 50000) {
+            step = 2500;
+        } else if (paddedValue >= 20000) {
+            step = 500;
+        } else if (paddedValue >= 5000) {
+            step = 250;
+        } else if (paddedValue >= 1000) {
+            step = 100;
         }
 
-        if (fraction <= 2) {
-            return 2 * exponent;
-        }
-
-        if (fraction <= 5) {
-            return 5 * exponent;
-        }
-
-        return 10 * exponent;
+        return Math.ceil(paddedValue / step) * step;
     }
 
     function splitAxisLabel(label) {
@@ -584,7 +586,7 @@
         const plotWidth = Math.max(180, width - margin.left - margin.right);
         const plotHeight = height - margin.top - margin.bottom;
         const maxValue = dataset.reduce((peak, item) => Math.max(peak, item.xprog + item.prog + (item.rejected || 0)), 0);
-        const yMax = getNiceMax(maxValue);
+        const yMax = getChartCeiling(maxValue);
         const tickCount = 4;
         const groupWidth = plotWidth / Math.max(dataset.length, 1);
         const compactMode = groupWidth < 64;
