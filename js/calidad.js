@@ -1,7 +1,6 @@
 (() => {
     let currentFilter = 'ACTIVE';
     let durationTimer = null;
-    let initialOrderSnapshot = new Map();
 
     const PERSON_FIELDS = ['calidad_auditor'];
     const CALIDAD_UNPROGRAMMED_STATES = new Set(['', 'X PROG']);
@@ -56,28 +55,6 @@
         ));
     }
 
-    function hasAuditorValue(record) {
-        return Boolean(String(record && record.calidad_auditor ? record.calidad_auditor : '').trim());
-    }
-
-    function resetInitialOrderSnapshot(records) {
-        initialOrderSnapshot = new Map();
-
-        (records || []).forEach((record, index) => {
-            if (!record || !record.id_registro) {
-                return;
-            }
-
-            initialOrderSnapshot.set(String(record.id_registro), index);
-        });
-    }
-
-    function ensureInitialOrderSnapshot(records) {
-        if (!initialOrderSnapshot.size) {
-            resetInitialOrderSnapshot(records);
-        }
-    }
-
     function isRejectedRecord(record) {
         return normalizeCalidadState(record) === 'RECHAZADO';
     }
@@ -90,43 +67,10 @@
         return getEligibleRecords(records).filter((record) => isRejectedRecord(record));
     }
 
-    function shouldPinRecordAtTop(record) {
-        const displayState = getDisplayCalidadState(record);
-        return displayState !== '' && displayState !== 'RECHAZADO' && displayState !== 'OK';
-    }
-
     function getVisibleRecords(records, filter = currentFilter) {
-        const sourceRecords = filter === 'REJECTED'
+        return filter === 'REJECTED'
             ? getRejectedRecords(records)
             : getActiveRecords(records);
-
-        ensureInitialOrderSnapshot(records);
-
-        const compareByInitialOrder = (left, right) => {
-            const leftOrder = initialOrderSnapshot.has(String(left.id_registro))
-                ? initialOrderSnapshot.get(String(left.id_registro))
-                : Number.MAX_SAFE_INTEGER;
-            const rightOrder = initialOrderSnapshot.has(String(right.id_registro))
-                ? initialOrderSnapshot.get(String(right.id_registro))
-                : Number.MAX_SAFE_INTEGER;
-
-            if (leftOrder !== rightOrder) {
-                return leftOrder - rightOrder;
-            }
-
-            return String(left.id_registro || '').localeCompare(String(right.id_registro || ''), 'es', {
-                numeric: true,
-                sensitivity: 'base'
-            });
-        };
-
-        const auditorRecords = sourceRecords.filter((record) => hasAuditorValue(record));
-        const remainingRecords = sourceRecords.filter((record) => !hasAuditorValue(record));
-
-        return [
-            ...auditorRecords.sort(compareByInitialOrder),
-            ...remainingRecords.sort(compareByInitialOrder)
-        ];
     }
 
     function normalizeClientFilterValue(value) {
@@ -577,7 +521,26 @@
         }
     });
 
+    function sortRecordsForPageLoad(records) {
+        const source = [...(records || [])];
+
+        return source
+            .map((record, index) => ({
+                record,
+                index,
+                hasAuditor: Boolean(String(record && record.calidad_auditor ? record.calidad_auditor : '').trim())
+            }))
+            .sort((left, right) => {
+                if (left.hasAuditor !== right.hasAuditor) {
+                    return left.hasAuditor ? -1 : 1;
+                }
+
+                return left.index - right.index;
+            })
+            .map((entry) => entry.record);
+    }
+
     window.TintoreriaCalidad = {
-        resetInitialOrderSnapshot
+        sortRecordsForPageLoad
     };
 })();
