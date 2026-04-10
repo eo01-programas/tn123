@@ -154,13 +154,13 @@
         return canEditActiveView(viewId);
     }
 
-    function canEditViewChanges(changes, viewId = state.activeView) {
+    function canEditViewChanges(changes, viewId = state.activeView, activeFilter = getActiveSubtabFilter(viewId)) {
         if (!hasAuthController()) {
             return true;
         }
 
         if (typeof TintoreriaAuth.canEditChanges === 'function') {
-            return TintoreriaAuth.canEditChanges(viewId, changes, getActiveSubtabFilter(viewId));
+            return TintoreriaAuth.canEditChanges(viewId, changes, activeFilter);
         }
 
         return canEditActiveView(viewId);
@@ -462,6 +462,55 @@
         });
     }
 
+    function applyOpGroupStriping(viewId = state.activeView) {
+        const section = document.getElementById(`view-${viewId}`);
+        if (!(section instanceof HTMLElement)) {
+            return;
+        }
+
+        const table = section.querySelector('table.data-table');
+        if (!(table instanceof HTMLTableElement)) {
+            return;
+        }
+
+        const columnIndex = getTableColumnIndexByHeader(table, OP_SEARCH_HEADER_LABEL);
+        if (columnIndex < 0 || !table.tBodies.length) {
+            return;
+        }
+
+        const rows = Array.from(table.tBodies[0].rows).filter((row) => (
+            row instanceof HTMLTableRowElement &&
+            !row.classList.contains('empty-state') &&
+            !row.classList.contains('client-filter-empty-state') &&
+            !row.classList.contains('op-search-empty-state')
+        ));
+
+        const visibleRows = rows.filter((row) => !row.hidden && row.style.display !== 'none');
+
+        rows.forEach((row) => {
+            row.classList.remove('op-group-plain', 'op-group-painted');
+        });
+
+        let previousGroupKey = null;
+        let groupIndex = -1;
+
+        visibleRows.forEach((row) => {
+            const cell = row.cells[columnIndex];
+            const groupKey = String(cell ? cell.textContent : '').trim();
+
+            if (!groupKey) {
+                return;
+            }
+
+            if (groupKey !== previousGroupKey) {
+                groupIndex += 1;
+                previousGroupKey = groupKey;
+            }
+
+            row.classList.add(groupIndex % 2 === 0 ? 'op-group-plain' : 'op-group-painted');
+        });
+    }
+
     function applyClientFilterToView(viewId = state.activeView) {
         const table = getClientFilterTable(viewId);
         const columnIndex = getClientColumnIndex(table);
@@ -492,6 +541,7 @@
 
         syncClientFilterRowClasses(rows);
         syncClientFilterEmptyState(table, visibleRows, selectedValue);
+        applyOpGroupStriping(viewId);
     }
 
     function removeOpSearchEmptyState(table) {
@@ -566,6 +616,7 @@
         });
 
         syncOpSearchEmptyState(table, visibleRows, searchValue);
+        applyOpGroupStriping(viewId);
     }
 
     function handleClientHeaderContextMenu(event) {
@@ -648,6 +699,15 @@
     function replaceTableControlWithReadonlyValue(control) {
         const extraClassName = control.classList.contains('mono') ? 'code-text' : '';
         const replacement = buildReadonlyValue(getReadonlyControlValue(control), extraClassName);
+        if (control.dataset.recordId) {
+            replacement.dataset.recordId = control.dataset.recordId;
+        }
+        if (control.dataset.field) {
+            replacement.dataset.field = control.dataset.field;
+        }
+        if (control.dataset.recordKey) {
+            replacement.dataset.recordKey = control.dataset.recordKey;
+        }
         control.replaceWith(replacement);
     }
 
@@ -777,7 +837,9 @@
             return;
         }
 
-        section.querySelectorAll('tbody tr').forEach((row) => {
+        const rows = section.querySelectorAll('tbody tr');
+
+        rows.forEach((row) => {
             if (!(row instanceof HTMLTableRowElement)) {
                 return;
             }
@@ -799,6 +861,8 @@
 
             row.dataset.recordRowId = recordId;
         });
+
+        syncClientFilterRowClasses(rows);
     }
 
     function isTableEditorControl(node) {
@@ -1265,6 +1329,12 @@
         });
     }
 
+    function resetViewOrderSnapshots(records = state.records) {
+        if (window.TintoreriaCalidad && typeof TintoreriaCalidad.resetInitialOrderSnapshot === 'function') {
+            TintoreriaCalidad.resetInitialOrderSnapshot(records);
+        }
+    }
+
     function renderActiveView(options = {}) {
         const { preserveInteraction = true } = options;
         const renderToken = state.renderSequence + 1;
@@ -1281,6 +1351,7 @@
         annotateVisibleRows();
         applyClientFilterToView();
         applyOpSearchFilterToView();
+        applyOpGroupStriping();
 
         if (interactionSnapshot) {
             window.requestAnimationFrame(() => {
@@ -1327,6 +1398,7 @@
             const result = await TintoreriaAPI.listRecords();
             state.records = TintoreriaUtils.sortRecords(result.records || []);
             state.source = result.source || 'local';
+            resetViewOrderSnapshots(state.records);
 
             refreshCounts();
             renderActiveView();
@@ -1368,6 +1440,7 @@
         state.records = TintoreriaUtils.sortRecords(
             (records || []).map((record) => TintoreriaUtils.defaultRecord(record))
         );
+        resetViewOrderSnapshots(state.records);
         refreshVisibleState(options);
         return getRecords();
     }
@@ -1397,10 +1470,12 @@
         const {
             silent = false,
             successTitle = 'Registro actualizado',
-            successMessage = 'Los cambios se guardaron correctamente.'
+            successMessage = 'Los cambios se guardaron correctamente.',
+            permissionViewId = state.activeView,
+            permissionFilter = getActiveSubtabFilter(permissionViewId)
         } = options;
 
-        if (!canEditViewChanges(changes, state.activeView)) {
+        if (!canEditViewChanges(changes, permissionViewId, permissionFilter)) {
             throw new Error('Tu usuario solo tiene permiso de consulta en esta vista o subtab.');
         }
 
