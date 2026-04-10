@@ -1329,10 +1329,12 @@
         });
     }
 
-    function resetViewOrderSnapshots(records = state.records) {
-        if (window.TintoreriaCalidad && typeof TintoreriaCalidad.resetInitialOrderSnapshot === 'function') {
-            TintoreriaCalidad.resetInitialOrderSnapshot(records);
+    function applyCalidadPageLoadOrder(records = state.records) {
+        if (window.TintoreriaCalidad && typeof TintoreriaCalidad.sortRecordsForPageLoad === 'function') {
+            return TintoreriaCalidad.sortRecordsForPageLoad(records);
         }
+
+        return [...records];
     }
 
     function renderActiveView(options = {}) {
@@ -1397,8 +1399,8 @@
         try {
             const result = await TintoreriaAPI.listRecords();
             state.records = TintoreriaUtils.sortRecords(result.records || []);
+            state.records = applyCalidadPageLoadOrder(state.records);
             state.source = result.source || 'local';
-            resetViewOrderSnapshots(state.records);
 
             refreshCounts();
             renderActiveView();
@@ -1440,7 +1442,7 @@
         state.records = TintoreriaUtils.sortRecords(
             (records || []).map((record) => TintoreriaUtils.defaultRecord(record))
         );
-        resetViewOrderSnapshots(state.records);
+        state.records = applyCalidadPageLoadOrder(state.records);
         refreshVisibleState(options);
         return getRecords();
     }
