@@ -1,6 +1,7 @@
 (() => {
     let currentFilter = 'ACTIVE';
     let durationTimer = null;
+    let initialOrderSnapshot = new Map();
 
     const PERSON_FIELDS = ['calidad_auditor'];
     const CALIDAD_UNPROGRAMMED_STATES = new Set(['', 'X PROG']);
@@ -13,6 +14,7 @@
         { key: 'cod_art', header: 'cod_art', width: 14 },
         { key: 'articulo', header: 'articulo', width: 34 },
         { key: 'peso_kg_crudo', header: 'kg(crudo)', width: 11, align: 'center' },
+        { key: 'cantidad_crudo', header: '#rollos/cntd', width: 12, align: 'center' },
         { key: 'calidad_auditor', header: 'Auditor', width: 18 },
         { key: 'calidad_turno', header: 'Turno', width: 10, align: 'center' },
         { key: 'calidad_inicio', header: 'Inicio', width: 12, align: 'center' },
@@ -54,6 +56,28 @@
         ));
     }
 
+    function hasAuditorValue(record) {
+        return Boolean(String(record && record.calidad_auditor ? record.calidad_auditor : '').trim());
+    }
+
+    function resetInitialOrderSnapshot(records) {
+        initialOrderSnapshot = new Map();
+
+        (records || []).forEach((record, index) => {
+            if (!record || !record.id_registro) {
+                return;
+            }
+
+            initialOrderSnapshot.set(String(record.id_registro), index);
+        });
+    }
+
+    function ensureInitialOrderSnapshot(records) {
+        if (!initialOrderSnapshot.size) {
+            resetInitialOrderSnapshot(records);
+        }
+    }
+
     function isRejectedRecord(record) {
         return normalizeCalidadState(record) === 'RECHAZADO';
     }
@@ -76,12 +100,32 @@
             ? getRejectedRecords(records)
             : getActiveRecords(records);
 
-        const pinnedRecords = sourceRecords.filter((record) => shouldPinRecordAtTop(record));
-        const remainingRecords = sourceRecords.filter((record) => !shouldPinRecordAtTop(record));
+        ensureInitialOrderSnapshot(records);
+
+        const compareByInitialOrder = (left, right) => {
+            const leftOrder = initialOrderSnapshot.has(String(left.id_registro))
+                ? initialOrderSnapshot.get(String(left.id_registro))
+                : Number.MAX_SAFE_INTEGER;
+            const rightOrder = initialOrderSnapshot.has(String(right.id_registro))
+                ? initialOrderSnapshot.get(String(right.id_registro))
+                : Number.MAX_SAFE_INTEGER;
+
+            if (leftOrder !== rightOrder) {
+                return leftOrder - rightOrder;
+            }
+
+            return String(left.id_registro || '').localeCompare(String(right.id_registro || ''), 'es', {
+                numeric: true,
+                sensitivity: 'base'
+            });
+        };
+
+        const auditorRecords = sourceRecords.filter((record) => hasAuditorValue(record));
+        const remainingRecords = sourceRecords.filter((record) => !hasAuditorValue(record));
 
         return [
-            ...TintoreriaUtils.sortRecordsByPriority(pinnedRecords, 'calidad_p'),
-            ...TintoreriaUtils.sortRecordsByPriority(remainingRecords, 'calidad_p')
+            ...auditorRecords.sort(compareByInitialOrder),
+            ...remainingRecords.sort(compareByInitialOrder)
         ];
     }
 
@@ -142,6 +186,7 @@
                 record.cod_art || '',
                 record.articulo || '',
                 record.peso_kg_crudo || '',
+                record.cantidad_crudo || '',
                 record.calidad_auditor || '',
                 getTurnoExportLabel(record),
                 getStartExportLabel(record),
@@ -280,7 +325,7 @@
 
             tbody.innerHTML = `
                 <tr class="empty-state">
-                    <td colspan="13">${emptyLabel}</td>
+                    <td colspan="14">${emptyLabel}</td>
                 </tr>
             `;
             syncDurationTimer(records);
@@ -299,6 +344,7 @@
                 <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.cod_art)}</span></td>
                 <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.articulo)}">${TintoreriaUtils.escapeHtml(record.articulo)}</span></td>
                 <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.peso_kg_crudo)}</span></td>
+                <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.cantidad_crudo)}</span></td>
                 <td>
                     <input class="table-input" type="text" value="${TintoreriaUtils.escapeHtml(record.calidad_auditor || '')}" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="calidad_auditor">
                 </td>
@@ -530,4 +576,8 @@
             };
         }
     });
+
+    window.TintoreriaCalidad = {
+        resetInitialOrderSnapshot
+    };
 })();
