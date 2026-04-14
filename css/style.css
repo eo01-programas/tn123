@@ -2715,8 +2715,8 @@ button.process-pill {
     }
 
     .stock-chart {
-        width: 90%;
-        margin: 0 auto;
+        width: 100%;
+        margin: 0;
     }
 
     .subtab {
