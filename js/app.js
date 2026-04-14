@@ -9,6 +9,7 @@
         pendingSaves: {},
         saveSequence: 0,
         renderSequence: 0,
+        returnView: null,
         initialized: false
     };
 
@@ -1368,6 +1369,7 @@
 
     function switchView(viewId, options = {}) {
         const { clearSearch = true } = options;
+        const previousView = state.activeView;
 
         if (!canAccessView(viewId)) {
             showToast('Tu usuario no tiene acceso a esta vista.', 'error', 'Acceso restringido');
@@ -1376,6 +1378,12 @@
 
         if (clearSearch) {
             clearActiveSearch({ rerender: false });
+        }
+
+        if (viewId === 'stock' && previousView !== 'stock') {
+            state.returnView = canAccessView(previousView) ? previousView : getDefaultAccessibleView();
+        } else if (viewId !== 'stock') {
+            state.returnView = viewId;
         }
 
         state.activeView = viewId;
@@ -1390,6 +1398,14 @@
         });
 
         renderActiveView();
+    }
+
+    function getStockReturnView() {
+        if (state.returnView && canAccessView(state.returnView)) {
+            return state.returnView;
+        }
+
+        return getDefaultAccessibleView();
     }
 
     async function refreshData(options = {}) {
@@ -1618,6 +1634,7 @@
         setRecords,
         findRecord,
         switchView,
+        getStockReturnView,
         refreshData,
         importRecords,
         saveRecordChanges,
