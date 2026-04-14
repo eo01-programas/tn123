@@ -532,7 +532,7 @@
                     class="${classNames.join(' ')}"
                     x="${x}"
                     y="${y}"
-                    text-anchor="end"
+                    text-anchor="middle"
                     dominant-baseline="middle"
                     transform="rotate(-90 ${x} ${y})"
                 >
@@ -609,7 +609,7 @@
         const margin = {
             top: 24,
             right: 22,
-            bottom: rotateAxisLabels ? 74 : 40,
+            bottom: rotateAxisLabels ? 104 : 40,
             left: 28
         };
         const hostWidth = host && host.clientWidth ? host.clientWidth : 0;
@@ -736,7 +736,7 @@
             const axisLabelText = rotateAxisLabels
                 ? (item.shortLabel || item.label)
                 : (compactMode ? (item.shortLabel || item.label) : item.label);
-            const axisLabelY = axisBottom + (rotateAxisLabels ? 42 : 20);
+            const axisLabelY = axisBottom + (rotateAxisLabels ? 26 : 20);
 
             return `
                 <g>
