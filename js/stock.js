@@ -600,7 +600,12 @@
         const host = svg.parentElement;
         const rotateAxisLabels = window.matchMedia('(max-width: 640px) and (orientation: portrait)').matches
             || (window.innerWidth <= 640 && window.innerHeight > window.innerWidth);
-        const height = rotateAxisLabels ? Math.round(430 * 0.9) : 430;
+        const viewportHeight = window.visualViewport && window.visualViewport.height
+            ? window.visualViewport.height
+            : window.innerHeight;
+        const height = rotateAxisLabels
+            ? Math.round(Math.min(560, Math.max(460, viewportHeight * 0.75)))
+            : 430;
         const margin = {
             top: 24,
             right: 22,
