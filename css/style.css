@@ -579,20 +579,40 @@ body[data-active-view="stock"] main.content {
     padding-top: 18px;
 }
 
-.stock-page-toolbar {
+.stock-title-group {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    margin-bottom: 12px;
+    gap: 10px;
 }
 
-.stock-back-button {
-    gap: 8px;
-    font-weight: 700;
+.stock-home-button {
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #eff6ff, #ffffff);
+    color: var(--primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.stock-back-button i {
-    font-size: 16px;
+.stock-home-button i {
+    font-size: 18px;
+}
+
+.stock-home-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.35);
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.16);
+}
+
+.stock-home-button:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.2);
+    outline-offset: 3px;
 }
 
 .config-banner {
@@ -852,10 +872,6 @@ main.content {
     gap: 4px;
 }
 
-.stock-chart-title {
-    color: var(--gray-800);
-}
-
 .stock-chart-subtitle {
     margin: 0;
 }
@@ -905,7 +921,7 @@ main.content {
     border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98));
-    padding: 10px 10px 6px;
+    padding: 8px 8px 0;
 }
 
 .stock-chart {
@@ -1033,6 +1049,11 @@ main.content {
     font-weight: 700;
     font-family: "Calibri", "Inter", sans-serif;
     pointer-events: none;
+}
+
+.stock-chart .group-label-rotated {
+    font-size: 10px;
+    letter-spacing: 0.01em;
 }
 
 .stock-chart .group-label-compact {
@@ -2653,6 +2674,49 @@ button.process-pill {
 
     .metric-grid {
         gap: 6px;
+    }
+
+    .stock-card {
+        padding: 12px;
+    }
+
+    .stock-card-head {
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .stock-filters {
+        width: 100%;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+    }
+
+    .stock-filter-field {
+        flex: 0 0 auto;
+        gap: 6px;
+    }
+
+    .stock-filter-field span {
+        font-size: 10px;
+        letter-spacing: 0.03em;
+    }
+
+    .stock-filter-select {
+        min-width: 108px;
+        flex: 0 0 108px;
+        font-size: 12px;
+    }
+
+    .stock-chart {
+        width: 90%;
+        margin: 0 auto;
     }
 
     .subtab {
