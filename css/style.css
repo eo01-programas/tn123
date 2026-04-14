@@ -72,6 +72,11 @@ body.auth-locked .stock-fab {
     display: none !important;
 }
 
+body[data-active-view="stock"] .topbar,
+body[data-active-view="stock"] .config-banner {
+    display: none !important;
+}
+
 .login-screen {
     display: none;
     min-height: 100dvh;
@@ -568,6 +573,26 @@ body.auth-locked .login-screen {
 
 body[data-active-view="stock"] .stock-fab {
     display: none;
+}
+
+body[data-active-view="stock"] main.content {
+    padding-top: 18px;
+}
+
+.stock-page-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 12px;
+}
+
+.stock-back-button {
+    gap: 8px;
+    font-weight: 700;
+}
+
+.stock-back-button i {
+    font-size: 16px;
 }
 
 .config-banner {
