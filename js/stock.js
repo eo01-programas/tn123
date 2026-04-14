@@ -515,13 +515,37 @@
             : TintoreriaUtils.formatNumber(value, 0);
     }
 
-    function renderAxisLabel(x, y, label, compactMode = false) {
+    function renderAxisLabel(x, y, label, compactMode = false, rotateLabel = false) {
+        const classNames = ['group-label'];
+
+        if (compactMode) {
+            classNames.push('group-label-compact');
+        }
+
+        if (rotateLabel) {
+            classNames.push('group-label-rotated');
+        }
+
+        if (rotateLabel) {
+            return `
+                <text
+                    class="${classNames.join(' ')}"
+                    x="${x}"
+                    y="${y}"
+                    text-anchor="end"
+                    dominant-baseline="middle"
+                    transform="rotate(-90 ${x} ${y})"
+                >
+                    ${TintoreriaUtils.escapeHtml(String(label || '').trim())}
+                </text>
+            `;
+        }
+
         const lines = splitAxisLabel(label);
         const firstLineY = y - ((lines.length - 1) * 6);
-        const className = compactMode ? 'group-label group-label-compact' : 'group-label';
 
         return `
-            <text class="${className}" text-anchor="middle">
+            <text class="${classNames.join(' ')}" text-anchor="middle">
                 ${lines.map((line, index) => `
                     <tspan x="${x}" y="${firstLineY + (index * 14)}">${TintoreriaUtils.escapeHtml(line)}</tspan>
                 `).join('')}
@@ -574,11 +598,13 @@
         }
 
         const host = svg.parentElement;
-        const height = 430;
+        const rotateAxisLabels = window.matchMedia('(max-width: 640px) and (orientation: portrait)').matches
+            || (window.innerWidth <= 640 && window.innerHeight > window.innerWidth);
+        const height = rotateAxisLabels ? Math.round(430 * 0.9) : 430;
         const margin = {
             top: 24,
             right: 22,
-            bottom: 64,
+            bottom: rotateAxisLabels ? 74 : 40,
             left: 28
         };
         const hostWidth = host && host.clientWidth ? host.clientWidth : 0;
@@ -702,6 +728,11 @@
                 `
                 : '';
 
+            const axisLabelText = rotateAxisLabels
+                ? (item.shortLabel || item.label)
+                : (compactMode ? (item.shortLabel || item.label) : item.label);
+            const axisLabelY = axisBottom + (rotateAxisLabels ? 42 : 20);
+
             return `
                 <g>
                     ${progMarkup}
@@ -711,13 +742,13 @@
                     ${xprogLabelMarkup}
                     ${rejectedLabelMarkup}
                     ${totalLabelMarkup}
-                    ${renderAxisLabel(groupCenter, axisBottom + 20, compactMode ? item.shortLabel || item.label : item.label, compactMode)}
+                    ${renderAxisLabel(groupCenter, axisLabelY, axisLabelText, compactMode, rotateAxisLabels)}
                 </g>
             `;
         }).join('');
 
         svg.innerHTML = `
-            <title>Stock de Tintoreria de telas</title>
+            <title>Stock Tintoreria Telas</title>
             <desc>Grafico de barras apiladas por proceso, separado entre Programado, Por Programar y Rechazos en Calidad, filtrado por tipo articulo, tipo tela y cliente.</desc>
             ${gridMarkup}
             <line class="axis-line" x1="${margin.left}" y1="${axisBottom}" x2="${width - margin.right}" y2="${axisBottom}"></line>
