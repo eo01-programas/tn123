@@ -739,6 +739,14 @@
         TintoreriaApp.switchView('stock', { clearSearch: false });
     }
 
+    function goBackToMainView() {
+        const returnView = typeof TintoreriaApp.getStockReturnView === 'function'
+            ? TintoreriaApp.getStockReturnView()
+            : 'plegado';
+
+        TintoreriaApp.switchView(returnView, { clearSearch: false });
+    }
+
     function bindArticleTypeFilter() {
         const filterSelect = document.getElementById('stock-article-type-filter');
         if (!(filterSelect instanceof HTMLSelectElement)) {
@@ -889,9 +897,14 @@
 
     function init() {
         const openButton = document.getElementById('btn-open-stock');
+        const backButton = document.getElementById('btn-stock-back');
 
         if (openButton) {
             openButton.addEventListener('click', goToStockView);
+        }
+
+        if (backButton) {
+            backButton.addEventListener('click', goBackToMainView);
         }
 
         bindArticleTypeFilter();
