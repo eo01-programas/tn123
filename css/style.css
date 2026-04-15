@@ -2219,6 +2219,13 @@ button.process-pill {
     color: var(--primary);
 }
 
+.process-pill-finished {
+    background: #1e3a8a;
+    border-color: #1e3a8a;
+    color: var(--white);
+    font-weight: 800;
+}
+
 .process-pill-action {
     background: var(--white);
     border-color: var(--primary);
