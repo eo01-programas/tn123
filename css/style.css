@@ -1388,6 +1388,21 @@ tbody tr:last-child td {
     color: #047857;
 }
 
+.status-chip.route-termofijado {
+    background: #fef08a;
+    color: #854d0e;
+}
+
+.status-chip.route-humectado {
+    background: #bfdbfe;
+    color: #1e3a8a;
+}
+
+.status-chip.route-directo {
+    background: #e9d5ff;
+    color: #581c87;
+}
+
 .route-readonly-chip {
     max-width: 100%;
     cursor: pointer;
