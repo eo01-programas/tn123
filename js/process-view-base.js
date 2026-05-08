@@ -7,6 +7,15 @@
         `;
     }
 
+    function getRouteClass(route) {
+        if (!route) return 'route-empty';
+        const lowerRoute = String(route).trim().toLowerCase();
+        if (lowerRoute === 'termofijado') return 'route-termofijado';
+        if (lowerRoute === 'humectado') return 'route-humectado';
+        if (lowerRoute === 'directo') return 'route-directo';
+        return 'route-filled';
+    }
+
     function buildRowsMarkup(records) {
         return records.map((record) => `
             <tr>
@@ -16,7 +25,7 @@
                 <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.articulo)}">${TintoreriaUtils.escapeHtml(record.articulo)}</span></td>
                 <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatColorLabel(record.color))}">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatColorLabel(record.color))}</span></td>
                 <td>
-                    <span class="status-chip ${record.ruta ? 'route-filled' : 'route-empty'}">
+                    <span class="status-chip ${getRouteClass(record.ruta)}">
                         ${TintoreriaUtils.escapeHtml(record.ruta || 'Sin ruta')}
                     </span>
                 </td>
