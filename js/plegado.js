@@ -1,5 +1,7 @@
 (() => {
     let currentFilter = 'X PROG';
+    const editingRouteRecordIds = new Set();
+    const ROUTE_OPTIONS = ['', 'Termofijado', 'Humectado'];
 
     function normalizePlegadoState(record) {
         return String(record.plegado_estado || 'X PROG').trim() || 'X PROG';
@@ -34,6 +36,61 @@
             const selected = selectedValue === optionValue ? 'selected' : '';
             return `<option value="${TintoreriaUtils.escapeHtml(optionValue)}" ${selected}>${TintoreriaUtils.escapeHtml(label)}</option>`;
         }).join('');
+    }
+
+    function normalizeRoute(value) {
+        const normalized = String(value === undefined || value === null ? '' : value)
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!normalized) {
+            return '';
+        }
+
+        if (normalized.toUpperCase() === 'TERMOFICADO') {
+            return 'Termofijado';
+        }
+
+        return normalized;
+    }
+
+    function renderRouteMarkup(record) {
+        const normalizedRoute = normalizeRoute(record.ruta);
+        const recordId = TintoreriaUtils.escapeHtml(record.id_registro);
+
+        if (editingRouteRecordIds.has(record.id_registro)) {
+            return `
+                <select class="table-select route-inline-select" data-record-id="${recordId}" data-field="ruta" data-inline-edit="ruta" autofocus>
+                    ${optionMarkup(normalizedRoute, ROUTE_OPTIONS)}
+                </select>
+            `;
+        }
+
+        const routeLabel = normalizedRoute || 'Selec';
+        let routeClass = 'route-empty';
+        if (normalizedRoute) {
+            const lowerRoute = normalizedRoute.toLowerCase();
+            if (lowerRoute === 'termofijado') {
+                routeClass = 'route-termofijado';
+            } else if (lowerRoute === 'humectado') {
+                routeClass = 'route-humectado';
+            } else if (lowerRoute === 'directo') {
+                routeClass = 'route-directo';
+            } else {
+                routeClass = 'route-filled';
+            }
+        }
+
+        return `
+            <span
+                class="status-chip ${routeClass} route-readonly-chip"
+                data-record-id="${recordId}"
+                data-action="edit-route"
+                title="Doble clic para cambiar ruta"
+            >
+                ${TintoreriaUtils.escapeHtml(routeLabel)}
+            </span>
+        `;
     }
 
     function renderSubtabCounts(records) {
@@ -75,7 +132,7 @@
                 <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatColorLabel(record.color))}">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatColorLabel(record.color))}</span></td>
                 <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.articulo)}">${TintoreriaUtils.escapeHtml(record.articulo)}</span></td>
                 <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.peso_kg_crudo)}</span></td>
-                <td><span class="cell-text">${TintoreriaUtils.escapeHtml(record.ruta || '')}</span></td>
+                <td>${renderRouteMarkup(record)}</td>
                 <td>
                     <select class="table-select" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="plegado_turno">
                         ${optionMarkup(record.plegado_turno || '', PLEGADO_TURNO_OPTIONS)}
@@ -115,6 +172,12 @@
 
         if (field === 'plegado_p') {
             nextValue = TintoreriaUtils.sanitizePlegadoP(nextValue);
+        }
+
+        if (field === 'ruta') {
+            nextValue = normalizeRoute(nextValue);
+            editingRouteRecordIds.delete(recordId);
+            changes.ruta = nextValue;
         }
 
         if (field === 'plegado_equipo') {
@@ -167,9 +230,57 @@
                 TintoreriaApp.showToast('La fila fue marcada como plegada.', 'success', 'Plegado completado');
             }
         } catch (error) {
+            if (field === 'ruta') {
+                editingRouteRecordIds.add(recordId);
+            }
             target.value = currentRecord[field] || '';
             TintoreriaApp.showToast(error.message || 'No se pudo guardar el cambio.', 'error', 'Error al guardar');
         }
+    }
+
+    function handleDoubleClick(event) {
+        const trigger = event.target.closest('[data-action="edit-route"]');
+        if (!trigger) {
+            return;
+        }
+
+        const { recordId } = trigger.dataset;
+        if (!recordId || editingRouteRecordIds.has(recordId)) {
+            return;
+        }
+
+        editingRouteRecordIds.add(recordId);
+        renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
+
+        window.requestAnimationFrame(() => {
+            const editor = document.querySelector('#tbody-plegado select[data-inline-edit="ruta"][data-record-id="' + CSS.escape(recordId) + '"]');
+            if (editor instanceof HTMLSelectElement) {
+                editor.focus();
+                editor.click();
+            }
+        });
+    }
+
+    function handleFocusOut(event) {
+        const target = event.target;
+        if (!(target instanceof HTMLSelectElement) || target.dataset.inlineEdit !== 'ruta') {
+            return;
+        }
+
+        const { recordId } = target.dataset;
+        if (!recordId || !editingRouteRecordIds.has(recordId)) {
+            return;
+        }
+
+        window.setTimeout(() => {
+            const activeElement = document.activeElement;
+            if (activeElement instanceof HTMLSelectElement && activeElement.dataset.recordId === recordId && activeElement.dataset.inlineEdit === 'ruta') {
+                return;
+            }
+
+            editingRouteRecordIds.delete(recordId);
+            renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
+        }, 0);
     }
 
     function init() {
@@ -186,6 +297,8 @@
         const tbody = document.getElementById('tbody-plegado');
         if (tbody) {
             tbody.addEventListener('change', handlePlegadoChange);
+            tbody.addEventListener('dblclick', handleDoubleClick);
+            tbody.addEventListener('focusout', handleFocusOut);
         }
     }
 
