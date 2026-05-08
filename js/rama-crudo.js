@@ -92,7 +92,19 @@
         }
 
         const routeLabel = normalizedRoute || 'Selec';
-        const routeClass = normalizedRoute ? 'route-filled' : 'route-empty';
+        let routeClass = 'route-empty';
+        if (normalizedRoute) {
+            const lowerRoute = normalizedRoute.toLowerCase();
+            if (lowerRoute === 'termofijado') {
+                routeClass = 'route-termofijado';
+            } else if (lowerRoute === 'humectado') {
+                routeClass = 'route-humectado';
+            } else if (lowerRoute === 'directo') {
+                routeClass = 'route-directo';
+            } else {
+                routeClass = 'route-filled';
+            }
+        }
 
         return `
             <span
