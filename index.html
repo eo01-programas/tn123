@@ -516,10 +516,16 @@
                         </button>
                     </div>
 
-                    <button class="quality-export-button" id="btn-export-calidad-excel" type="button" title="Descargar Excel de Calidad" aria-label="Descargar Excel de Calidad">
-                        <i class="ph ph-file-xls" aria-hidden="true"></i>
-                        <span>Excel</span>
-                    </button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="primary-button" id="btn-auditoria-calidad" type="button" style="background-color: var(--warning); border-color: var(--warning); color: var(--white);" title="Auditoría Masiva">
+                            <i class="ph ph-clipboard-text" aria-hidden="true"></i>
+                            <span>AUDITORIA</span>
+                        </button>
+                        <button class="quality-export-button" id="btn-export-calidad-excel" type="button" title="Descargar Excel de Calidad" aria-label="Descargar Excel de Calidad">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                            <span>Excel</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-card">
@@ -802,6 +808,139 @@
             <div class="modal-actions">
                 <button class="ghost-button" id="tenido-detail-clear" type="button">Limpiar</button>
                 <button class="primary-button" id="tenido-detail-save" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="calidad-reject-modal">
+        <div class="modal-card modal-card-form" style="max-width: 612px;">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="calidad-reject-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="calidad-reject-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="calidad-reject-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="calidad-reject-form">
+                <div class="form-field form-field-full">
+                    <label for="calidad-motivo-rechazo">Motivo de Rechazo</label>
+                    <select class="table-select" id="calidad-motivo-rechazo" name="motivo_rechazo_1">
+                        <option value="">Seleccionar motivo...</option>
+                    </select>
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="calidad-observacion">Observación de Calidad</label>
+                    <div class="voice-textarea-wrapper" style="position: relative; display: flex; flex-direction: column;">
+                        <textarea class="table-textarea" id="calidad-observacion" name="observacion_calidad" rows="4" style="text-transform: none;"></textarea>
+                        <button type="button" class="ghost-button icon-only-button voice-dictation-btn" id="calidad-voice-btn" style="position: absolute; right: 8px; bottom: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;" title="Dictar por voz">
+                            <i class="ph ph-microphone"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="calidad-reject-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="calidad-reject-save" type="button">Guardar y Rechazar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="calidad-approve-modal">
+        <div class="modal-card modal-card-form" style="max-width: 612px;">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="calidad-approve-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="calidad-approve-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="calidad-approve-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="calidad-approve-form">
+                <div class="form-field">
+                    <label for="calidad-tipo-aprobacion">Tipo de Aprobación</label>
+                    <select class="table-select" id="calidad-tipo-aprobacion" name="tipo_aprobacion">
+                        <option value="">Seleccionar tipo...</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="calidad-quien-aprobo">Quién Aprobó</label>
+                    <select class="table-select" id="calidad-quien-aprobo" name="quien_aprobo">
+                        <option value="">Seleccionar quién...</option>
+                    </select>
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="calidad-approve-observacion">Observación de Calidad</label>
+                    <div class="voice-textarea-wrapper" style="position: relative; display: flex; flex-direction: column;">
+                        <textarea class="table-textarea" id="calidad-approve-observacion" name="observacion_calidad" rows="4" style="text-transform: none;"></textarea>
+                        <button type="button" class="ghost-button icon-only-button voice-dictation-btn" id="calidad-approve-voice-btn" style="position: absolute; right: 8px; bottom: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;" title="Dictar por voz">
+                            <i class="ph ph-microphone"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="calidad-approve-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="calidad-approve-save" type="button">Aprobar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="calidad-auditoria-modal">
+        <div class="modal-card modal-card-form" style="max-width: 800px;">
+            <div class="modal-card-head">
+                <h3 id="calidad-auditoria-title">Auditoría Masiva</h3>
+                <button class="modal-close-button" id="calidad-auditoria-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <div class="modal-search-section" style="margin-bottom: 20px;">
+                <label for="calidad-auditoria-search" style="display: block; font-weight: 500; margin-bottom: 8px; color: var(--gray-500);">Buscar OP-PTDA</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="calidad-auditoria-search" class="table-input" placeholder="Ingresar partida" style="flex: 1;">
+                    <button type="button" id="calidad-auditoria-search-btn" class="primary-button" style="padding: 0 16px;">
+                        <i class="ph ph-magnifying-glass"></i> Buscar
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--gray-200); border-radius: 4px;">
+                <table class="data-table" id="calidad-auditoria-table" style="margin: 0; min-width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px; text-align: center;"><input type="checkbox" id="calidad-auditoria-select-all" aria-label="Seleccionar todos"></th>
+                            <th>cliente</th>
+                            <th>OP-PTDA</th>
+                            <th>articulo</th>
+                            <th>kg(crudo)</th>
+                            <th>#rollos/cntd</th>
+                        </tr>
+                    </thead>
+                    <tbody id="calidad-auditoria-tbody">
+                        <tr><td colspan="6" style="text-align: center; color: var(--gray-500);">Realiza una búsqueda para ver resultados</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <form class="detail-form-grid hidden" id="calidad-auditoria-form">
+                <div class="form-field">
+                    <label for="calidad-auditoria-turno">Turno (Calculado)</label>
+                    <select class="table-select" id="calidad-auditoria-turno" name="calidad_turno">
+                        <option value="1T">1T</option>
+                        <option value="2T">2T</option>
+                        <option value="3T">3T</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="calidad-auditoria-auditor">Auditor</label>
+                    <input type="text" class="table-input" id="calidad-auditoria-auditor" name="calidad_auditor" placeholder="Nombre del Auditor">
+                </div>
+            </form>
+
+            <div class="modal-actions hidden" id="calidad-auditoria-actions">
+                <button class="ghost-button" id="calidad-auditoria-clear" type="button">Limpiar Selección</button>
+                <button class="primary-button" id="calidad-auditoria-save" type="button" style="background-color: var(--warning); border-color: var(--warning); color: var(--white);">Guardar Auditoría</button>
             </div>
         </div>
     </div>
