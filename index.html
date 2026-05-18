@@ -891,7 +891,7 @@
     <div class="modal-backdrop hidden" id="calidad-auditoria-modal">
         <div class="modal-card modal-card-form" style="max-width: 800px;">
             <div class="modal-card-head">
-                <h3 id="calidad-auditoria-title">Auditoría Masiva</h3>
+                <h3 id="calidad-auditoria-title">Auditoría</h3>
                 <button class="modal-close-button" id="calidad-auditoria-close" type="button" aria-label="Cerrar">x</button>
             </div>
 
@@ -941,6 +941,33 @@
             <div class="modal-actions hidden" id="calidad-auditoria-actions">
                 <button class="ghost-button" id="calidad-auditoria-clear" type="button">Limpiar Selección</button>
                 <button class="primary-button" id="calidad-auditoria-save" type="button" style="background-color: var(--warning); border-color: var(--warning); color: var(--white);">Guardar Auditoría</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="calidad-info-modal">
+        <div class="modal-card modal-card-form" style="max-width: 612px;">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="calidad-info-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="calidad-info-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="calidad-info-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <div class="quality-info-grid">
+                <div class="quality-info-item">
+                    <span class="quality-info-label">Cantidad Rechazos</span>
+                    <strong class="quality-info-value" id="calidad-info-cantidad-rechazos">0</strong>
+                </div>
+                <div class="quality-info-item quality-info-item-full" id="calidad-info-motivos-block">
+                    <span class="quality-info-label">Motivos de Rechazo</span>
+                    <div class="quality-info-list" id="calidad-info-motivos"></div>
+                </div>
+                <div class="quality-info-item quality-info-item-full">
+                    <span class="quality-info-label">Observacion de Calidad</span>
+                    <p class="quality-info-text" id="calidad-info-observacion">Sin observaciones registradas.</p>
+                </div>
             </div>
         </div>
     </div>
