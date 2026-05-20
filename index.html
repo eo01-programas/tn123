@@ -61,7 +61,7 @@
                         name="password"
                         type="password"
                         autocomplete="current-password"
-                        placeholder="Ingresa tu contraseña"
+                        placeholder="Ingresa tu contraseÃ±a"
                         required
                     >
                 </label>
@@ -369,7 +369,7 @@
                                     <th>MAQ</th>
                                     <th>Proceso</th>
                                     <th>Tipo_proceso</th>
-                                    <th>Kg(teñido)</th>
+                                    <th>Kg(teÃ±ido)</th>
                                     <th>Control@</th>
                                     <th>Superv</th>
                                     <th>Inicio</th>
@@ -516,8 +516,12 @@
                         </button>
                     </div>
 
-                    <div style="display: flex; gap: 8px;">
-                        <button class="primary-button" id="btn-auditoria-calidad" type="button" style="background-color: var(--warning); border-color: var(--warning); color: var(--white);" title="Auditoría Masiva">
+                    <div class="quality-toolbar-actions">
+                        <label class="quality-search-field quality-search-field-top" for="calidad-toolbar-search">
+                            <span>Busqueda:</span>
+                            <input type="text" id="calidad-toolbar-search" class="table-input" placeholder="OP-PTDA" maxlength="10">
+                        </label>
+                        <button class="primary-button" id="btn-auditoria-calidad" type="button" style="background-color: var(--warning); border-color: var(--warning); color: var(--white);" title="Auditoria Masiva">
                             <i class="ph ph-clipboard-text" aria-hidden="true"></i>
                             <span>AUDITORIA</span>
                         </button>
@@ -825,12 +829,15 @@
             <form class="detail-form-grid" id="calidad-reject-form">
                 <div class="form-field form-field-full">
                     <label for="calidad-motivo-rechazo">Motivo de Rechazo</label>
-                    <select class="table-select" id="calidad-motivo-rechazo" name="motivo_rechazo_1">
-                        <option value="">Seleccionar motivo...</option>
-                    </select>
+                    <input class="table-input" id="calidad-motivo-rechazo" name="motivo_rechazo_1" list="calidad-motivo-rechazo-list" placeholder="Escribe para buscar motivo...">
+                    <datalist id="calidad-motivo-rechazo-list"></datalist>
                 </div>
                 <div class="form-field form-field-full">
-                    <label for="calidad-observacion">Observación de Calidad</label>
+                    <label for="calidad-supervisor-rechazo">Supervisor</label>
+                    <input type="text" class="table-input" id="calidad-supervisor-rechazo" name="supervisor_rechazo_1" placeholder="Nombre del Supervisor">
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="calidad-observacion">ObservaciÃ³n de Calidad</label>
                     <div class="voice-textarea-wrapper" style="position: relative; display: flex; flex-direction: column;">
                         <textarea class="table-textarea" id="calidad-observacion" name="observacion_calidad" rows="4" style="text-transform: none;"></textarea>
                         <button type="button" class="ghost-button icon-only-button voice-dictation-btn" id="calidad-voice-btn" style="position: absolute; right: 8px; bottom: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;" title="Dictar por voz">
@@ -859,19 +866,23 @@
 
             <form class="detail-form-grid" id="calidad-approve-form">
                 <div class="form-field">
-                    <label for="calidad-tipo-aprobacion">Tipo de Aprobación</label>
+                    <label for="calidad-tipo-aprobacion">Tipo de AprobaciÃ³n</label>
                     <select class="table-select" id="calidad-tipo-aprobacion" name="tipo_aprobacion">
                         <option value="">Seleccionar tipo...</option>
                     </select>
                 </div>
                 <div class="form-field">
-                    <label for="calidad-quien-aprobo">Quién Aprobó</label>
+                    <label for="calidad-quien-aprobo">Quien Aprobo</label>
                     <select class="table-select" id="calidad-quien-aprobo" name="quien_aprobo">
-                        <option value="">Seleccionar quién...</option>
+                        <option value="">Seleccionar quiÃ©n...</option>
                     </select>
                 </div>
+                <div class="form-field">
+                    <label for="calidad-supervisor-aprobacion">Supervisor</label>
+                    <input type="text" class="table-input" id="calidad-supervisor-aprobacion" name="supervisor_aprobacion" placeholder="Nombre del Supervisor">
+                </div>
                 <div class="form-field form-field-full">
-                    <label for="calidad-approve-observacion">Observación de Calidad</label>
+                    <label for="calidad-approve-observacion">ObservaciÃ³n de Calidad</label>
                     <div class="voice-textarea-wrapper" style="position: relative; display: flex; flex-direction: column;">
                         <textarea class="table-textarea" id="calidad-approve-observacion" name="observacion_calidad" rows="4" style="text-transform: none;"></textarea>
                         <button type="button" class="ghost-button icon-only-button voice-dictation-btn" id="calidad-approve-voice-btn" style="position: absolute; right: 8px; bottom: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;" title="Dictar por voz">
@@ -891,7 +902,7 @@
     <div class="modal-backdrop hidden" id="calidad-auditoria-modal">
         <div class="modal-card modal-card-form" style="max-width: 800px;">
             <div class="modal-card-head">
-                <h3 id="calidad-auditoria-title">Auditoría</h3>
+                <h3 id="calidad-auditoria-title">Auditoria</h3>
                 <button class="modal-close-button" id="calidad-auditoria-close" type="button" aria-label="Cerrar">x</button>
             </div>
 
@@ -910,15 +921,15 @@
                     <thead>
                         <tr>
                             <th style="width: 50px; text-align: center;"><input type="checkbox" id="calidad-auditoria-select-all" aria-label="Seleccionar todos"></th>
-                            <th>cliente</th>
-                            <th>OP-PTDA</th>
+                            <th style="width: 84px;">cliente</th>
+                            <th style="width: 104px;">OP-PTDA</th>
                             <th>articulo</th>
-                            <th>kg(crudo)</th>
-                            <th>#rollos/cntd</th>
+                            <th style="width: 88px;">kg(crudo)</th>
+                            <th style="width: 108px;">#rollos/cntd</th>
                         </tr>
                     </thead>
                     <tbody id="calidad-auditoria-tbody">
-                        <tr><td colspan="6" style="text-align: center; color: var(--gray-500);">Realiza una búsqueda para ver resultados</td></tr>
+                        <tr><td colspan="6" style="text-align: center; color: var(--gray-500);">Realiza una busqueda para ver resultados</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -939,8 +950,8 @@
             </form>
 
             <div class="modal-actions hidden" id="calidad-auditoria-actions">
-                <button class="ghost-button" id="calidad-auditoria-clear" type="button">Limpiar Selección</button>
-                <button class="primary-button" id="calidad-auditoria-save" type="button" style="background-color: var(--warning); border-color: var(--warning); color: var(--white);">Guardar Auditoría</button>
+                <button class="ghost-button" id="calidad-auditoria-clear" type="button">Limpiar Seleccion</button>
+                <button class="primary-button" id="calidad-auditoria-save" type="button" style="background-color: var(--warning); border-color: var(--warning); color: var(--white);">Guardar Auditoria</button>
             </div>
         </div>
     </div>
@@ -956,11 +967,11 @@
             </div>
 
             <div class="quality-info-grid">
-                <div class="quality-info-item">
-                    <span class="quality-info-label">Cantidad Rechazos</span>
-                    <strong class="quality-info-value" id="calidad-info-cantidad-rechazos">0</strong>
+                <div class="quality-info-item quality-info-item-inline">
+                    <span class="quality-info-label">#Rechazos :</span>
+                    <strong class="quality-info-value quality-info-value-inline" id="calidad-info-cantidad-rechazos">0</strong>
                 </div>
-                <div class="quality-info-item quality-info-item-full" id="calidad-info-motivos-block">
+                <div class="quality-info-item" id="calidad-info-motivos-block">
                     <span class="quality-info-label">Motivos de Rechazo</span>
                     <div class="quality-info-list" id="calidad-info-motivos"></div>
                 </div>
@@ -984,3 +995,4 @@
     </div>
 </body>
 </html>
+
