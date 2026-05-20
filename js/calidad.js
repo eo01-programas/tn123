@@ -2,8 +2,17 @@
     let currentFilter = 'ACTIVE';
     let durationTimer = null;
     let currentRejectRecordId = null;
+    let qualityLookupQuery = '';
+    let qualityLookupCommittedQuery = '';
 
-    const PERSON_FIELDS = ['calidad_auditor'];
+    const PERSON_FIELDS = [
+        'calidad_auditor',
+        'supervisor_aprobacion',
+        'supervisor_rechazo_1',
+        'supervisor_rechazo_2',
+        'supervisor_rechazo_3',
+        'supervisor_rechazo_4'
+    ];
     const CALIDAD_UNPROGRAMMED_STATES = new Set(['', 'X PROG']);
     const QUALITY_EXPORT_COLUMNS = [
         { key: 'calidad_p', header: 'P', width: 6, align: 'center' },
@@ -78,6 +87,105 @@
         return filter === 'REJECTED'
             ? getRejectedRecords(records)
             : getActiveRecords(records);
+    }
+
+    function normalizeQualityLookupQuery(value) {
+        return TintoreriaUtils.normalizeOpPartidaSearchValue(value);
+    }
+
+    function filterRecordsForQualityLookup(records, query = qualityLookupQuery, options = {}) {
+        const { exact = false } = options;
+        const normalizedQuery = normalizeQualityLookupQuery(query);
+        if (!normalizedQuery) {
+            return [...(records || [])];
+        }
+
+        return (records || []).filter((record) => {
+            const opPartida = TintoreriaUtils.formatOpPartida(record && record.op_tela, record && record.partida);
+            const normalizedOpPartida = normalizeQualityLookupQuery(opPartida);
+            return exact
+                ? normalizedOpPartida === normalizedQuery
+                : normalizedOpPartida.includes(normalizedQuery);
+        });
+    }
+
+    function setCurrentFilter(filter, options = {}) {
+        const { rerender = true } = options;
+        currentFilter = filter === 'REJECTED' ? 'REJECTED' : 'ACTIVE';
+
+        document.querySelectorAll('[data-calidad-filter]').forEach((node) => {
+            node.classList.toggle('active', node.dataset.calidadFilter === currentFilter);
+        });
+
+        if (rerender) {
+            renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
+        }
+    }
+
+    function clearQualityLookup(options = {}) {
+        const { rerender = true } = options;
+        qualityLookupQuery = '';
+        qualityLookupCommittedQuery = '';
+        if (rerender) {
+            renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
+        }
+    }
+
+    function getQualityLookupMatches(records, query) {
+        const activeMatches = filterRecordsForQualityLookup(getActiveRecords(records), query, { exact: true });
+        const rejectedMatches = filterRecordsForQualityLookup(getRejectedRecords(records), query, { exact: true });
+
+        return {
+            activeMatches,
+            rejectedMatches
+        };
+    }
+
+    function applyQualityLookup(query, options = {}) {
+        const { silentNoMatch = false, cycleOnRepeat = false, markCommitted = false } = options;
+        const normalizedQuery = normalizeQualityLookupQuery(query);
+        if (!normalizedQuery) {
+            clearQualityLookup();
+            return true;
+        }
+
+        const records = TintoreriaApp.getRecords();
+        const { activeMatches, rejectedMatches } = getQualityLookupMatches(records, normalizedQuery);
+        const hasActiveMatches = activeMatches.length > 0;
+        const hasRejectedMatches = rejectedMatches.length > 0;
+
+        if (!hasActiveMatches && !hasRejectedMatches) {
+            if (markCommitted) {
+                qualityLookupCommittedQuery = '';
+            }
+            if (!silentNoMatch) {
+                TintoreriaApp.showToast(`No se encontro la partida ${query}.`, 'error', 'Sin resultados');
+            }
+            return false;
+        }
+
+        qualityLookupQuery = query.trim();
+
+        let targetFilter = 'ACTIVE';
+        if (hasActiveMatches && hasRejectedMatches) {
+            const shouldCycle = cycleOnRepeat && qualityLookupCommittedQuery === normalizedQuery;
+            if (shouldCycle) {
+                targetFilter = currentFilter === 'ACTIVE' ? 'REJECTED' : 'ACTIVE';
+            } else {
+                targetFilter = 'ACTIVE';
+            }
+        } else if (hasRejectedMatches && !hasActiveMatches) {
+            targetFilter = 'REJECTED';
+        } else if (hasActiveMatches && !hasRejectedMatches) {
+            targetFilter = 'ACTIVE';
+        }
+
+        if (markCommitted) {
+            qualityLookupCommittedQuery = normalizedQuery;
+        }
+
+        setCurrentFilter(targetFilter);
+        return true;
     }
 
     function normalizeClientFilterValue(value) {
@@ -204,6 +312,17 @@
         }).join('');
     }
 
+    function datalistOptionMarkup(options) {
+        return (options || [])
+            .filter((optionValue) => String(optionValue || '').trim() !== '')
+            .map((optionValue) => `<option value="${TintoreriaUtils.escapeHtml(optionValue)}"></option>`)
+            .join('');
+    }
+
+    function normalizeApprovalType(value) {
+        return String(value || '').trim().toUpperCase();
+    }
+
     function renderSubtabCounts(records) {
         const activeRecords = getActiveRecords(records);
         const rejectedRecords = getRejectedRecords(records);
@@ -267,8 +386,8 @@
                 type="button"
                 data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}"
                 data-action="show-info"
-                title="Ver información de calidad"
-                aria-label="Ver información de calidad"
+                title="Ver informaciÃ³n de calidad"
+                aria-label="Ver informaciÃ³n de calidad"
             >
                 <i class="ph ph-eye"></i>
             </button>
@@ -281,13 +400,17 @@
             return;
         }
 
-        const filtered = TintoreriaUtils.filterRecordsForSearch(getVisibleRecords(records), state, 'calidad');
+        const filtered = filterRecordsForQualityLookup(
+            TintoreriaUtils.filterRecordsForSearch(getVisibleRecords(records), state, 'calidad')
+        );
         renderSubtabCounts(records);
 
         if (!filtered.length) {
-            const emptyLabel = currentFilter === 'REJECTED'
-                ? 'No hay partidas rechazadas.'
-                : 'No hay filas en Calidad.';
+            const emptyLabel = qualityLookupQuery
+                ? `No se encontraron filas para ${TintoreriaUtils.escapeHtml(qualityLookupQuery)} en este subtab.`
+                : (currentFilter === 'REJECTED'
+                    ? 'No hay partidas rechazadas.'
+                    : 'No hay filas en Calidad.');
 
             tbody.innerHTML = `
                 <tr class="empty-state">
@@ -565,9 +688,12 @@
                     return null;
                 }
 
+                const supervisor = String(record && record[`supervisor_rechazo_${index}`] || '').trim();
+
                 return {
                     label: `Motivo ${index}`,
-                    value
+                    value,
+                    supervisor
                 };
             })
             .filter(Boolean);
@@ -603,6 +729,9 @@
                 <div>
                     <strong>${TintoreriaUtils.escapeHtml(entry.label)}:</strong>
                     <span>${TintoreriaUtils.escapeHtml(entry.value)}</span>
+                    ${entry.supervisor ? `
+                        <span> &rarr; <strong>Supervisor:</strong> ${TintoreriaUtils.escapeHtml(entry.supervisor)}</span>
+                    ` : ''}
                 </div>
             `).join('');
         }
@@ -631,13 +760,15 @@
             clearBtn: document.getElementById('calidad-reject-clear'),
             saveBtn: document.getElementById('calidad-reject-save'),
             voiceBtn: document.getElementById('calidad-voice-btn'),
+            supervisorInput: document.getElementById('calidad-supervisor-rechazo'),
             observacion: document.getElementById('calidad-observacion'),
-            motivoSelect: document.getElementById('calidad-motivo-rechazo')
+            motivoInput: document.getElementById('calidad-motivo-rechazo'),
+            motivoList: document.getElementById('calidad-motivo-rechazo-list')
         };
     }
 
     function openRejectModal(record, rejectNumber = 1, finalStatus = 'RECHAZADO') {
-        const { modal, title, subtitle, form, motivoSelect, observacion } = getRejectModalElements();
+        const { modal, title, subtitle, form, motivoInput, motivoList, observacion, supervisorInput } = getRejectModalElements();
         if (!record || !(modal instanceof HTMLElement)) {
             return;
         }
@@ -649,13 +780,21 @@
         if (title) title.textContent = `${record.cliente || ''} - ${TintoreriaUtils.formatOpPartida(record.op_tela, record.partida)} - ${TintoreriaUtils.formatColorLabel(record.color)}`;
         if (subtitle) subtitle.textContent = `${record.cod_art || ''} - ${record.articulo || ''}`;
 
-        if (motivoSelect) {
-            motivoSelect.name = `motivo_rechazo_${rejectNumber}`;
-            motivoSelect.innerHTML = optionMarkup(record[`motivo_rechazo_${rejectNumber}`] || '', TintoreriaConfig.MOTIVOS_RECHAZO_OPTIONS || [], 'Seleccionar motivo...');
+        if (motivoInput) {
+            motivoInput.name = `motivo_rechazo_${rejectNumber}`;
+            motivoInput.value = record[`motivo_rechazo_${rejectNumber}`] || '';
+        }
+
+        if (motivoList) {
+            motivoList.innerHTML = datalistOptionMarkup(TintoreriaConfig.MOTIVOS_RECHAZO_OPTIONS || []);
         }
 
         if (observacion) {
             observacion.name = 'observacion_calidad';
+        }
+
+        if (supervisorInput) {
+            supervisorInput.name = `supervisor_rechazo_${rejectNumber}`;
         }
 
         if (form instanceof HTMLFormElement) {
@@ -698,7 +837,15 @@
         };
 
         for (const [key, value] of formData.entries()) {
-            updates[key] = String(value).trim();
+            const trimmedValue = String(value).trim();
+            if (key.startsWith('motivo_rechazo_')) {
+                updates[key] = trimmedValue.toUpperCase();
+                continue;
+            }
+
+            updates[key] = PERSON_FIELDS.includes(key)
+                ? TintoreriaUtils.sanitizePersonName(trimmedValue)
+                : trimmedValue;
         }
 
         const recordId = currentRejectRecordId;
@@ -706,7 +853,7 @@
 
         try {
             await TintoreriaApp.saveRecordChanges(recordId, updates);
-            TintoreriaApp.showToast('Rechazo registrado exitosamente.', 'success', 'Operación completada');
+            TintoreriaApp.showToast('Rechazo registrado exitosamente.', 'success', 'Operacion completada');
         } catch (error) {
             TintoreriaApp.showToast(error.message || 'No se pudo guardar el rechazo.', 'error', 'Error al guardar');
             renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
@@ -718,7 +865,7 @@
         if (!observacion) return;
 
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            TintoreriaApp.showToast('Tu navegador no soporta el reconocimiento de voz.', 'error', 'Función no disponible');
+            TintoreriaApp.showToast('Tu navegador no soporta el reconocimiento de voz.', 'error', 'FunciÃ³n no disponible');
             return;
         }
 
@@ -729,7 +876,7 @@
         recognition.maxAlternatives = 1;
 
         recognition.onstart = function() {
-            TintoreriaApp.showToast('Escuchando... Habla ahora.', 'info', 'Micrófono activo');
+            TintoreriaApp.showToast('Escuchando... Habla ahora.', 'info', 'MicrÃ³fono activo');
         };
 
         recognition.onresult = function(event) {
@@ -758,6 +905,7 @@
             clearBtn: document.getElementById('calidad-approve-clear'),
             saveBtn: document.getElementById('calidad-approve-save'),
             voiceBtn: document.getElementById('calidad-approve-voice-btn'),
+            supervisorInput: document.getElementById('calidad-supervisor-aprobacion'),
             observacion: document.getElementById('calidad-approve-observacion'),
             tipoSelect: document.getElementById('calidad-tipo-aprobacion'),
             quienSelect: document.getElementById('calidad-quien-aprobo')
@@ -765,7 +913,7 @@
     }
 
     function openApproveModal(record) {
-        const { modal, title, subtitle, form, tipoSelect, quienSelect, observacion } = getApproveModalElements();
+        const { modal, title, subtitle, form, tipoSelect, quienSelect, observacion, supervisorInput } = getApproveModalElements();
         if (!record || !(modal instanceof HTMLElement)) {
             return;
         }
@@ -776,10 +924,10 @@
         if (subtitle) subtitle.textContent = `${record.cod_art || ''} - ${record.articulo || ''}`;
 
         if (tipoSelect) {
-            tipoSelect.innerHTML = optionMarkup(record.tipo_aprobacion || '', TintoreriaConfig.TIPO_APROBACION_OPTIONS || [], 'Seleccionar tipo...');
+            tipoSelect.innerHTML = optionMarkup(normalizeApprovalType(record.tipo_aprobacion), TintoreriaConfig.TIPO_APROBACION_OPTIONS || [], 'Seleccionar tipo...');
         }
         if (quienSelect) {
-            quienSelect.innerHTML = optionMarkup(record.quien_aprobo || '', TintoreriaConfig.QUIEN_APROBO_OPTIONS || [], 'Seleccionar quién...');
+            quienSelect.innerHTML = optionMarkup(record.quien_aprobo || '', TintoreriaConfig.QUIEN_APROBO_OPTIONS || [], 'Seleccionar quiÃ©n...');
         }
 
         if (form instanceof HTMLFormElement) {
@@ -821,7 +969,15 @@
         };
 
         for (const [key, value] of formData.entries()) {
-            updates[key] = String(value).trim();
+            const trimmedValue = String(value).trim();
+            if (key.startsWith('motivo_rechazo_')) {
+                updates[key] = trimmedValue.toUpperCase();
+                continue;
+            }
+
+            updates[key] = PERSON_FIELDS.includes(key)
+                ? TintoreriaUtils.sanitizePersonName(trimmedValue)
+                : trimmedValue;
         }
 
         const recordId = currentApproveRecordId;
@@ -829,9 +985,9 @@
 
         try {
             await TintoreriaApp.saveRecordChanges(recordId, updates);
-            TintoreriaApp.showToast('Aprobación registrada exitosamente.', 'success', 'Operación completada');
+            TintoreriaApp.showToast('Aprobacion registrada exitosamente.', 'success', 'Operacion completada');
         } catch (error) {
-            TintoreriaApp.showToast(error.message || 'No se pudo guardar la aprobación.', 'error', 'Error al guardar');
+            TintoreriaApp.showToast(error.message || 'No se pudo guardar la aprobaciÃ³n.', 'error', 'Error al guardar');
             renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
         }
     }
@@ -841,7 +997,7 @@
         if (!observacion) return;
 
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            TintoreriaApp.showToast('Tu navegador no soporta el reconocimiento de voz.', 'error', 'Función no disponible');
+            TintoreriaApp.showToast('Tu navegador no soporta el reconocimiento de voz.', 'error', 'FunciÃ³n no disponible');
             return;
         }
 
@@ -852,7 +1008,7 @@
         recognition.maxAlternatives = 1;
 
         recognition.onstart = function() {
-            TintoreriaApp.showToast('Escuchando... Habla ahora.', 'info', 'Micrófono activo');
+            TintoreriaApp.showToast('Escuchando... Habla ahora.', 'info', 'MicrÃ³fono activo');
         };
 
         recognition.onresult = function(event) {
@@ -888,9 +1044,33 @@
     function calculateTurno() {
         const now = new Date();
         const hours = now.getHours();
-        if (hours >= 7 && hours < 15) return '1T';
-        if (hours >= 15 && hours < 23) return '2T';
-        return '3T'; // 11pm (23) to 6:59am
+        if (hours >= 6 && hours < 14) return '1T';
+        if (hours >= 14 && hours < 23) return '2T';
+        return '3T'; // 11pm (23) to 5:59am
+    }
+
+    function isAuditoriaAlreadyRegistered(record) {
+        return Boolean(record && String(record.calidad_inicio || '').trim());
+    }
+
+    function getAuditoriaRegisteredStatus(record) {
+        if (!isAuditoriaAlreadyRegistered(record)) {
+            return 'Pendiente';
+        }
+
+        if (normalizeCalidadState(record) === 'OK') {
+            return 'YA FUE REGISTRADO: APROBADO';
+        }
+
+        if (isRejectedRecord(record)) {
+            const reasons = getRejectReasonEntries(record);
+            const reasonLabel = reasons.length
+                ? ` - ${reasons.map((entry) => `${entry.label}: ${entry.value}`).join(' | ')}`
+                : '';
+            return `YA FUE REGISTRADO: ${getDisplayCalidadState(record).toUpperCase()}${reasonLabel}`;
+        }
+
+        return 'YA FUE REGISTRADO: AUDITANDO';
     }
 
     function openAuditoriaModal() {
@@ -898,7 +1078,7 @@
         if (!els.modal) return;
         
         els.searchInput.value = '';
-        els.tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--gray-500);">Realiza una búsqueda para ver resultados</td></tr>';
+        els.tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--gray-500);">Realiza una busqueda para ver resultados</td></tr>';
         els.form.classList.add('hidden');
         els.actions.classList.add('hidden');
         els.selectAll.checked = false;
@@ -918,7 +1098,7 @@
     function renderAuditoriaTable(query) {
         const els = getAuditoriaModalElements();
         if (!query.trim()) {
-            els.tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--gray-500);">Realiza una búsqueda para ver resultados</td></tr>';
+            els.tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--gray-500);">Realiza una busqueda para ver resultados</td></tr>';
             els.form.classList.add('hidden');
             els.actions.classList.add('hidden');
             return;
@@ -941,12 +1121,15 @@
 
         els.tbody.innerHTML = filtered.map(record => `
             <tr>
-                <td style="text-align: center;"><input type="checkbox" class="auditoria-row-checkbox" value="${TintoreriaUtils.escapeHtml(record.id_registro)}"></td>
-                <td>${TintoreriaUtils.escapeHtml(record.cliente || '')}</td>
-                <td><strong>${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatOpPartida(record.op_tela, record.partida))}</strong></td>
-                <td>${TintoreriaUtils.escapeHtml(record.articulo || '')}</td>
-                <td>${TintoreriaUtils.escapeHtml(record.kg_crudo || '0')}</td>
-                <td>${TintoreriaUtils.escapeHtml(record.rollos_crudo || '0')}</td>
+                <td style="text-align: center;">${isAuditoriaAlreadyRegistered(record)
+                    ? '<span class="cell-text" style="font-size:12px; color: var(--gray-500);">Registrado</span>'
+                    : `<input type="checkbox" class="auditoria-row-checkbox" value="${TintoreriaUtils.escapeHtml(record.id_registro)}">`
+                }</td>
+                <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.cliente || '')}">${TintoreriaUtils.escapeHtml(record.cliente || '')}</span></td>
+                <td><strong class="cell-text" title="${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatOpPartida(record.op_tela, record.partida))}">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatOpPartida(record.op_tela, record.partida))}</strong></td>
+                <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.articulo || '')}">${TintoreriaUtils.escapeHtml(record.articulo || '')}</span></td>
+                <td>${TintoreriaUtils.escapeHtml(record.peso_kg_crudo || '0')}</td>
+                <td>${TintoreriaUtils.escapeHtml(record.cantidad_crudo || '0')}</td>
             </tr>
         `).join('');
 
@@ -1025,25 +1208,21 @@
             });
             await Promise.all(promises);
 
-            TintoreriaApp.showToast(`Auditoría guardada exitosamente en ${selectedIds.length} partida(s).`, 'success', 'Operación completada');
+            TintoreriaApp.showToast(`Auditoria guardada exitosamente en ${selectedIds.length} partida(s).`, 'success', 'Operacion completada');
             closeAuditoriaModal();
             renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
         } catch (error) {
-            TintoreriaApp.showToast(error.message || 'Error al guardar la auditoría.', 'error', 'Error');
+            TintoreriaApp.showToast(error.message || 'Error al guardar la auditoria.', 'error', 'Error');
         } finally {
             els.saveBtn.disabled = false;
-            els.saveBtn.textContent = 'Guardar Auditoría';
+            els.saveBtn.textContent = 'Guardar Auditoria';
         }
     }
 
     function init() {
         document.querySelectorAll('[data-calidad-filter]').forEach((button) => {
             button.addEventListener('click', () => {
-                currentFilter = button.dataset.calidadFilter || 'ACTIVE';
-                document.querySelectorAll('[data-calidad-filter]').forEach((node) => {
-                    node.classList.toggle('active', node === button);
-                });
-                renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
+                setCurrentFilter(button.dataset.calidadFilter || 'ACTIVE');
             });
         });
 
@@ -1051,6 +1230,37 @@
         if (tbody) {
             tbody.addEventListener('change', handleEditableChange);
             tbody.addEventListener('click', handleActionClick);
+        }
+
+        const qualitySearchInput = document.getElementById('calidad-toolbar-search');
+        if (qualitySearchInput) {
+            qualitySearchInput.addEventListener('input', () => {
+                const nextValue = qualitySearchInput.value;
+                if (!nextValue.trim()) {
+                    clearQualityLookup();
+                    return;
+                }
+
+                qualityLookupCommittedQuery = '';
+                qualityLookupQuery = nextValue.trim();
+                renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
+            });
+
+            qualitySearchInput.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+                const applied = applyQualityLookup(qualitySearchInput.value, {
+                    cycleOnRepeat: true,
+                    markCommitted: true
+                });
+                if (!applied) {
+                    qualityLookupQuery = qualitySearchInput.value.trim();
+                    renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
+                }
+            });
         }
 
         const exportButton = document.getElementById('btn-export-calidad-excel');
@@ -1200,3 +1410,4 @@
         sortRecordsForPageLoad
     };
 })();
+
