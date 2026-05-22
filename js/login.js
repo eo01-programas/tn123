@@ -4,7 +4,7 @@
     const DEFAULT_CREDENTIALS_TABLE = `
 | usuario | password |
 | --- | --- |
-| Pcp_textil | 087ja |
+| Pcp_textil | 9973 |
 | Tintoreria05 | 982ao |
 | Supervisor01 | 993ra |
 | Supervisor02 | 477lf |
@@ -83,6 +83,7 @@
     };
 
     let credentialsMap = new Map();
+    let credentialsList = [];
     let currentSession = null;
     let credentialsReadyPromise = Promise.resolve();
     let credentialsLoaded = false;
@@ -134,7 +135,31 @@
         }
 
         const parsedCredentials = parseCredentialsTable(rawTable);
+        credentialsList = parsedCredentials;
         credentialsMap = new Map(parsedCredentials.map((credential) => [credential.username, credential]));
+    }
+
+    function populateUsernameOptions() {
+        const usernameSelect = document.getElementById('login-username');
+        if (!(usernameSelect instanceof HTMLSelectElement)) {
+            return;
+        }
+
+        usernameSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Selecciona usuario';
+        placeholder.selected = true;
+        placeholder.disabled = true;
+        usernameSelect.appendChild(placeholder);
+
+        credentialsList.forEach((credential) => {
+            const option = document.createElement('option');
+            option.value = credential.username;
+            option.textContent = credential.username;
+            usernameSelect.appendChild(option);
+        });
     }
 
     function buildSession(username) {
@@ -418,6 +443,7 @@
         Array.from(form.elements).forEach((element) => {
             if (
                 element instanceof HTMLInputElement ||
+                element instanceof HTMLSelectElement ||
                 element instanceof HTMLButtonElement
             ) {
                 element.disabled = !isEnabled;
@@ -448,13 +474,22 @@
 
         const usernameInput = document.getElementById('login-username');
         const passwordInput = document.getElementById('login-password');
-        if (!(usernameInput instanceof HTMLInputElement) || !(passwordInput instanceof HTMLInputElement)) {
+        if (
+            !(usernameInput instanceof HTMLSelectElement || usernameInput instanceof HTMLInputElement) ||
+            !(passwordInput instanceof HTMLInputElement)
+        ) {
             return;
         }
 
         const username = normalizeUsername(usernameInput.value);
         const password = normalizePassword(passwordInput.value || '');
         const credential = credentialsMap.get(username);
+
+        if (!username) {
+            setFeedback('Selecciona un usuario.');
+            usernameInput.focus();
+            return;
+        }
 
         if (!credential || credential.password !== password) {
             setFeedback('Usuario o contraseña incorrectos.');
@@ -496,6 +531,8 @@
 
         credentialsReadyPromise = loadCredentialsTable()
             .then(() => {
+                populateUsernameOptions();
+
                 if (currentSession && !credentialsMap.has(currentSession.username)) {
                     clearSession();
                     syncShellState();
