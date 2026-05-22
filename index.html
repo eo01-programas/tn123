@@ -43,15 +43,14 @@
             <form class="login-form" id="login-form" novalidate>
                 <label class="login-field">
                     <span>Usuario</span>
-                    <input
+                    <select
                         id="login-username"
                         name="username"
-                        type="text"
                         autocomplete="username"
-                        spellcheck="false"
-                        placeholder="Ingresa tu usuario"
                         required
                     >
+                        <option value="" selected disabled>Selecciona usuario</option>
+                    </select>
                 </label>
 
                 <label class="login-field">
