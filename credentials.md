@@ -1,6 +1,6 @@
 | usuario | password |
 | --- | --- |
-| Pcp_textil | 087ja |
+| Pcp_textil | 9973 |
 | Tintoreria05 | 982ao |
 | Supervisor01 | 993ra |
 | Supervisor02 | 477lf |
