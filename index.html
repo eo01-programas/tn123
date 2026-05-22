@@ -171,11 +171,17 @@
             <section id="view-maestro" class="view-section">
                 <div class="panel-header panel-header-maestro">
                     <div>
-                        <h2>Ingreso Tela Cruda</h2>
+                        <div class="maestro-title-group">
+                            <h2>Ingreso Tela Cruda</h2>
+                            <button class="maestro-upload-circle-button" id="btn-open-entrega-excel" type="button" title="Cargar fecha entrega tela acabada" aria-label="Cargar fecha entrega tela acabada">
+                                <i class="ph ph-calendar-check"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="panel-actions">
                         <input type="file" id="excel-input" accept=".xls,.xlsx" hidden>
+                        <input type="file" id="excel-entrega-input" accept=".xls,.xlsx" hidden>
                         <div class="metric-grid" aria-label="Resumen de maestro">
                             <article class="metric-card">
                                 <strong id="metric-total-records">0 Partidas</strong>
@@ -514,6 +520,11 @@
                             <span class="count-pill" id="count-calidad-rejected">0</span>
                             <span class="subtab-summary" id="summary-calidad-rejected">[0 partidas - 0.00kg]</span>
                         </button>
+                        <button class="subtab" type="button" data-calidad-filter="APPROVED">
+                            PTDAS APROBADAS
+                            <span class="count-pill" id="count-calidad-approved">0</span>
+                            <span class="subtab-summary" id="summary-calidad-approved">[0 partidas - 0.00kg]</span>
+                        </button>
                     </div>
 
                     <div class="quality-toolbar-actions">
@@ -547,6 +558,7 @@
                                     <th>kg(crudo)</th>
                                     <th>#rollos/cntd</th>
                                     <th>Auditor</th>
+                                    <th>Supervisor</th>
                                     <th>Turno</th>
                                     <th>Inicio</th>
                                     <th>Fin</th>
@@ -995,4 +1007,3 @@
     </div>
 </body>
 </html>
-
