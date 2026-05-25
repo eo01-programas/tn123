@@ -32,6 +32,12 @@
         { key: 'calidad_estado', header: 'Status', width: 14, align: 'center' }
     ];
 
+    function getQualityExportColumns(filter) {
+        return filter === 'APPROVED'
+            ? QUALITY_EXPORT_COLUMNS.slice(1)
+            : QUALITY_EXPORT_COLUMNS;
+    }
+
     function getCurrentUsername() {
         if (!window.TintoreriaAuth || typeof TintoreriaAuth.getSession !== 'function') {
             return '';
@@ -322,7 +328,22 @@
 
         return clientFilteredRecords.map((record) => ({
             urgent: TintoreriaUtils.isUrgentPriority(record.calidad_p),
-            cells: [
+            cells: (filter === 'APPROVED' ? [
+                record.cliente || '',
+                TintoreriaUtils.formatOpPartida(record.op_tela, record.partida),
+                record.cod_color || '',
+                TintoreriaUtils.formatColorLabel(record.color),
+                record.cod_art || '',
+                record.articulo || '',
+                record.peso_kg_crudo || '',
+                record.cantidad_crudo || '',
+                record.calidad_auditor || '',
+                getSupervisorCalidadLabel(record),
+                getTurnoExportLabel(record),
+                getStartExportLabel(record),
+                getFinishExportLabel(record, filter),
+                getStatusExportLabel(record)
+            ] : [
                 record.calidad_p || '',
                 record.cliente || '',
                 TintoreriaUtils.formatOpPartida(record.op_tela, record.partida),
@@ -338,7 +359,7 @@
                 getStartExportLabel(record),
                 getFinishExportLabel(record, filter),
                 getStatusExportLabel(record)
-            ]
+            ])
         }));
     }
 
@@ -368,17 +389,17 @@
                 sheets: [
                     {
                         name: 'En_calidad',
-                        columns: QUALITY_EXPORT_COLUMNS,
+                        columns: getQualityExportColumns('ACTIVE'),
                         rows: getExportRows(records, state, 'ACTIVE')
                     },
                     {
                         name: 'PTDAS_RECHAZADAS',
-                        columns: QUALITY_EXPORT_COLUMNS,
+                        columns: getQualityExportColumns('REJECTED'),
                         rows: getExportRows(records, state, 'REJECTED')
                     },
                     {
                         name: 'PTDAS_APROBADAS',
-                        columns: QUALITY_EXPORT_COLUMNS,
+                        columns: getQualityExportColumns('APPROVED'),
                         rows: getExportRows(records, state, 'APPROVED')
                     }
                 ]
