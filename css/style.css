@@ -2249,11 +2249,13 @@ table.quality-table td:nth-child(7) {
 table.quality-table th:nth-child(8),
 table.quality-table td:nth-child(8) {
     width: 5.5%;
+    text-align: center;
 }
 
 table.quality-table th:nth-child(9),
 table.quality-table td:nth-child(9) {
     width: 5.5%;
+    text-align: center;
 }
 
 table.quality-table th:nth-child(10),
@@ -2284,6 +2286,11 @@ table.quality-table td:nth-child(14) {
 table.quality-table th:nth-child(15),
 table.quality-table td:nth-child(15) {
     width: 7.3%;
+}
+
+table.quality-table.quality-table-hide-priority th:nth-child(1),
+table.quality-table.quality-table-hide-priority td:nth-child(1) {
+    display: none;
 }
 
 table.embalaje-table th:nth-child(1),
