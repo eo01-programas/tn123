@@ -292,9 +292,13 @@
         return TintoreriaUtils.formatProcessDateTimeLabel(record && record.calidad_inicio) || 'click';
     }
 
-    function getFinishExportLabel(record) {
+    function getFinishExportLabel(record, filter) {
         if (!record || !record.calidad_inicio) {
             return '--:--';
+        }
+
+        if (filter === 'APPROVED' && record.calidad_fin) {
+            return TintoreriaUtils.formatProcessDateTimeLabel(record.calidad_fin) || '--:--';
         }
 
         return TintoreriaUtils.formatElapsedTime(record.calidad_inicio, record.calidad_fin || new Date()) || '00:00';
@@ -321,7 +325,7 @@
                 getSupervisorCalidadLabel(record),
                 getTurnoExportLabel(record),
                 getStartExportLabel(record),
-                getFinishExportLabel(record),
+                getFinishExportLabel(record, filter),
                 getStatusExportLabel(record)
             ]
         }));
@@ -461,6 +465,11 @@
 
         const durationLabel = TintoreriaUtils.formatElapsedTime(record.calidad_inicio, record.calidad_fin || new Date()) || '00:00';
         if (record.calidad_fin) {
+            if (currentFilter === 'APPROVED') {
+                const finishLabel = TintoreriaUtils.formatProcessDateTimeLabel(record.calidad_fin);
+                return `<span class="process-pill process-pill-finished">${TintoreriaUtils.escapeHtml(finishLabel || '--:--')}</span>`;
+            }
+
             return `<span class="process-pill process-pill-finished">${TintoreriaUtils.escapeHtml(durationLabel)}</span>`;
         }
 
