@@ -168,9 +168,20 @@
             node.classList.toggle('active', node.dataset.calidadFilter === currentFilter);
         });
 
+        syncQualityPriorityColumnVisibility();
+
         if (rerender) {
             renderTable(TintoreriaApp.getRecords(), TintoreriaApp.state);
         }
+    }
+
+    function syncQualityPriorityColumnVisibility() {
+        const table = document.querySelector('table.quality-table');
+        if (!table) {
+            return;
+        }
+
+        table.classList.toggle('quality-table-hide-priority', currentFilter === 'APPROVED');
     }
 
     function clearQualityLookup(options = {}) {
