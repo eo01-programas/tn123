@@ -515,14 +515,9 @@
                             <span class="subtab-summary" id="summary-calidad-active">[0 partidas - 0.00kg]</span>
                         </button>
                         <button class="subtab" type="button" data-calidad-filter="REJECTED">
-                            PTDAS RECHAZADAS
+                            AUDITADAS
                             <span class="count-pill" id="count-calidad-rejected">0</span>
                             <span class="subtab-summary" id="summary-calidad-rejected">[0 partidas - 0.00kg]</span>
-                        </button>
-                        <button class="subtab" type="button" data-calidad-filter="APPROVED">
-                            PTDAS APROBADAS
-                            <span class="count-pill" id="count-calidad-approved">0</span>
-                            <span class="subtab-summary" id="summary-calidad-approved">[0 partidas - 0.00kg]</span>
                         </button>
                     </div>
 
@@ -545,25 +540,8 @@
                 <div class="table-card">
                     <div class="table-container">
                         <table class="data-table quality-table">
-                            <thead>
-                                <tr>
-                                    <th>P</th>
-                                    <th>cliente</th>
-                                    <th>OP-PTDA</th>
-                                    <th>cod_color</th>
-                                    <th>color</th>
-                                    <th>cod_art</th>
-                                    <th>articulo</th>
-                                    <th>kg(crudo)</th>
-                                    <th>#rollos/cntd</th>
-                                    <th>Auditor</th>
-                                    <th>Supervisor</th>
-                                    <th>Turno</th>
-                                    <th>Inicio</th>
-                                    <th>Fin</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
+                            <colgroup id="colgroup-calidad"></colgroup>
+                            <thead id="thead-calidad"></thead>
                             <tbody id="tbody-calidad"></tbody>
                         </table>
                     </div>
@@ -985,6 +963,7 @@
                 <div class="quality-info-item" id="calidad-info-motivos-block">
                     <span class="quality-info-label">Motivos de Rechazo</span>
                     <div class="quality-info-list" id="calidad-info-motivos"></div>
+                    <div class="quality-info-list hidden" id="calidad-info-aprobacion-block"></div>
                 </div>
                 <div class="quality-info-item quality-info-item-full">
                     <span class="quality-info-label">Observacion de Calidad</span>
