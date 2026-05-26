@@ -298,22 +298,68 @@
     }
 
     function collectClientFilterOptions(table, columnIndex) {
-        return collectColumnFilterOptions(table, columnIndex);
+        return collectColumnFilterOptions(table, columnIndex, '', '');
     }
 
-    function collectColumnFilterOptions(table, columnIndex) {
+    // Cascading filter: collects unique values for a column considering all OTHER active filters.
+    // excludeLabel = the column being opened — its own filter is ignored so the user can change it.
+    function collectColumnFilterOptions(table, columnIndex, viewId, excludeLabel) {
+        // Build the list of active filters for every column EXCEPT the one being opened
+        const activeExact = [];
+        const activeText = [];
+
+        if (viewId) {
+            // CLIENTE filter
+            const clientColIdx = getClientColumnIndex(table);
+            const clientKey = normalizeClientFilterKey(normalizeClientFilterValue(state.clientFilters[viewId]));
+            if (clientKey && clientColIdx >= 0 && excludeLabel !== 'CLIENTE') {
+                activeExact.push({ colIdx: clientColIdx, key: clientKey });
+            }
+
+            // Dropdown column filters
+            const viewColumnFilters = state.columnFilters[viewId] || {};
+            for (const [colLabel, filterValue] of Object.entries(viewColumnFilters)) {
+                if (!filterValue || colLabel === excludeLabel) continue;
+                const colIdx = getTableColumnIndexByHeader(table, colLabel);
+                if (colIdx >= 0) activeExact.push({ colIdx, key: normalizeClientFilterKey(filterValue) });
+            }
+
+            // Text column filters (e.g. OP-PTDA)
+            const viewTextFilters = state.columnTextFilters[viewId] || {};
+            for (const [colLabel, filterText] of Object.entries(viewTextFilters)) {
+                const trimmed = (filterText || '').trim();
+                if (!trimmed || colLabel === excludeLabel) continue;
+                const colIdx = getTableColumnIndexByHeader(table, colLabel);
+                if (colIdx >= 0) activeText.push({ colIdx, key: trimmed.toUpperCase() });
+            }
+        }
+
         const values = new Map();
 
         getClientFilterDataRows(table).forEach((row) => {
+            // Only include rows that pass all OTHER active filters
+            const passesExact = activeExact.every(({ colIdx, key }) =>
+                normalizeClientFilterKey(getColumnCellValue(row.cells[colIdx])) === key
+            );
+            if (!passesExact) return;
+
+            const passesText = activeText.every(({ colIdx, key }) => {
+                const cell = row.cells[colIdx];
+                const textEl = cell && cell.querySelector('.cell-text');
+                const value = (textEl ? textEl.textContent : cell ? cell.textContent : '').trim().toUpperCase();
+                return value.includes(key);
+            });
+            if (!passesText) return;
+
             const cellValue = getColumnCellValue(row.cells[columnIndex]);
             if (!cellValue) return;
-            const key = normalizeClientFilterKey(cellValue);
-            if (!values.has(key)) values.set(key, cellValue);
+            const k = normalizeClientFilterKey(cellValue);
+            if (!values.has(k)) values.set(k, cellValue);
         });
 
-        return Array.from(values.values()).sort((left, right) => {
-            return left.localeCompare(right, 'es', { sensitivity: 'base' });
-        });
+        return Array.from(values.values()).sort((left, right) =>
+            left.localeCompare(right, 'es', { sensitivity: 'base' })
+        );
     }
 
     function ensureClientFilterMenu() {
@@ -432,7 +478,7 @@
             : normalizeClientFilterValue((state.columnFilters[viewId] || {})[columnLabel]);
 
         const menu = ensureClientFilterMenu();
-        const options = collectColumnFilterOptions(table, columnIndex);
+        const options = collectColumnFilterOptions(table, columnIndex, viewId, columnLabel);
 
         menu.root.dataset.viewId = viewId;
         menu.root.dataset.columnLabel = columnLabel;
