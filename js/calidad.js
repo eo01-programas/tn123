@@ -16,7 +16,7 @@
         'supervisor_rechazo_4'
     ];
     const CALIDAD_UNPROGRAMMED_STATES = new Set(['', 'X PROG']);
-    const QUALITY_EXPORT_COLUMNS = [
+    const QUALITY_EXPORT_BASE_COLUMNS = [
         { key: 'cliente', header: 'cliente', width: 12 },
         { key: 'op_ptda', header: 'OP-PTDA', width: 14 },
         { key: 'cod_color', header: 'cod_color', width: 13 },
@@ -32,9 +32,16 @@
         { key: 'calidad_fin', header: 'Fin', width: 12, align: 'center' },
         { key: 'calidad_estado', header: 'Status', width: 14, align: 'center' }
     ];
+    const QUALITY_EXPORT_COLUMNS_ACTIVE = QUALITY_EXPORT_BASE_COLUMNS.map((column) => ({ ...column }));
+    const QUALITY_EXPORT_COLUMNS_AUDITADAS = [
+        ...QUALITY_EXPORT_BASE_COLUMNS.map((column) => ({ ...column })),
+        { key: 'motivo_rechazo', header: 'Motivo rechazo', width: 28 }
+    ];
 
-    function getQualityExportColumns() {
-        return QUALITY_EXPORT_COLUMNS;
+    function getQualityExportColumns(filter = 'ACTIVE') {
+        return filter === 'REJECTED'
+            ? QUALITY_EXPORT_COLUMNS_AUDITADAS
+            : QUALITY_EXPORT_COLUMNS_ACTIVE;
     }
 
     function getCurrentUsername() {
@@ -325,7 +332,11 @@
         return getDisplayCalidadState(record) || 'SELEC';
     }
 
-    function getStartExportLabel(record) {
+    function getStartExportLabel(record, filter) {
+        if (filter === 'REJECTED') {
+            return TintoreriaUtils.formatDateDayMonth(record && record.calidad_inicio) || 'click';
+        }
+
         return TintoreriaUtils.formatProcessDateTimeLabel(record && record.calidad_inicio) || 'click';
     }
 
@@ -335,7 +346,7 @@
         }
 
         if (filter === 'REJECTED' && normalizeCalidadState(record) === 'OK' && record.calidad_fin) {
-            return TintoreriaUtils.formatProcessDateTimeLabel(record.calidad_fin) || '--:--';
+            return TintoreriaUtils.formatDateDayMonth(record.calidad_fin) || '--:--';
         }
 
         return TintoreriaUtils.formatElapsedTime(record.calidad_inicio, record.calidad_fin || new Date()) || '00:00';
@@ -360,10 +371,10 @@
                 record.calidad_auditor || '',
                 getSupervisorCalidadLabel(record),
                 getTurnoExportLabel(record),
-                getStartExportLabel(record),
+                getStartExportLabel(record, filter),
                 getFinishExportLabel(record, filter),
                 getStatusExportLabel(record, filter)
-            ]
+            ].concat(filter === 'REJECTED' ? [getRejectReasonsExportLabel(record)] : [])
         }));
     }
 
@@ -393,12 +404,12 @@
                 sheets: [
                     {
                         name: 'En_calidad',
-                        columns: getQualityExportColumns(),
+                        columns: getQualityExportColumns('ACTIVE'),
                         rows: getExportRows(records, state, 'ACTIVE')
                     },
                     {
                         name: 'AUDITADAS',
-                        columns: getQualityExportColumns(),
+                        columns: getQualityExportColumns('REJECTED'),
                         rows: getExportRows(records, state, 'REJECTED')
                     }
                 ]
@@ -864,6 +875,13 @@
                 };
             })
             .filter(Boolean);
+    }
+
+    function getRejectReasonsExportLabel(record) {
+        return getRejectReasonEntries(record)
+            .map((entry) => entry.value)
+            .filter((value) => value)
+            .join(' / ');
     }
 
     function openInfoModal(record) {
