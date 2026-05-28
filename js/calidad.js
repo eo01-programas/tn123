@@ -887,7 +887,11 @@
 
     function getRejectDatesExportLabel(record) {
         return [1, 2, 3, 4]
-            .map((index) => String(record && record[`fecha_rechazo_${index}`] || '').trim())
+            .map((index) => {
+                const raw = String(record && record[`fecha_rechazo_${index}`] || '').trim();
+                if (!raw) return '';
+                return TintoreriaUtils.formatProcessDateTimeLabel(raw) || raw;
+            })
             .filter(Boolean)
             .join(' - ');
     }
@@ -1041,7 +1045,7 @@
         const updates = {
             calidad_estado: currentRejectStatus,
             cantidad_rechazos: String(currentRejectNumber),
-            [`fecha_rechazo_${currentRejectNumber}`]: TintoreriaUtils.formatDateDayMonth(new Date())
+            [`fecha_rechazo_${currentRejectNumber}`]: TintoreriaUtils.formatProcessDateTime(new Date())
         };
         const rejectTurnoField = getRejectTurnoField(currentRejectNumber);
 
