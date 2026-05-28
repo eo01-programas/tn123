@@ -35,7 +35,8 @@
     const QUALITY_EXPORT_COLUMNS_ACTIVE = QUALITY_EXPORT_BASE_COLUMNS.map((column) => ({ ...column }));
     const QUALITY_EXPORT_COLUMNS_AUDITADAS = [
         ...QUALITY_EXPORT_BASE_COLUMNS.map((column) => ({ ...column })),
-        { key: 'motivo_rechazo', header: 'Motivo rechazo', width: 28 }
+        { key: 'motivo_rechazo', header: 'Motivo rechazo', width: 28 },
+        { key: 'fecha_rechazos', header: 'Fecha Rechazos', width: 24 }
     ];
 
     function getQualityExportColumns(filter = 'ACTIVE') {
@@ -374,7 +375,7 @@
                 getStartExportLabel(record, filter),
                 getFinishExportLabel(record, filter),
                 getStatusExportLabel(record, filter)
-            ].concat(filter === 'REJECTED' ? [getRejectReasonsExportLabel(record)] : [])
+            ].concat(filter === 'REJECTED' ? [getRejectReasonsExportLabel(record), getRejectDatesExportLabel(record)] : [])
         }));
     }
 
@@ -884,6 +885,13 @@
             .join(' / ');
     }
 
+    function getRejectDatesExportLabel(record) {
+        return [1, 2, 3, 4]
+            .map((index) => String(record && record[`fecha_rechazo_${index}`] || '').trim())
+            .filter(Boolean)
+            .join(' - ');
+    }
+
     function openInfoModal(record) {
         const {
             modal,
@@ -1032,7 +1040,8 @@
         const formData = new FormData(form);
         const updates = {
             calidad_estado: currentRejectStatus,
-            cantidad_rechazos: String(currentRejectNumber)
+            cantidad_rechazos: String(currentRejectNumber),
+            [`fecha_rechazo_${currentRejectNumber}`]: TintoreriaUtils.formatDateDayMonth(new Date())
         };
         const rejectTurnoField = getRejectTurnoField(currentRejectNumber);
 
