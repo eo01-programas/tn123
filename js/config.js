@@ -129,6 +129,10 @@ const MASTER_HEADERS = [
     'quien_aprobo',
     'supervisor_aprobacion',
     'turno_aprobacion',
+    'fecha_rechazo_1',
+    'fecha_rechazo_2',
+    'fecha_rechazo_3',
+    'fecha_rechazo_4',
     'embalaje_p',
     'embalaje_fecha',
     'embalaje_estado'
