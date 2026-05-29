@@ -381,14 +381,15 @@
                     TintoreriaUtils.formatColorLabel(record.color),
                     record.cod_art || '',
                     record.articulo || '',
-                    record.peso_kg_crudo || '',
+                    parseFloat(String(record.peso_kg_crudo || '').replace(',', '.')) || 0,
                     record.cantidad_crudo || '',
                     record.calidad_auditor || '',
                     getSupervisorCalidadLabel(record),
                     getTurnoExportLabel(record),
                     getStatusExportLabel(record, filter),
                     getRejectReasonsExportLabel(record),
-                    getRejectDatesExportLabel(record)
+                    getRejectDatesExportLabel(record),
+                    record.observacion_calidad || ''
                 ]
             }));
         }
@@ -463,7 +464,7 @@
                             TintoreriaUtils.formatColorLabel(record.color),
                             record.cod_art || '',
                             record.articulo || '',
-                            record.peso_kg_crudo || '',
+                            parseFloat(String(record.peso_kg_crudo || '').replace(',', '.')) || 0,
                             record.cantidad_crudo || '',
                             record.calidad_auditor || '',
                             getSupervisorCalidadLabel(record),
@@ -484,7 +485,7 @@
                         TintoreriaUtils.formatColorLabel(record.color),
                         record.cod_art || '',
                         record.articulo || '',
-                        record.peso_kg_crudo || '',
+                        parseFloat(String(record.peso_kg_crudo || '').replace(',', '.')) || 0,
                         record.cantidad_crudo || '',
                         record.calidad_auditor || '',
                         getSupervisorCalidadLabel(record),
