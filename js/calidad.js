@@ -360,9 +360,9 @@
     function getFechaRegistroExportLabel(record) {
         const isAprobado = normalizeCalidadState(record) === 'OK';
         if (isAprobado) {
-            return TintoreriaUtils.formatProcessDateTimeLabel(record && record.calidad_fin) || '--';
+            return TintoreriaUtils.formatDateDayMonth(record && record.calidad_fin) || '--';
         }
-        return TintoreriaUtils.formatProcessDateTimeLabel(record && record.calidad_inicio) || '--';
+        return TintoreriaUtils.formatDateDayMonth(record && record.calidad_inicio) || '--';
     }
 
     function getExportRows(records, state, filter) {
