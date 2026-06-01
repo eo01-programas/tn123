@@ -21,7 +21,13 @@
             return TintoreriaUtils.sortRecordsByPriority(
                 eligible.filter((record) => normalizePlegadoState(record) === 'OK'),
                 'plegado_p'
-            );
+            ).sort((a, b) => {
+                const dateA = TintoreriaUtils.parseDateish(a.plegado_fecha);
+                const dateB = TintoreriaUtils.parseDateish(b.plegado_fecha);
+                const timeA = dateA ? dateA.getTime() : 0;
+                const timeB = dateB ? dateB.getTime() : 0;
+                return timeB - timeA;
+            });
         }
 
         return TintoreriaUtils.sortRecordsByPriority(
