@@ -311,12 +311,12 @@
             <section id="view-preparado" class="view-section">
                 <div class="subtabs" aria-label="Estado de preparado">
                     <button class="subtab active" type="button" data-preparado-filter="X PROG">
-                        Por Programar
+                        Por procesar
                         <span class="count-pill" id="count-preparado-xprog">0</span>
                         <span class="subtab-summary" id="summary-preparado-xprog">[0 partidas - 0.00kg]</span>
                     </button>
                     <button class="subtab" type="button" data-preparado-filter="PROG">
-                        Programado
+                        Procesado
                         <span class="count-pill" id="count-preparado-prog">0</span>
                         <span class="subtab-summary" id="summary-preparado-prog">[0 partidas - 0.00kg]</span>
                     </button>
@@ -328,6 +328,8 @@
                             <thead>
                                 <tr>
                                     <th>P</th>
+                                    <th id="th-preparado-fing">F_ing_crudo</th>
+                                    <th id="th-preparado-fprep">F_preparado</th>
                                     <th>cliente</th>
                                     <th>OP-PTDA</th>
                                     <th>color</th>
@@ -335,10 +337,11 @@
                                     <th>kg(crudo)</th>
                                     <th>ruta</th>
                                     <th>Turno</th>
-                                    <th>Equipo</th>
+                                    <th id="th-preparado-supervisor">Responsable</th>
+                                    <th id="th-preparado-equipo">Equipo</th>
                                     <th>Tipo</th>
-                                    <th>Inicio</th>
-                                    <th>Fin</th>
+                                    <th id="th-preparado-inicio">Inicio</th>
+                                    <th id="th-preparado-fin">Fin</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
