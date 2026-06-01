@@ -227,12 +227,12 @@
             <section id="view-plegado" class="view-section active">
                 <div class="subtabs" aria-label="Estado de plegado">
                     <button class="subtab active" type="button" data-plegado-filter="X PROG">
-                        Por Programar
+                        Por procesar
                         <span class="count-pill" id="count-plegado-xprog">0</span>
                         <span class="subtab-summary" id="summary-plegado-xprog">[0 partidas - 0.00kg]</span>
                     </button>
                     <button class="subtab" type="button" data-plegado-filter="PROG">
-                        Programado
+                        Procesado
                         <span class="count-pill" id="count-plegado-prog">0</span>
                         <span class="subtab-summary" id="summary-plegado-prog">[0 partidas - 0.00kg]</span>
                     </button>
@@ -244,14 +244,18 @@
                             <thead>
                                 <tr>
                                     <th>P</th>
+                                    <th>F_ing_crudo</th>
+                                    <th id="th-plegado-fecha">F_plegado</th>
                                     <th>cliente</th>
                                     <th>OP-PTDA</th>
                                     <th>color</th>
                                     <th>articulo</th>
                                     <th>kg(crudo)</th>
                                     <th>ruta</th>
+                                    <th>#dias</th>
                                     <th>Turno</th>
-                                    <th>Equipo</th>
+                                    <th id="th-plegado-supervisor">Supervisor</th>
+                                    <th id="th-plegado-equipo">Equipo</th>
                                     <th>status</th>
                                 </tr>
                             </thead>
