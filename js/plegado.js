@@ -175,9 +175,19 @@
         `;
     }
 
+    function getAdjustedPlegadoDate(rawValue) {
+        const date = TintoreriaUtils.parseDateish(rawValue);
+        if (!date) return null;
+        if (date.getHours() < 7) {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1, date.getHours(), date.getMinutes(), date.getSeconds());
+        }
+        return date;
+    }
+
     function renderPlegadoDateMarkup(record) {
-        const shortDate = TintoreriaUtils.formatDateDayMonth(record.plegado_fecha);
-        const fullDate = TintoreriaUtils.formatDateForUi(record.plegado_fecha);
+        const adjusted = getAdjustedPlegadoDate(record.plegado_fecha);
+        const shortDate = TintoreriaUtils.formatDateDayMonth(adjusted);
+        const fullDate = TintoreriaUtils.formatDateForUi(adjusted);
         const label = shortDate || 'S/Fecha';
         const title = fullDate || 'S/Fecha';
         return `
