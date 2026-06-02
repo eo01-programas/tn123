@@ -338,7 +338,7 @@
         if (filter === 'REJECTED' && normalizeCalidadState(record) === 'OK') {
             return 'APROBADO';
         }
-        return getDisplayCalidadState(record) || 'SELEC';
+        return getDisplayCalidadState(record) || (filter === 'ACTIVE' ? 'AUDITANDO' : 'SELEC');
     }
 
     function getStartExportLabel(record, filter) {
@@ -358,7 +358,7 @@
             return TintoreriaUtils.formatDateDayMonth(record.calidad_fin) || '--:--';
         }
 
-        return TintoreriaUtils.formatElapsedTime(record.calidad_inicio, record.calidad_fin || new Date()) || '00:00';
+        return TintoreriaUtils.formatElapsedDaysNoDomingos(record.calidad_inicio, record.calidad_fin || new Date()) || '0.5días';
     }
 
     // Si el registro cae entre 00:00 y 05:59 pertenece al turno nocturno del día anterior (3T)
@@ -634,7 +634,7 @@
             return '<span class="process-pill process-pill-muted">--:--</span>';
         }
 
-        const durationLabel = TintoreriaUtils.formatElapsedTime(record.calidad_inicio, record.calidad_fin || new Date()) || '00:00';
+        const durationLabel = TintoreriaUtils.formatElapsedDaysNoDomingos(record.calidad_inicio, record.calidad_fin || new Date()) || '0.5días';
         if (record.calidad_fin) {
             if (currentFilter === 'REJECTED' && normalizeCalidadState(record) === 'OK') {
                 const finishLabel = TintoreriaUtils.formatProcessDateTimeLabel(record.calidad_fin);
@@ -718,6 +718,20 @@
         const filtered = filterRecordsForQualityLookup(
             TintoreriaUtils.filterRecordsForSearch(getVisibleRecords(records), state, 'calidad')
         );
+
+        if (currentFilter === 'ACTIVE') {
+            const now = Date.now();
+            filtered.sort((a, b) => {
+                const startA = TintoreriaUtils.parseDateish(a.calidad_inicio);
+                const startB = TintoreriaUtils.parseDateish(b.calidad_inicio);
+                const endA = TintoreriaUtils.parseDateish(a.calidad_fin) || new Date(now);
+                const endB = TintoreriaUtils.parseDateish(b.calidad_fin) || new Date(now);
+                const elapsedA = startA ? endA.getTime() - startA.getTime() : 0;
+                const elapsedB = startB ? endB.getTime() - startB.getTime() : 0;
+                return elapsedB - elapsedA;
+            });
+        }
+
         renderSubtabCounts(records);
 
         if (!filtered.length) {
@@ -749,7 +763,7 @@
             const tdFin = `<td data-fin-date="${finDateLabel}">${renderFinishMarkup(record, isReadonly)}</td>`;
             const tdStatus = isAprobado
                 ? `<td><span class="process-pill process-pill-finished">APROBADO</span></td>`
-                : `<td><select class="${selectClass}" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="calidad_estado"${readonlyAttrs}>${optionMarkup(getDisplayCalidadState(record), currentFilter === 'REJECTED' ? TintoreriaConfig.CALIDAD_ESTADO_RECHAZADAS_OPTIONS : TintoreriaConfig.CALIDAD_ESTADO_OPTIONS, 'SELEC')}</select></td>`;
+                : `<td><select class="${selectClass}" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="calidad_estado"${readonlyAttrs}>${optionMarkup(getDisplayCalidadState(record), currentFilter === 'REJECTED' ? TintoreriaConfig.CALIDAD_ESTADO_RECHAZADAS_OPTIONS : TintoreriaConfig.CALIDAD_ESTADO_OPTIONS, 'AUDITANDO')}</select></td>`;
 
             const tdFechaRegistro = buildFechaRegistroCell(record);
             const cells = currentFilter === 'REJECTED'
