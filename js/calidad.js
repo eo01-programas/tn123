@@ -357,12 +357,20 @@
         return TintoreriaUtils.formatElapsedTime(record.calidad_inicio, record.calidad_fin || new Date()) || '00:00';
     }
 
+    // Si el registro cae entre 00:00 y 05:59 pertenece al turno nocturno del día anterior (3T)
+    function getAdjustedFechaRegistroDate(rawValue) {
+        const date = TintoreriaUtils.parseDateish(rawValue);
+        if (!date) return null;
+        if (date.getHours() < 6) {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1, date.getHours(), date.getMinutes(), date.getSeconds());
+        }
+        return date;
+    }
+
     function getFechaRegistroExportLabel(record) {
         const isAprobado = normalizeCalidadState(record) === 'OK';
-        if (isAprobado) {
-            return TintoreriaUtils.formatDateDayMonth(record && record.calidad_fin) || '--';
-        }
-        return TintoreriaUtils.formatDateDayMonth(record && record.calidad_inicio) || '--';
+        const rawDate = isAprobado ? (record && record.calidad_fin) : (record && record.calidad_inicio);
+        return TintoreriaUtils.formatDateDayMonth(getAdjustedFechaRegistroDate(rawDate)) || '--';
     }
 
     function shouldHighlightEnCalidadExportRow(record) {
@@ -646,13 +654,14 @@
     function buildFechaRegistroCell(record) {
         const isAprobado = normalizeCalidadState(record) === 'OK';
         const rawDate = isAprobado ? record.calidad_fin : record.calidad_inicio;
-        const dateLabel = TintoreriaUtils.escapeHtml(TintoreriaUtils.formatDateDayMonth(rawDate) || '');
+        const adjustedDate = getAdjustedFechaRegistroDate(rawDate);
+        const dateLabel = TintoreriaUtils.escapeHtml(TintoreriaUtils.formatDateDayMonth(adjustedDate) || '');
 
         if (!rawDate) {
             return `<td data-fecha-registro="${dateLabel}"><span class="process-pill process-pill-muted">--</span></td>`;
         }
 
-        const fullLabel = TintoreriaUtils.formatProcessDateTimeLabel(rawDate);
+        const fullLabel = TintoreriaUtils.formatProcessDateTimeLabel(adjustedDate);
         const pillClass = isAprobado ? 'process-pill-finished' : 'process-pill-info';
         return `<td data-fecha-registro="${dateLabel}"><span class="process-pill ${pillClass}">${TintoreriaUtils.escapeHtml(fullLabel || '--')}</span></td>`;
     }
