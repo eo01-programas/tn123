@@ -304,6 +304,50 @@
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     }
 
+    function formatElapsedDaysNoDomingos(startValue, endValue = null) {
+        const startDate = parseDateish(startValue);
+        const endDate = parseDateish(endValue) || new Date();
+        if (!startDate || !endDate) {
+            return '';
+        }
+
+        const startMs = startDate.getTime();
+        const endMs = endDate.getTime();
+        if (endMs <= startMs) {
+            return '0.5días';
+        }
+
+        const msPerDay = 24 * 60 * 60 * 1000;
+        let sundayMs = 0;
+
+        // Find the Sunday (day 0) that contains or follows startMs
+        const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const startDow = startDay.getDay(); // 0=Sun
+        // Offset in ms to the beginning of the Sunday on or before startMs
+        const msToPrevSunday = startDow * msPerDay;
+        let sundayStart = startDay.getTime() - msToPrevSunday;
+        // If startDow > 0, the prev Sunday is before startMs; advance to the next Sunday
+        if (startDow !== 0) {
+            sundayStart += 7 * msPerDay;
+        }
+
+        while (sundayStart < endMs) {
+            const sundayEnd = sundayStart + msPerDay;
+            const overlapStart = Math.max(sundayStart, startMs);
+            const overlapEnd = Math.min(sundayEnd, endMs);
+            if (overlapEnd > overlapStart) {
+                sundayMs += overlapEnd - overlapStart;
+            }
+            sundayStart += 7 * msPerDay;
+        }
+
+        const effectiveHours = Math.max(0, (endMs - startMs - sundayMs)) / (1000 * 60 * 60);
+        const days = effectiveHours / 24;
+        const rounded = Math.round(days * 2) / 2;
+        const result = rounded < 0.5 ? 0.5 : rounded;
+        return `${result}días`;
+    }
+
     function calculateProductionTurno(value = new Date()) {
         const date = parseDateish(value) || value;
         if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
@@ -625,6 +669,7 @@
         formatProcessDateTime,
         formatProcessDateTimeLabel,
         formatElapsedTime,
+        formatElapsedDaysNoDomingos,
         calculateProductionTurno,
         parseExcelDate,
         sanitizeAncho,
