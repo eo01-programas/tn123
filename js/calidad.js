@@ -134,7 +134,11 @@
     }
 
     function getActiveRecords(records) {
-        return getEligibleRecords(records).filter((record) => !isRejectedRecord(record));
+        return getEligibleRecords(records).filter((record) =>
+            !isRejectedRecord(record) &&
+            Boolean(String(record.calidad_inicio || '').trim()) &&
+            CALIDAD_UNPROGRAMMED_STATES.has(normalizeCalidadState(record))
+        );
     }
 
     function getAuditadasStatusOrder(record) {
