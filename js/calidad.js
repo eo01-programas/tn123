@@ -579,11 +579,11 @@
         const rejectedSummary = document.getElementById('summary-calidad-rejected');
 
         if (activeCount) {
-            activeCount.textContent = String(activeRecords.length);
+            activeCount.textContent = String(new Set(activeRecords.map((r) => TintoreriaUtils.formatOpPartida(r.op_tela, r.partida))).size);
         }
 
         if (rejectedCount) {
-            rejectedCount.textContent = String(rejectedRecords.length);
+            rejectedCount.textContent = String(new Set(rejectedRecords.map((r) => TintoreriaUtils.formatOpPartida(r.op_tela, r.partida))).size);
         }
 
         if (activeSummary) {
@@ -997,6 +997,37 @@
             } catch (error) {
                 TintoreriaApp.showToast(error.message || 'No se pudo registrar el fin.', 'error', 'Error al guardar');
             }
+        }
+    }
+
+    function updateSubtabSummaryFromDOM() {
+        const tbody = document.getElementById('tbody-calidad');
+        if (!tbody) return;
+
+        const allRecords = TintoreriaApp.getRecords();
+        const recordMap = new Map(allRecords.map((r) => [String(r.id_registro), r]));
+
+        const visibleRecords = [];
+        tbody.querySelectorAll('tr').forEach((row) => {
+            if (row.hidden || row.classList.contains('client-filter-hidden-row') || row.classList.contains('empty-state')) return;
+            const idEl = row.querySelector('[data-record-id]');
+            if (!idEl) return;
+            const record = recordMap.get(String(idEl.dataset.recordId));
+            if (record) visibleRecords.push(record);
+        });
+
+        const uniqueOpCount = new Set(visibleRecords.map((r) => TintoreriaUtils.formatOpPartida(r.op_tela, r.partida))).size;
+
+        if (currentFilter === 'REJECTED') {
+            const countEl = document.getElementById('count-calidad-rejected');
+            const summaryEl = document.getElementById('summary-calidad-rejected');
+            if (countEl) countEl.textContent = String(uniqueOpCount);
+            if (summaryEl) summaryEl.textContent = TintoreriaUtils.formatSubtabSummary(visibleRecords);
+        } else {
+            const countEl = document.getElementById('count-calidad-active');
+            const summaryEl = document.getElementById('summary-calidad-active');
+            if (countEl) countEl.textContent = String(uniqueOpCount);
+            if (summaryEl) summaryEl.textContent = TintoreriaUtils.formatSubtabSummary(visibleRecords);
         }
     }
 
@@ -1614,6 +1645,9 @@
         if (tbody) {
             tbody.addEventListener('change', handleEditableChange);
             tbody.addEventListener('click', handleActionClick);
+
+            const summaryObserver = new MutationObserver(updateSubtabSummaryFromDOM);
+            summaryObserver.observe(tbody, { attributes: true, attributeFilter: ['hidden', 'class'], subtree: true });
         }
 
         const qualitySearchInput = document.getElementById('calidad-toolbar-search');
