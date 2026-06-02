@@ -168,11 +168,21 @@
         }
     }
 
+    function getAdjustedPreparadoDate(rawValue) {
+        const date = TintoreriaUtils.parseDateish(rawValue);
+        if (!date) return null;
+        if (date.getHours() < 7) {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1, date.getHours(), date.getMinutes(), date.getSeconds());
+        }
+        return date;
+    }
+
     function renderFPreparadoCell(record) {
-        const finLabel = TintoreriaUtils.formatDateDayMonth(record.preparado_fin);
+        const adjusted = getAdjustedPreparadoDate(record.preparado_fin);
+        const finLabel = TintoreriaUtils.formatDateDayMonth(adjusted);
         const finFull = TintoreriaUtils.formatProcessDateTimeLabel(record.preparado_fin);
         const inicioFull = TintoreriaUtils.formatProcessDateTimeLabel(record.preparado_inicio);
-        const filterDate = TintoreriaUtils.formatDateForUi(record.preparado_fin) || 'S/Fecha';
+        const filterDate = TintoreriaUtils.formatDateForUi(adjusted) || 'S/Fecha';
         const tooltip = [
             finFull ? `Fin: ${finFull}` : null,
             inicioFull ? `Inicio: ${inicioFull}` : null
