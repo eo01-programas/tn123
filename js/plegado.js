@@ -175,26 +175,16 @@
         `;
     }
 
-    function getAdjustedPlegadoDate(rawValue) {
-        const date = TintoreriaUtils.parseDateish(rawValue);
-        if (!date) return null;
-        if (date.getHours() < 7) {
-            return new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1, date.getHours(), date.getMinutes(), date.getSeconds());
-        }
-        return date;
-    }
-
     function renderPlegadoDateMarkup(record) {
-        const adjusted = getAdjustedPlegadoDate(record.plegado_fecha);
-        const shortDate = TintoreriaUtils.formatDateDayMonth(adjusted);
-        const fullDate = TintoreriaUtils.formatDateForUi(adjusted);
-        const label = shortDate || 'S/Fecha';
-        const title = fullDate || 'S/Fecha';
-        return `
-            <td data-f-plegado="${TintoreriaUtils.escapeHtml(fullDate || 'S/Fecha')}" title="${TintoreriaUtils.escapeHtml(title)}">
-                <span class="cell-text">${TintoreriaUtils.escapeHtml(label)}</span>
-            </td>
-        `;
+        const dateLabel = TintoreriaUtils.formatDateDayMonth(record.plegado_fecha);
+        const fullLabel = TintoreriaUtils.formatProcessDateTimeLabel(record.plegado_fecha);
+        const filterDate = TintoreriaUtils.formatDateForUi(record.plegado_fecha) || 'S/Fecha';
+
+        const pill = dateLabel
+            ? `<span class="process-pill process-pill-finished" title="${TintoreriaUtils.escapeHtml(fullLabel || '')}">${TintoreriaUtils.escapeHtml(dateLabel)}</span>`
+            : `<span class="process-pill process-pill-muted" title="Sin fecha">S/Fecha</span>`;
+
+        return `<td data-f-plegado="${TintoreriaUtils.escapeHtml(filterDate)}">${pill}</td>`;
     }
 
     function renderSubtabCounts(records) {
