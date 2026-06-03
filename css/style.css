@@ -1010,6 +1010,19 @@ main.content {
     background: #dc2626;
 }
 
+.stock-salida-rama-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1.5px solid #6366f1;
+    color: #6366f1;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
 .stock-chart-scroll {
     flex: 1;
     min-height: 0;
@@ -1546,43 +1559,43 @@ tbody tr:last-child td {
 
 .maestro-table th:nth-child(1),
 .maestro-table td:nth-child(1) {
-    width: 5%;
+    width: 3%;
 }
 
 .maestro-table th:nth-child(2),
 .maestro-table td:nth-child(2) {
-    width: 6.5%;
+    width: 4%;
 }
 
 .maestro-table th:nth-child(3),
 .maestro-table td:nth-child(3) {
-    width: 4%;
+    width: 2.5%;
 }
 
 .maestro-table th:nth-child(4),
 .maestro-table td:nth-child(4) {
-    width: 7.5%;
+    width: 5%;
 }
 
 .maestro-table th:nth-child(5),
 .maestro-table td:nth-child(5) {
-    width: 7.5%;
+    width: 5%;
 }
 
 .maestro-table th:nth-child(6),
 .maestro-table td:nth-child(6) {
-    width: 7%;
+    width: 20%;
 }
 
 .maestro-table th:nth-child(7),
 .maestro-table td:nth-child(7) {
-    width: 5.5%;
+    width: 4%;
 }
 
-.maestro-table th:nth-child(8),
+.maestro-table th:nth-child(8), 
 .maestro-table td:nth-child(8) {
-    width: 6.5%;
-}
+    width: 10%;
+} 
 
 .maestro-table th:nth-child(9),
 .maestro-table td:nth-child(9) {
@@ -1591,7 +1604,7 @@ tbody tr:last-child td {
 
 .maestro-table th:nth-child(10),
 .maestro-table td:nth-child(10) {
-    width: 5.5%;
+    width: 4%;
 }
 
 .maestro-table th:nth-child(11),
@@ -1601,7 +1614,7 @@ tbody tr:last-child td {
 
 .maestro-table th:nth-child(12),
 .maestro-table td:nth-child(12) {
-    width: 4.5%;
+    width: 3%;
 }
 
 .maestro-table th:nth-child(13),
@@ -1611,12 +1624,12 @@ tbody tr:last-child td {
 
 .maestro-table th:nth-child(14),
 .maestro-table td:nth-child(14) {
-    width: 4.5%;
+    width: 3%;
 }
 
 .maestro-table th:nth-child(15),
 .maestro-table td:nth-child(15) {
-    width: 7.5%;
+    width: 6%;
 }
 
 .maestro-table th:nth-child(16),
@@ -1748,7 +1761,7 @@ table.quality-table .process-pill {
 
 table.plegado-table th:nth-child(1),
 table.plegado-table td:nth-child(1) {
-    width: 3.2%;
+    width: 3%;
 }
 
 table.plegado-table th:nth-child(2),
@@ -1758,17 +1771,17 @@ table.plegado-table td:nth-child(2) {
 
 table.plegado-table th:nth-child(3),
 table.plegado-table td:nth-child(3) {
-    width: 5.25%;
+    width: 3%;
 }
 
 table.plegado-table th:nth-child(4),
 table.plegado-table td:nth-child(4) {
-    width: 10%;
+    width: 8%;
 }
 
 table.plegado-table th:nth-child(5),
 table.plegado-table td:nth-child(5) {
-    width: 13%;
+    width: 15%;
 }
 
 table.plegado-table th:nth-child(6),
