@@ -102,8 +102,9 @@
         },
         {
             id: 'por-env-calidad',
-            label: 'Por Env. a Calidad',
-            shortLabel: 'P/Cal.',
+            label: 'Salida de Rama',
+            shortLabel: 'Sal.Rama',
+            asPill: true,
             isEligible(record) {
                 return isReadyForCalidad(record)
                     && !String(record.calidad_inicio || '').trim()
@@ -114,8 +115,8 @@
         },
         {
             id: 'rechazos-calidad',
-            label: 'Rechazos Calidad',
-            shortLabel: 'Rech.Cal.',
+            label: 'Guias rechazadas',
+            shortLabel: 'Guias',
             isEligible(record) {
                 return isCalidadRejected(record);
             },
@@ -453,6 +454,7 @@
             return {
                 id: area.id,
                 label: area.label,
+                asPill: area.asPill || false,
                 xprog: sumRecordWeight(porProgramarRecords),
                 prog: sumRecordWeight(programadoRecords),
                 rejected: sumRecordWeight(rejectedRecords),
@@ -794,7 +796,14 @@
         syncStockFilterOptions(records);
         updateChartSubtitle();
         const dataset = buildStockDataset(records);
-        renderChart(dataset);
+
+        const salidaRamaItem = dataset.find((item) => item.asPill);
+        const salidaRamaEl = document.getElementById('stock-salida-rama-value');
+        if (salidaRamaEl && salidaRamaItem) {
+            salidaRamaEl.textContent = TintoreriaUtils.formatNumber(salidaRamaItem.xprog + salidaRamaItem.prog, 0);
+        }
+
+        renderChart(dataset.filter((item) => !item.asPill));
     }
 
     function goToStockView() {
