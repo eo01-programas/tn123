@@ -374,10 +374,14 @@
         return date;
     }
 
+    function getFechaRegistroRawDate(record) {
+        if (normalizeCalidadState(record) === 'OK') return record && record.calidad_fin;
+        const n = parseInt(record && record.cantidad_rechazos, 10);
+        return (n >= 1 && n <= 7) ? (record && record[`fecha_rechazo_${n}`]) : null;
+    }
+
     function getFechaRegistroExportLabel(record) {
-        const isAprobado = normalizeCalidadState(record) === 'OK';
-        const rawDate = isAprobado ? (record && record.calidad_fin) : (record && record.calidad_inicio);
-        return TintoreriaUtils.formatDateDayMonth(getAdjustedFechaRegistroDate(rawDate)) || '--';
+        return TintoreriaUtils.formatDateDayMonth(getAdjustedFechaRegistroDate(getFechaRegistroRawDate(record))) || '--';
     }
 
     function shouldHighlightEnCalidadExportRow(record) {
@@ -659,8 +663,8 @@
     }
 
     function buildFechaRegistroCell(record) {
+        const rawDate = getFechaRegistroRawDate(record);
         const isAprobado = normalizeCalidadState(record) === 'OK';
-        const rawDate = isAprobado ? record.calidad_fin : record.calidad_inicio;
         const adjustedDate = getAdjustedFechaRegistroDate(rawDate);
         const dateLabel = TintoreriaUtils.escapeHtml(TintoreriaUtils.formatDateDayMonth(adjustedDate) || '');
 
