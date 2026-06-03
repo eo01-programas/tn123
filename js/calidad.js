@@ -1076,7 +1076,7 @@
     }
 
     function getRejectReasonEntries(record) {
-        return [1, 2, 3, 4]
+        return [1, 2, 3, 4, 5, 6, 7]
             .map((index) => {
                 const value = String(record && record[`motivo_rechazo_${index}`] || '').trim();
                 if (!value) {
@@ -1084,9 +1084,11 @@
                 }
 
                 const supervisor = String(record && record[`supervisor_rechazo_${index}`] || '').trim();
+                const fecha = TintoreriaUtils.formatProcessDateTimeLabel(record && record[`fecha_rechazo_${index}`]) || '';
 
                 return {
-                    label: `Motivo ${index}`,
+                    label: `Fecha ${index}`,
+                    fecha,
                     value,
                     supervisor
                 };
@@ -1140,12 +1142,11 @@
         }
         if (motivos) {
             motivos.innerHTML = reasonEntries.map((entry) => `
-                <div>
+                <div style="white-space: nowrap;">
                     <strong>${TintoreriaUtils.escapeHtml(entry.label)}:</strong>
-                    <span>${TintoreriaUtils.escapeHtml(entry.value)}</span>
-                    ${entry.supervisor ? `
-                        <span> &rarr; <strong>Supervisor:</strong> ${TintoreriaUtils.escapeHtml(entry.supervisor)}</span>
-                    ` : ''}
+                    ${entry.fecha ? `<span>${TintoreriaUtils.escapeHtml(entry.fecha)}</span>` : ''}
+                    &nbsp;&nbsp;<strong>Motivo:</strong> <span>${TintoreriaUtils.escapeHtml(entry.value)}</span>
+                    ${entry.supervisor ? `<span> &rarr; <strong>Supervisor:</strong> ${TintoreriaUtils.escapeHtml(entry.supervisor)}</span>` : ''}
                 </div>
             `).join('');
         }
