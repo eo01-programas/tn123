@@ -70,7 +70,7 @@
     }
 
     function isPcpTextilQualityReadonly() {
-        return isPcpTextilUser();
+        return isPcpTextilUser() || getCurrentUsername() === 'Tintoreria05';
     }
 
     function syncAuditoriaButtonVisibility() {
