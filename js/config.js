@@ -29,7 +29,6 @@ const MASTER_HEADERS = [
     'plegado_equipo',
     'plegado_estado',
     'plegado_fecha',
-    'plegado_supervisor',
     'rama_crudo_p',
     'rama_crudo_turno',
     'rama_crudo_operario',
@@ -112,8 +111,6 @@ const MASTER_HEADERS = [
     'calidad_inicio',
     'calidad_fin',
     'calidad_estado',
-    'cal_situacion',
-    'cal_situacion_fecha',
     'motivo_rechazo_1',
     'turno_rechazo_1',
     'supervisor_rechazo_1',
@@ -148,12 +145,13 @@ const MASTER_HEADERS = [
     'fecha_rechazo_5',
     'fecha_rechazo_6',
     'fecha_rechazo_7',
+    'fecha_aprobacion',
     'embalaje_p',
     'embalaje_fecha',
     'embalaje_estado'
 ];
 
-const ROUTE_OPTIONS = ['', 'Termofijado', 'Humectado', 'Directo'];
+const ROUTE_OPTIONS = ['', 'Termoficado', 'Humectado', 'Directo'];
 const PLEGADO_TURNO_OPTIONS = ['', '1T', '2T'];
 const PLEGADO_ESTADO_OPTIONS = ['X PROG', 'PROG', 'OK'];
 const RAMA_CRUDO_TURNO_OPTIONS = ['', '1T', '2T'];
@@ -210,77 +208,51 @@ const ACABADO_ESPECIAL_ESTADO_OPTIONS = ['X PROG', 'PROG', 'OK'];
 const CALIDAD_TURNO_OPTIONS = ['', '1T', '2T', '3T'];
 const CALIDAD_ESTADO_OPTIONS = ['', 'AUDITANDO', '1er RECHAZO', 'OK'];
 const CALIDAD_ESTADO_RECHAZADAS_OPTIONS = ['1er RECHAZO', '2do RECHAZO', '3er RECHAZO', '4to RECHAZO', 'OK'];
-const CALIDAD_SITUACION_OPTIONS = ['', 'xPlegado', 'xBulk', 'xPruebas'];
 const MOTIVOS_RECHAZO_OPTIONS = [
     '',
-    'AMARILLAMIENTO FENÓLICO',
-    'ANCHO',
-    'ANILLADO',
-    'APARIENCIA',
-    'ARRUGAS',
-    'AUREOLAS',
-    'BARRADO',
-    'CALAMINADO',
-    'CONTAMINACIÓN',
-    'COSTURABILIDAD',
-    'DEGRADÉ',
-    'DENSIDAD BAJA',
-    'DENSIDAD PESADA',
-    'EFECTO PIZARRA',
-    'EMBOLSADO',
-    'ENCOGIMIENTO',
-    'ENGLOBADO',
-    'ESMERILADO',
-    'FALLA DE LYCRA',
-    'FIBRA MUERTA',
-    'FUERA DE MATCHING',
-    'FUERA DE TONO',
-    'FUERA DE MEDIDA',
-    'FUGAS',
-    'JALADURAS',
-    'LÍNEAS VERTICALES',
-    'IGUALACIÓN',
-    'MANCHAS BLANCAS',
-    'MANCHAS DE COLORANTE',
-    'MANCHAS DE PRODUCTO',
-    'MANCHAS DE SUCIEDAD',
-    'MANCHAS OSCURAS',
-    'MIGRACIÓN',
-    'ÓPTICO',
-    'ORILLO RECOGIDO',
-    'PH',
-    'HUECOS DE PROCESO',
+    'CONTAMINACION',
+    'DEGRAD\u00C9',
+    'DENSIDAD BAJA/ELEVADA',
+    'ESTABILIDAD DIMENSIONAL',
+    'FIBRA MUERTA (NEPS)',
+    'FUERA DE MEDIDAS',
+    'MALA IGUALACI\u00D3N',
+    'MANCHAS',
+    'LINEAS VERTICALES',
     'PILLING',
     'QUEBRADURAS',
+    'RASPADURAS',
     'RESISTENCIA',
-    'REVIRADO',
-    'SOBRELIMENTACIÓN',
     'SOLIDEZ',
     'TACTO',
-    'TRAMA ARQUEADA'
+    'TONO',
+    'OTROS'
 ];
 const TIPO_APROBACION_OPTIONS = [
-    '', 
-    'APROBADO', 
-    'APROBADO C/TOLERANCIA', 
+    '',
+    'APROBADO',
+    'APROBADO C/TOLERANCIA',
     'APROBADO C/AUTORIZACION'
 ];
 const QUIEN_APROBO_OPTIONS = [
     '',
-    'CLIENTE',
-    'JOSE CASTILLO',
-    'FERNANDO UGARTE',
-    'JORGE VIDAL',
-    'CARLA MONTOYA',
-    'CARLA QUIÑONES',
-    'FLOR VELEZ',
-    'KARLITA REYES',
-    'LUIS COLAN',
-    'YESENIA LIMAY',
-    'PATRICIA ESPINOZA'
+    'G. OPERACIONES',
+    'G. COMERCIAL',
+    'DT TINTORERIA',
+    'DT CONFECCIONES',
+    'ASEG. CAL. CONFECC',
+    'JEFATURA TINTO',
+    'EJECUTIVO COM.'
+];
+const SUPERVISOR_APROBACION_OPTIONS = [
+    '',
+    'ALEX FLORES',
+    'RONALD JARAMILLO',
+    'MIGUEL MAMANI',
+    'OTRO'
 ];
 const EMBALAJE_ESTADO_OPTIONS = ['', 'OK'];
-const LOCAL_STORAGE_KEY = 'tintoreria-records';
+const LOCAL_STORAGE_KEY = 'tintoreria-records-mobile-calidad';
 
 const PROCESS_TABS = [
     { id: 'plegado', label: 'Plegado' },
@@ -326,10 +298,10 @@ window.TintoreriaConfig = {
     CALIDAD_TURNO_OPTIONS,
     CALIDAD_ESTADO_OPTIONS,
     CALIDAD_ESTADO_RECHAZADAS_OPTIONS,
-    CALIDAD_SITUACION_OPTIONS,
     MOTIVOS_RECHAZO_OPTIONS,
     TIPO_APROBACION_OPTIONS,
     QUIEN_APROBO_OPTIONS,
+    SUPERVISOR_APROBACION_OPTIONS,
     EMBALAJE_ESTADO_OPTIONS,
     LOCAL_STORAGE_KEY,
     PROCESS_TABS
