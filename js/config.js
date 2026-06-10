@@ -210,7 +210,7 @@ const ACABADO_ESPECIAL_ESTADO_OPTIONS = ['X PROG', 'PROG', 'OK'];
 const CALIDAD_TURNO_OPTIONS = ['', '1T', '2T', '3T'];
 const CALIDAD_ESTADO_OPTIONS = ['', 'AUDITANDO', '1er RECHAZO', 'OK'];
 const CALIDAD_ESTADO_RECHAZADAS_OPTIONS = ['1er RECHAZO', '2do RECHAZO', '3er RECHAZO', '4to RECHAZO', 'OK'];
-const CALIDAD_SITUACION_OPTIONS = ['', 'xPlegado', 'xBulk', 'xPruebas'];
+const CALIDAD_SITUACION_OPTIONS = ['', 'xTela cuerpo', 'xBulk', 'xPruebas'];
 const MOTIVOS_RECHAZO_OPTIONS = [
     '',
     'AMARILLAMIENTO FENÓLICO',
