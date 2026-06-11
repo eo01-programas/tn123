@@ -28,7 +28,7 @@
 
     const PERMISSION_PROFILES = {
         Pcp_textil: {
-            canAccessMaestro: true,
+            canAccessMaestro: false,
             fullAccess: true,
             readOnlyViews: [],
             programadoOnlyViews: [],
