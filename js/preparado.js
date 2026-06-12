@@ -5,7 +5,7 @@
     const ROUTE_OPTIONS = ['', 'Termofijado', 'Humectado'];
     // ── Anchos de columnas (px) — editar aquí ──────────────────────────
     // X PROG (12): P | F_ing_crudo | cliente | OP-PTDA | color | articulo | kg | ruta | Turno | Tipo | Inicio | Status
-    const PREPARADO_XPROG_WIDTHS = [36, 67, 90, 78, 168, 290, 56, 67, 73, 101, 75, 101];
+    const PREPARADO_XPROG_WIDTHS = [36, 67, 90, 78, 151, 290, 56, 67, 73, 118, 75, 101];
     // PROG  (12): F_preparado | cliente | OP-PTDA | color | articulo | kg | ruta | Turno | Responsable | Equipo | Tipo | Status
     const PREPARADO_PROG_WIDTHS  = [67, 56, 78, 101, 280, 56, 56, 45, 112, 90, 101, 45];
 
@@ -221,7 +221,7 @@
     function renderEstadoMarkup(record, readOnly = false) {
         const selectedValue = normalizePreparadoState(record);
         const statusOptions = PREPARADO_ESTADO_OPTIONS.map((optionValue) => {
-            const label = optionValue === 'X PROG' ? 'X PROCESAR' : optionValue;
+            const label = optionValue === 'X PROG' ? 'X PROCESAR' : optionValue === 'PROG' ? 'EN PROCESO' : optionValue;
             const selected = selectedValue === optionValue ? 'selected' : '';
             return `<option value="${TintoreriaUtils.escapeHtml(optionValue)}" ${selected}>${TintoreriaUtils.escapeHtml(label)}</option>`;
         }).join('');
