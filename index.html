@@ -121,39 +121,30 @@
             <nav class="main-tabs" aria-label="Procesos de tintoreria">
                 <button class="main-tab active" type="button" data-view-target="plegado">
                     <span>Plegado</span>
-                    <span class="count-pill" id="count-plegado">0</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="rama-crudo">
                     <span>Rama Crudo</span>
-                    <span class="count-pill" id="count-rama-crudo">0</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="preparado">
                     <span>Preparado</span>
-                    <span class="count-pill" id="count-preparado">0</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="tenido">
                     <span>Tenido</span>
-                    <span class="count-pill" id="count-tenido">0</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="abridora">
                     <span>Abridora</span>
-                    <span class="count-pill" id="count-abridora">0</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="rama-tenido">
                     <span>Rama Tenido</span>
-                    <span class="count-pill" id="count-rama-tenido">0</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="acab-espec">
                     <span>Acab Espec.</span>
-                    <span class="count-pill" id="count-acab-espec">0</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="calidad">
                     <span>Calidad</span>
-                    <span class="count-pill" id="count-calidad">0</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="embalaje">
                     <span>Embalaje</span>
-                    <span class="count-pill" id="count-embalaje">0</span>
                 </button>
             </nav>
 
@@ -272,12 +263,12 @@
             <section id="view-rama-crudo" class="view-section">
                 <div class="subtabs" aria-label="Estado de rama crudo">
                     <button class="subtab active" type="button" data-rama-crudo-filter="X PROG">
-                        Por Programar
+                        Por procesar
                         <span class="count-pill" id="count-rama-crudo-xprog">0</span>
                         <span class="subtab-summary" id="summary-rama-crudo-xprog">[0 partidas - 0.00kg]</span>
                     </button>
                     <button class="subtab" type="button" data-rama-crudo-filter="PROG">
-                        Programado
+                        Procesado
                         <span class="count-pill" id="count-rama-crudo-prog">0</span>
                         <span class="subtab-summary" id="summary-rama-crudo-prog">[0 partidas - 0.00kg]</span>
                     </button>
@@ -288,7 +279,7 @@
                         <table class="data-table rama-crudo-table">
                             <colgroup id="colgroup-rama-crudo"></colgroup>
                             <thead>
-                                <tr>
+                                <tr id="thead-tr-rama-crudo">
                                     <th>P</th>
                                     <th>cliente</th>
                                     <th>OP-PTDA</th>
@@ -444,12 +435,12 @@
             <section id="view-rama-tenido" class="view-section">
                 <div class="subtabs" aria-label="Estado de rama tenido">
                     <button class="subtab active" type="button" data-rama-tenido-filter="X PROG">
-                        Por Programar
+                        Por procesar
                         <span class="count-pill" id="count-rama-tenido-xprog">0</span>
                         <span class="subtab-summary" id="summary-rama-tenido-xprog">[0 partidas - 0.00kg]</span>
                     </button>
                     <button class="subtab" type="button" data-rama-tenido-filter="PROG">
-                        Programado
+                        Procesado
                         <span class="count-pill" id="count-rama-tenido-prog">0</span>
                         <span class="subtab-summary" id="summary-rama-tenido-prog">[0 partidas - 0.00kg]</span>
                     </button>
@@ -460,7 +451,7 @@
                         <table class="data-table rama-tenido-table">
                             <colgroup id="colgroup-rama-tenido"></colgroup>
                             <thead>
-                                <tr>
+                                <tr id="thead-tr-rama-tenido">
                                     <th>P</th>
                                     <th>cliente</th>
                                     <th>OP-PTDA</th>
