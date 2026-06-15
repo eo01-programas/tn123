@@ -7,3 +7,4 @@
 | Calidad | 023sb |
 | Embalaje | 050jl |
 | lab_tintoreria | 123lab |
+| lab_calidad | lc123 |
