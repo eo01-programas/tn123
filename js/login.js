@@ -11,6 +11,7 @@
 | Calidad | 023sb |
 | Embalaje | 050jl |
 | lab_tintoreria | 123lab |
+| lab_calidad | lc123 |
 `.trim();
 
     const PROCESS_VIEW_IDS = [
@@ -82,6 +83,16 @@
             defaultFilter: ''
         },
         lab_tintoreria: {
+            canAccessMaestro: false,
+            fullAccess: false,
+            readOnlyViews: ['plegado', 'rama-crudo', 'preparado', 'tenido', 'abridora', 'rama-tenido', 'acab-espec', 'calidad', 'embalaje'],
+            programadoOnlyViews: [],
+            alwaysEditableViews: [],
+            preserveControlsDisabled: true,
+            defaultView: 'plegado',
+            defaultFilter: 'X PROG'
+        },
+        lab_calidad: {
             canAccessMaestro: false,
             fullAccess: false,
             readOnlyViews: ['plegado', 'rama-crudo', 'preparado', 'tenido', 'abridora', 'rama-tenido', 'acab-espec', 'calidad', 'embalaje'],
