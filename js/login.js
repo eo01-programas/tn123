@@ -89,7 +89,7 @@
             programadoOnlyViews: [],
             alwaysEditableViews: [],
             preserveControlsDisabled: true,
-            defaultView: 'plegado',
+            defaultView: 'calidad',
             defaultFilter: 'X PROG'
         },
         lab_calidad: {
@@ -99,7 +99,7 @@
             programadoOnlyViews: [],
             alwaysEditableViews: [],
             preserveControlsDisabled: true,
-            defaultView: 'plegado',
+            defaultView: 'calidad',
             defaultFilter: 'X PROG'
         }
     };
