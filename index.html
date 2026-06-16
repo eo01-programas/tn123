@@ -22,6 +22,7 @@
     <script defer src="./js/preparado.js"></script>
     <script defer src="./js/tenido.js"></script>
     <script defer src="./js/abridora.js"></script>
+    <script defer src="./js/secado.js"></script>
     <script defer src="./js/rama-tenido.js"></script>
     <script defer src="./js/acab-espec.js"></script>
     <script defer src="./js/excel-export.js"></script>
@@ -133,6 +134,9 @@
                 </button>
                 <button class="main-tab" type="button" data-view-target="abridora">
                     <span>Abridora</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="secado">
+                    <span>Secado</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="rama-tenido">
                     <span>Rama Tenido</span>
@@ -396,12 +400,12 @@
             <section id="view-abridora" class="view-section">
                 <div class="subtabs" aria-label="Estado de abridora">
                     <button class="subtab active" type="button" data-abridora-filter="X PROG">
-                        Por Programar
+                        Por procesar
                         <span class="count-pill" id="count-abridora-xprog">0</span>
                         <span class="subtab-summary" id="summary-abridora-xprog">[0 partidas - 0.00kg]</span>
                     </button>
                     <button class="subtab" type="button" data-abridora-filter="PROG">
-                        Programado
+                        Procesado
                         <span class="count-pill" id="count-abridora-prog">0</span>
                         <span class="subtab-summary" id="summary-abridora-prog">[0 partidas - 0.00kg]</span>
                     </button>
@@ -413,20 +417,63 @@
                             <colgroup id="colgroup-abridora"></colgroup>
                             <thead>
                                 <tr>
-                                    <th>P</th>
+                                    <th id="th-abridora-p">P</th>
+                                    <th id="th-abridora-fing">F_ing_crudo</th>
+                                    <th id="th-abridora-fabridora">F_abridora</th>
                                     <th>cliente</th>
                                     <th>OP-PTDA</th>
                                     <th>color</th>
                                     <th>articulo</th>
                                     <th>kg(crudo)</th>
                                     <th>Turno</th>
-                                    <th>Oper</th>
-                                    <th>Inicio</th>
-                                    <th>Fin</th>
+                                    <th id="th-abridora-oper">Oper</th>
+                                    <th id="th-abridora-inicio">Inicio</th>
+                                    <th id="th-abridora-fin">Fin</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-abridora"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-secado" class="view-section">
+                <div class="subtabs" aria-label="Estado de secado">
+                    <button class="subtab active" type="button" data-secado-filter="X PROG">
+                        Por procesar
+                        <span class="count-pill" id="count-secado-xprog">0</span>
+                        <span class="subtab-summary" id="summary-secado-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-secado-filter="PROG">
+                        Procesado
+                        <span class="count-pill" id="count-secado-prog">0</span>
+                        <span class="subtab-summary" id="summary-secado-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table secado-table">
+                            <colgroup id="colgroup-secado"></colgroup>
+                            <thead>
+                                <tr>
+                                    <th id="th-secado-p">P</th>
+                                    <th id="th-secado-fing">F_ing_crudo</th>
+                                    <th id="th-secado-fsecado">F_secado</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th id="th-secado-oper">Oper</th>
+                                    <th id="th-secado-inicio">Inicio</th>
+                                    <th id="th-secado-fin">Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-secado"></tbody>
                         </table>
                     </div>
                 </div>
