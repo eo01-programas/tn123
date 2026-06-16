@@ -31,7 +31,7 @@
     function getEligibleRecords(records) {
         return records.filter((record) => (
             String(record.abridora_estado || '').trim() === 'OK' &&
-            String(record.secado_estado || '').trim() === 'OK'
+            ['OK', 'NO LLEVA'].includes(String(record.secado_estado || '').trim())
         ));
     }
 
@@ -50,8 +50,9 @@
                 });
         }
 
+        // Por procesar: solo registros enrutados explícitamente desde abridora_mobile
         return TintoreriaUtils.sortRecordsByPriority(
-            eligible.filter((record) => !['PROG', 'OK'].includes(normalizeRamaTenidoState(record))),
+            eligible.filter((record) => normalizeRamaTenidoState(record) === 'X PROCESAR'),
             'rama_tenido_p'
         ).sort((a, b) => {
             const aHasInicio = Boolean(a.rama_tenido_inicio);
@@ -328,7 +329,7 @@
 
     function renderSubtabCounts(records) {
         const eligible = getEligibleRecords(records);
-        const xprogRecords = eligible.filter((record) => !['PROG', 'OK'].includes(normalizeRamaTenidoState(record)));
+        const xprogRecords = eligible.filter((record) => normalizeRamaTenidoState(record) === 'X PROCESAR');
         const progRecords = eligible.filter((record) => ['PROG', 'OK'].includes(normalizeRamaTenidoState(record)));
 
         document.getElementById('count-rama-tenido-xprog').textContent = `${new Set(xprogRecords.map((r) => TintoreriaUtils.formatOpPartida(r.op_tela, r.partida))).size} ptds`;
@@ -829,16 +830,17 @@
             syncVisibleSubtabSummary();
         },
         count(records) {
-            return getEligibleRecords(records).length;
+            return getEligibleRecords(records).filter((r) => normalizeRamaTenidoState(r) === 'X PROCESAR').length;
         },
         locateRecord(record) {
             if (!getEligibleRecords([record]).length) {
                 return null;
             }
 
-            return {
-                filter: normalizeRamaTenidoState(record) === 'PROG' ? 'PROG' : 'X PROG'
-            };
+            const rtState = normalizeRamaTenidoState(record);
+            if (['PROG', 'OK'].includes(rtState)) return { filter: 'PROG' };
+            if (rtState === 'X PROCESAR') return { filter: 'X PROG' };
+            return null;
         }
     });
 })();
