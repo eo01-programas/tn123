@@ -18,7 +18,7 @@
     }
 
     function normalizeSecadoState(record) {
-        return String(record.secado_estado || 'X PROG').trim() || 'X PROG';
+        return String(record.secado_estado || '').trim();
     }
 
     function getEligibleRecords(records) {
@@ -46,8 +46,9 @@
             });
         }
 
+        // Por procesar: solo registros enrutados explícitamente desde abridora_mobile
         return TintoreriaUtils.sortRecordsByPriority(
-            eligible.filter((record) => normalizeSecadoState(record) !== 'OK'),
+            eligible.filter((record) => normalizeSecadoState(record) === 'X PROCESAR'),
             'secado_p'
         ).sort((a, b) => {
             const aHasInicio = Boolean(a.secado_inicio);
@@ -148,7 +149,7 @@
 
     function renderSubtabCounts(records) {
         const eligible = getEligibleRecords(records);
-        const xprogRecords = eligible.filter((record) => normalizeSecadoState(record) !== 'OK');
+        const xprogRecords = eligible.filter((record) => normalizeSecadoState(record) === 'X PROCESAR');
         const progRecords  = eligible.filter((record) => normalizeSecadoState(record) === 'OK');
 
         document.getElementById('count-secado-xprog').textContent = `${new Set(xprogRecords.map((r) => TintoreriaUtils.formatOpPartida(r.op_tela, r.partida))).size} ptds`;
@@ -485,16 +486,17 @@
             syncVisibleSubtabSummary();
         },
         count(records) {
-            return getEligibleRecords(records).filter((r) => normalizeSecadoState(r) !== 'OK').length;
+            return getEligibleRecords(records).filter((r) => normalizeSecadoState(r) === 'X PROCESAR').length;
         },
         locateRecord(record) {
-            if (!getEligibleRecords([record]).length) {
-                return null;
+            const secadoState = normalizeSecadoState(record);
+            if (secadoState === 'OK') {
+                return { filter: 'PROG' };
             }
-
-            return {
-                filter: normalizeSecadoState(record) === 'OK' ? 'PROG' : 'X PROG'
-            };
+            if (secadoState === 'X PROCESAR') {
+                return { filter: 'X PROG' };
+            }
+            return null;
         }
     });
 })();
