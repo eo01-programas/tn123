@@ -645,44 +645,70 @@
                         </button>
                         <h2>Reporte Ramas</h2>
                     </div>
-                    <span class="muted-note">Ultimos 7 dias con actividad &mdash; kg por proceso de rama</span>
                 </div>
 
                 <div class="rr-layout">
-                    <div class="table-card rr-card">
-                        <div class="table-container">
-                            <table class="data-table rr-table">
-                                <colgroup>
-                                    <col style="width: 50px;">
-                                    <col style="width: 50px;">
-                                    <col style="width: 50px;">
-                                    <col style="width: 50px;">
-                                    <col style="width: 50px;">
-                                    <col style="width: 50px;">
-                                    <col style="width: 50px;">
-                                </colgroup>
-                                <thead>
-                                    <tr>
-                                        <th class="rr-th-fecha">Fecha</th>
-                                        <th>Termofijado</th>
-                                        <th>Humectado</th>
-                                        <th>Secado</th>
-                                        <th>Acabado</th>
-                                        <th>Reproceso</th>
-                                        <th class="rr-th-total">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-reporte-ramas"></tbody>
-                            </table>
+                    <div class="rr-left-col">
+                        <div class="table-card rr-card">
+                            <div class="table-container">
+                                <table class="data-table rr-table">
+                                    <colgroup>
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                    </colgroup>
+                                    <thead>
+                                        <tr>
+                                            <th class="rr-th-fecha">Fecha</th>
+                                            <th>Termofijado</th>
+                                            <th>Humectado</th>
+                                            <th>Secado</th>
+                                            <th>Acabado</th>
+                                            <th>Reproceso</th>
+                                            <th class="rr-th-total">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-reporte-ramas"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="table-card rr-card">
+                            <div class="table-container">
+                                <table class="data-table rr-table">
+                                    <colgroup>
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                    </colgroup>
+                                    <thead>
+                                        <tr>
+                                            <th class="rr-th-fecha">Fecha</th>
+                                            <th>Plegado</th>
+                                            <th>Preparado</th>
+                                            <th>Abridora</th>
+                                            <th>Secado</th>
+                                            <th>Acab. Especial</th>
+                                            <th class="rr-th-total">Embalaje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-procesos"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
                     <div class="table-card rr-chart-card">
-                        <div class="rr-chart-header">
-                            <span class="rr-chart-title">Produccion semanal</span>
-                            <span class="muted-note">Ultimas 5 semanas</span>
-                        </div>
                         <svg id="rr-weekly-chart" class="rr-chart" viewBox="0 0 420 230" preserveAspectRatio="xMidYMid meet"></svg>
+                        <svg id="rr-embalaje-chart" class="rr-chart rr-chart-bottom" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid meet"></svg>
                     </div>
                 </div>
             </section>
