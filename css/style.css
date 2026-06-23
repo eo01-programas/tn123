@@ -363,8 +363,8 @@ body.auth-locked .login-screen {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex: 0 1 126px;
-    min-width: 116px;
+    flex: 0 1 151px;
+    min-width: 139px;
     margin-right: 4px;
 }
 
