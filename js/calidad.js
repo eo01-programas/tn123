@@ -111,6 +111,9 @@
         if (state === '2DO RECHAZO') return '2do RECHAZO';
         if (state === '3ER RECHAZO') return '3er RECHAZO';
         if (state === '4TO RECHAZO') return '4to RECHAZO';
+        if (state === '5TO RECHAZO') return '5to RECHAZO';
+        if (state === '6TO RECHAZO') return '6to RECHAZO';
+        if (state === '7MO RECHAZO') return '7mo RECHAZO';
 
         return state;
     }
@@ -146,13 +149,16 @@
 
     function getAuditadasStatusOrder(record) {
         const state = normalizeCalidadState(record);
-        if (state === '4TO RECHAZO') return 0;
-        if (state === '3ER RECHAZO') return 1;
-        if (state === '2DO RECHAZO') return 2;
+        if (state === '7MO RECHAZO') return 0;
+        if (state === '6TO RECHAZO') return 1;
+        if (state === '5TO RECHAZO') return 2;
+        if (state === '4TO RECHAZO') return 3;
+        if (state === '3ER RECHAZO') return 4;
+        if (state === '2DO RECHAZO') return 5;
         // RECHAZADO stored as '1ER RECHAZO' or 'RECHAZADO' — both map to 1er RECHAZO display
-        if (state === 'RECHAZADO' || state === '1ER RECHAZO') return 3;
-        if (state === 'OK') return 4;
-        return 5;
+        if (state === 'RECHAZADO' || state === '1ER RECHAZO') return 6;
+        if (state === 'OK') return 7;
+        return 8;
     }
 
     function getRejectedRecords(records) {
@@ -327,7 +333,7 @@
             return approvalSupervisor;
         }
 
-        for (let index = 4; index >= 1; index -= 1) {
+        for (let index = 7; index >= 1; index -= 1) {
             const rejectionSupervisor = String(record && record[`supervisor_rechazo_${index}`] ? record[`supervisor_rechazo_${index}`] : '').trim();
             if (rejectionSupervisor) {
                 return rejectionSupervisor;
@@ -849,6 +855,15 @@
         } else if (nextValue === '4to RECHAZO') {
             isRejectionStatus = true;
             rejectNumber = 4;
+        } else if (nextValue === '5to RECHAZO') {
+            isRejectionStatus = true;
+            rejectNumber = 5;
+        } else if (nextValue === '6to RECHAZO') {
+            isRejectionStatus = true;
+            rejectNumber = 6;
+        } else if (nextValue === '7mo RECHAZO') {
+            isRejectionStatus = true;
+            rejectNumber = 7;
         }
 
         let oldRejectNumber = 0;
@@ -857,6 +872,9 @@
         else if (currentEstado === '2do RECHAZO') oldRejectNumber = 2;
         else if (currentEstado === '3er RECHAZO') oldRejectNumber = 3;
         else if (currentEstado === '4to RECHAZO') oldRejectNumber = 4;
+        else if (currentEstado === '5to RECHAZO') oldRejectNumber = 5;
+        else if (currentEstado === '6to RECHAZO') oldRejectNumber = 6;
+        else if (currentEstado === '7mo RECHAZO') oldRejectNumber = 7;
 
         if (field === 'calidad_estado' && isRejectionStatus && rejectNumber !== oldRejectNumber) {
             openRejectModal(currentRecord, rejectNumber, finalStatus);
@@ -1140,7 +1158,7 @@
     }
 
     function getRejectDatesExportLabel(record) {
-        return [1, 2, 3, 4]
+        return [1, 2, 3, 4, 5, 6, 7]
             .map((index) => {
                 const raw = String(record && record[`fecha_rechazo_${index}`] || '').trim();
                 if (!raw) return '';
