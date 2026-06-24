@@ -291,7 +291,7 @@
 
         try {
             await TintoreriaApp.saveRecordChanges(detailModalRecordId, changes, {
-                successTitle: 'Rama Tenido',
+                successTitle: 'Rama Acabado',
                 successMessage: 'Los datos del formulario se guardaron correctamente.'
             });
             closeDetailModal();
@@ -402,7 +402,7 @@
                 <td><span class="cell-text">${TintoreriaUtils.escapeHtml(record.cliente)}</span></td>
                 <td>
                     <div class="op-action-cell">
-                        <button class="edit-detail-button" type="button" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-action="open-detail-modal" title="Editar datos de Rama Tenido">&#9998;</button>
+                        <button class="edit-detail-button" type="button" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-action="open-detail-modal" title="Editar datos de Rama Acabado">&#9998;</button>
                         <span class="cell-text code-text">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatOpPartida(record.op_tela, record.partida))}</span>
                     </div>
                 </td>
@@ -551,7 +551,7 @@
                     <td><span class="cell-text">${TintoreriaUtils.escapeHtml(record.cliente)}</span></td>
                     <td>
                         <div class="op-action-cell">
-                            <button class="edit-detail-button" type="button" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-action="open-detail-modal" title="Editar datos de Rama Tenido">&#9998;</button>
+                            <button class="edit-detail-button" type="button" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-action="open-detail-modal" title="Editar datos de Rama Acabado">&#9998;</button>
                             <span class="cell-text code-text">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatOpPartida(record.op_tela, record.partida))}</span>
                         </div>
                     </td>
@@ -665,7 +665,7 @@
             }
 
             const confirmed = await TintoreriaApp.confirmAction({
-                title: 'Confirmar Rama Tenido',
+                title: 'Confirmar Rama Acabado',
                 message: `Esta seguro que esta OP-Partida ya se pas\u00f3 por rama como tela te\u00f1ida? ${currentRecord.op_tela}-${currentRecord.partida}`
             });
 
