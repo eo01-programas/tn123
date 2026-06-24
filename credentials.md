@@ -1,5 +1,7 @@
 | usuario | password |
 | --- | --- |
+| G_operaciones | pp2026 |
+| DT_tintoreria | dt123 |
 | Pcp_textil | 9973 |
 | Tintoreria05 | 982ao |
 | Supervisor01 | 993ra |
