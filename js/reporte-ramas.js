@@ -133,14 +133,12 @@
 
         records.forEach(r => accumulateRecord(r, dayMap, weekMap));
 
-        const todayKey = dateKey(new Date());
         const rows = days
             .map(key => {
                 const row = dayMap[key];
                 const total = row.termofijado + row.humectado + row.secado + row.acabado + row.reproceso;
                 return { key, ...row, total };
-            })
-            .filter(row => row.total > 0 || row.key === todayKey);
+            });
 
         return { rows, weekMap, weeks };
     }
@@ -293,13 +291,7 @@
             }
         });
 
-        const todayKey = dateKey(new Date());
-        return days
-            .map(key => ({ key, ...map[key] }))
-            .filter(row => {
-                const total = row.plegado + row.preparado + row.abridora + row.secado + row.acabEspec + row.embalaje;
-                return total > 0 || row.key === todayKey;
-            });
+        return days.map(key => ({ key, ...map[key] }));
     }
 
     function renderProcessTable(rows) {
@@ -356,10 +348,14 @@
         const cW = VW - pad.left - pad.right;
         const cH = VH - pad.top - pad.bottom;
 
+        const todayKey = dateKey(new Date());
         const dayKeys = getLast7DayKeys();
         const kgByDay = {};
         rows.forEach(r => { kgByDay[r.key] = r.kg; });
-        const chartData = dayKeys.map(key => ({ key, kg: kgByDay[key] || 0 })).filter(d => d.kg > 0);
+        // Días con datos + siempre el día actual (aunque reporte 0).
+        const chartData = dayKeys
+            .map(key => ({ key, kg: kgByDay[key] || 0 }))
+            .filter(d => d.kg > 0 || d.key === todayKey);
 
         const maxVal = Math.max(...chartData.map(d => d.kg), 0);
         const yMax = niceMax(maxVal) || 1000;
@@ -368,7 +364,6 @@
         const barSlot = cW / chartData.length;
         const barW = barSlot * 0.58;
         const barOffset = (barSlot - barW) / 2;
-        const todayKey = dateKey(new Date());
 
         let html = '';
 
