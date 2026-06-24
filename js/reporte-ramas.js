@@ -5,8 +5,20 @@
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     }
 
-    function toDateKey(value) {
+    // Corte de jornada: lo registrado antes de las 7am cuenta como el día anterior
+    // (mismo criterio que las vistas de proceso, corte único porque este reporte
+    // no incluye datos de Calidad).
+    function toBusinessDate(value) {
         const d = TintoreriaUtils.parseDateish(value);
+        if (!d) return null;
+        if (d.getHours() < 7) {
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1, d.getHours(), d.getMinutes(), d.getSeconds());
+        }
+        return d;
+    }
+
+    function toDateKey(value) {
+        const d = toBusinessDate(value);
         return d ? dateKey(d) : null;
     }
 
@@ -71,7 +83,7 @@
         }
 
         function addToWeek(dateValue) {
-            const d = TintoreriaUtils.parseDateish(dateValue);
+            const d = toBusinessDate(dateValue);
             if (!d) return;
             const { key } = isoWeekKey(d);
             if (weekMap[key] !== undefined) weekMap[key] += kg;
