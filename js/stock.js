@@ -80,8 +80,8 @@
         },
         {
             id: 'rama-tenido',
-            label: 'Rama Tenido',
-            shortLabel: 'R. Ten.',
+            label: 'Rama Acabado',
+            shortLabel: 'R. Acab.',
             isEligible(record) {
                 return String(record.abridora_estado || '').trim() === 'OK'
                     && String(record.secado_estado || '').trim() === 'OK'
