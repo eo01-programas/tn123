@@ -4,6 +4,8 @@
     const DEFAULT_CREDENTIALS_TABLE = `
 | usuario | password |
 | --- | --- |
+| G_operaciones | pp2026 |
+| DT_tintoreria | dt123 |
 | Pcp_textil | 9973 |
 | Tintoreria05 | 982ao |
 | Supervisor01 | 993ra |
@@ -30,6 +32,26 @@
     ];
 
     const PERMISSION_PROFILES = {
+        G_operaciones: {
+            canAccessMaestro: false,
+            fullAccess: false,
+            readOnlyViews: ['plegado', 'rama-crudo', 'preparado', 'tenido', 'abridora', 'secado', 'rama-tenido', 'acab-espec', 'calidad', 'embalaje'],
+            programadoOnlyViews: [],
+            alwaysEditableViews: [],
+            preserveControlsDisabled: true,
+            defaultView: 'calidad',
+            defaultFilter: 'X PROG'
+        },
+        DT_tintoreria: {
+            canAccessMaestro: false,
+            fullAccess: false,
+            readOnlyViews: ['plegado', 'rama-crudo', 'preparado', 'tenido', 'abridora', 'secado', 'rama-tenido', 'acab-espec', 'calidad', 'embalaje'],
+            programadoOnlyViews: [],
+            alwaysEditableViews: [],
+            preserveControlsDisabled: true,
+            defaultView: 'calidad',
+            defaultFilter: 'X PROG'
+        },
         Pcp_textil: {
             canAccessMaestro: false,
             fullAccess: true,
