@@ -2028,7 +2028,7 @@
 
             if (!silent) {
                 const message = state.source === 'remote'
-                    ? 'Datos actualizados desde Google Sheet.'
+                    ? 'Datos actualizados desde la base de datos.'
                     : 'Datos actualizados en modo local.';
                 showToast(message, 'success', 'Datos sincronizados');
             }
