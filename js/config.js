@@ -271,7 +271,7 @@ const PROCESS_TABS = [
     { id: 'tenido', label: 'Tenido' },
     { id: 'abridora', label: 'Abridora' },
     { id: 'secado', label: 'Secado' },
-    { id: 'rama-tenido', label: 'Rama Tenido' },
+    { id: 'rama-tenido', label: 'Rama Acabado' },
     { id: 'acab-espec', label: 'Acab Espec.' },
     { id: 'calidad', label: 'Calidad' },
     { id: 'embalaje', label: 'Embalaje' }
