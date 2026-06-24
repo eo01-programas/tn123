@@ -5,13 +5,22 @@
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     }
 
+    // ¿El valor crudo trae hora? Los campos de solo fecha (embalaje_fecha,
+    // acabado_especial_fecha → formatDateForUi) no tienen componente horario y
+    // por tanto no se les debe aplicar el corte de jornada.
+    function hasTimeComponent(value) {
+        return /\d{1,2}:\d{2}/.test(String(value == null ? '' : value));
+    }
+
     // Corte de jornada: lo registrado antes de las 7am cuenta como el día anterior
     // (mismo criterio que las vistas de proceso, corte único porque este reporte
-    // no incluye datos de Calidad).
+    // no incluye datos de Calidad). Solo aplica a campos que guardan hora; los de
+    // solo fecha se respetan tal cual (de lo contrario medianoche caería siempre
+    // en el día anterior).
     function toBusinessDate(value) {
         const d = TintoreriaUtils.parseDateish(value);
         if (!d) return null;
-        if (d.getHours() < 7) {
+        if (hasTimeComponent(value) && d.getHours() < 7) {
             return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1, d.getHours(), d.getMinutes(), d.getSeconds());
         }
         return d;
