@@ -1986,15 +1986,15 @@ table.quality-table {
 
 /* Edita aqui los anchos de Embalaje. Puedes usar px, %, rem, etc. */
 table.embalaje-table {
-    --embalaje-col-p: 42px;
-    --embalaje-col-calidad-fin: 80px;
-    --embalaje-col-cliente: 80px;
-    --embalaje-col-op-ptda: 100px;
-    --embalaje-col-color: 190px;
-    --embalaje-col-articulo: 450px;
-    --embalaje-col-kg: 92px;
-    --embalaje-col-rollos: 92px;
-    --embalaje-col-status: 70px;
+    --embalaje-col-p: 30px;
+    --embalaje-col-calidad-fin: 50px;
+    --embalaje-col-cliente: 60px;
+    --embalaje-col-op-ptda: 80px;
+    --embalaje-col-color: 150px;
+    --embalaje-col-articulo: 550px;
+    --embalaje-col-kg: 80px;
+    --embalaje-col-rollos: 80px;
+    --embalaje-col-status: 60px;
 }
 
 table.tenido-table,
@@ -2543,26 +2543,12 @@ table.quality-table td {
 }
 
 /* ── EMBALAJE — 9 cols: P | calidad_fin | cliente | OP-PTDA | color |
-      articulo | kg | #rollos/cntd | Status ── */
-table.embalaje-table th:nth-child(1),
-table.embalaje-table td:nth-child(1)  { width: 42px; }   /* P             */
-table.embalaje-table th:nth-child(2),
-table.embalaje-table td:nth-child(2)  { width: 72px; }   /* calidad_fin   */
-table.embalaje-table th:nth-child(3),
-table.embalaje-table td:nth-child(3)  { width: 120px; }  /* cliente       */
-table.embalaje-table th:nth-child(4),
-table.embalaje-table td:nth-child(4)  { width: 120px; }  /* OP-PTDA       */
-table.embalaje-table th:nth-child(5),
-table.embalaje-table td:nth-child(5)  { width: 190px; }  /* color         */
-
-table.embalaje-table th:nth-child(6),
-table.embalaje-table td:nth-child(6)  { width: 380px; cursor: context-menu; }  /* articulo      */
-table.embalaje-table th:nth-child(7),
-table.embalaje-table td:nth-child(7)  { width: 92px; }   /* kg            */
-table.embalaje-table th:nth-child(8),
-table.embalaje-table td:nth-child(8)  { width: 92px; }   /* #rollos/cntd  */
-table.embalaje-table th:nth-child(9),
-table.embalaje-table td:nth-child(9)  { width: 80px; }  /* Status        */
+      articulo | kg | #rollos/cntd | Status ──
+   NOTA: los ANCHOS de columna NO se editan aqui. Como la tabla usa
+   table-layout: fixed con un <colgroup>, mandan los <col>. Edita los anchos
+   en las variables --embalaje-col-* (busca "Edita aqui los anchos de Embalaje",
+   mas arriba en este archivo). Aqui solo queda el cursor del articulo. */
+table.embalaje-table td:nth-child(6) { cursor: context-menu; }  /* articulo */
 
 .process-pill {
     display: inline-flex;
