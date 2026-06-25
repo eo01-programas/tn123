@@ -605,12 +605,21 @@
             </section>
 
             <section id="view-embalaje" class="view-section">
-                <div class="subtabs" aria-label="Estado de embalaje">
-                    <button class="subtab active" type="button">
-                        Por embalar
-                        <span class="count-pill" id="count-embalaje-pending">0 ptds</span>
-                        <span class="subtab-summary" id="summary-embalaje-pending">[0.00kg]</span>
-                    </button>
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de embalaje">
+                        <button class="subtab active" type="button">
+                            Por embalar
+                            <span class="count-pill" id="count-embalaje-pending">0 ptds</span>
+                            <span class="subtab-summary" id="summary-embalaje-pending">[0.00kg]</span>
+                        </button>
+                    </div>
+
+                    <div class="quality-toolbar-actions">
+                        <button class="quality-export-button" id="btn-export-embalaje-excel" type="button" title="Descargar Excel de Embalaje" aria-label="Descargar Excel de Embalaje">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                            <span>Excel</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-card">
