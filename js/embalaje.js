@@ -5,18 +5,22 @@
     let embalajeLastRecords = null;
     let embalajeLastState = null;
 
-    // ── Anchos de columnas (px) — editar aquí ──────────────────────────
-    // P | calidad_fin | cliente | OP-PTDA | color | articulo | kg(crudo) | #rollos/cntd | Status
+    // ── Anchos de columnas ────────────────────────────────────────────
+    // NO edites los px aqui. Cada columna usa la variable CSS --embalaje-col-*
+    // y estos px son solo el valor de respaldo si la variable no existe.
+    // Para CAMBIAR los anchos edita las variables --embalaje-col-* en
+    // css/style.css (busca "Edita aqui los anchos de Embalaje").
+    // Orden: P | calidad_fin | cliente | OP-PTDA | color | articulo | kg | #rollos/cntd | Status
     const EMBALAJE_WIDTHS = [
         'var(--embalaje-col-p, 42px)',
-        'var(--embalaje-col-calidad-fin, 72px)',
-        'var(--embalaje-col-cliente, 120px)',
-        'var(--embalaje-col-op-ptda, 120px)',
+        'var(--embalaje-col-calidad-fin, 80px)',
+        'var(--embalaje-col-cliente, 80px)',
+        'var(--embalaje-col-op-ptda, 100px)',
         'var(--embalaje-col-color, 190px)',
-        'var(--embalaje-col-articulo, 350px)',
+        'var(--embalaje-col-articulo, 450px)',
         'var(--embalaje-col-kg, 92px)',
         'var(--embalaje-col-rollos, 92px)',
-        'var(--embalaje-col-status, 110px)'
+        'var(--embalaje-col-status, 70px)'
     ];
 
     function isCalidadUser() {
@@ -319,6 +323,35 @@
         }
     }
 
+    // Orden ascendente por calidad_fin (lo mas antiguo primero); las filas sin
+    // fecha valida quedan al final.
+    function sortByCalidadFin(records) {
+        return [...records].sort((a, b) => {
+            const dateA = TintoreriaUtils.parseDateish(a.calidad_fin);
+            const dateB = TintoreriaUtils.parseDateish(b.calidad_fin);
+            if (!dateA && !dateB) return 0;
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+            return dateA - dateB;
+        });
+    }
+
+    function getFilteredEmbalajeRecords(records, state) {
+        let filtered = TintoreriaUtils.filterRecordsForSearch(
+            sortByCalidadFin(getEligibleRecords(records)),
+            state,
+            'embalaje'
+        );
+
+        if (embalajeCalidadFinFilter) {
+            filtered = filtered.filter(
+                (r) => TintoreriaUtils.formatDateDayMonth(r.calidad_fin) === embalajeCalidadFinFilter
+            );
+        }
+
+        return filtered;
+    }
+
     function renderTable(records, state) {
         embalajeLastRecords = records;
         embalajeLastState = state;
@@ -337,17 +370,7 @@
         hideCalidadFinFilterMenu();
         renderSubtabCounts(records);
 
-        let filtered = TintoreriaUtils.filterRecordsForSearch(
-            TintoreriaUtils.sortRecordsByPriority(getEligibleRecords(records), 'embalaje_p'),
-            state,
-            'embalaje'
-        );
-
-        if (embalajeCalidadFinFilter) {
-            filtered = filtered.filter(
-                (r) => TintoreriaUtils.formatDateDayMonth(r.calidad_fin) === embalajeCalidadFinFilter
-            );
-        }
+        const filtered = getFilteredEmbalajeRecords(records, state);
 
         if (!filtered.length) {
             tbody.innerHTML = `
@@ -447,11 +470,166 @@
         }
     }
 
+    // ── Exportacion a Excel (hoja "Por embalar", lista para imprimir) ─────
+
+    // Columnas del Excel — mismo orden que la tabla en pantalla.
+    // Anchos en "caracteres" de Excel. Suman ~146, que entra en A4 horizontal
+    // con margenes estrechos sin que Excel tenga que encoger el texto.
+    // articulo lleva el mayor ancho; cliente y color se ajustan a lo justo.
+    function getEmbalajeExportColumns() {
+        return [
+            { key: 'p', header: 'P', width: 5, align: 'center' },
+            { key: 'calidad_fin', header: 'calidad_fin', width: 12, align: 'center' },
+            { key: 'cliente', header: 'cliente', width: 16, align: 'left' },
+            { key: 'op_ptda', header: 'OP-PTDA', width: 14, align: 'center' },
+            { key: 'color', header: 'color', width: 20, align: 'left' },
+            { key: 'articulo', header: 'articulo', width: 60, align: 'left' },
+            { key: 'kg', header: 'kg(crudo)', width: 11, align: 'center' },
+            { key: 'rollos', header: '#rollos/cntd', width: 12, align: 'center' },
+            { key: 'status', header: 'Status', width: 10, align: 'center' }
+        ];
+    }
+
+    // Calcula los saltos de pagina manuales para que, cuando la informacion
+    // ocupe mas de una hoja A4, cada hoja se llene al maximo y el corte caiga
+    // siempre en un limite de OP-PTDA (nunca parte en dos una misma OP-PTDA ni
+    // deja paginas a medias). Devuelve numeros de fila del Excel (1-based)
+    // despues de los cuales insertar el salto.
+    function computeOpPtdaRowBreaks(rows) {
+        // Capacidad fisica de filas de datos por hoja A4 horizontal con los
+        // margenes actuales. Debe ser <= a lo que realmente entra para que el
+        // salto manual gane al automatico de Excel. Si ves que parte una
+        // OP-PTDA, baja este numero; si sobra espacio abajo, subelo.
+        const CAPACITY = 30;
+        const breaks = [];
+        const total = rows.length;
+        let pageStart = 0;
+
+        // Mientras lo que queda no entre en una sola hoja, cerramos una hoja.
+        while (total - pageStart > CAPACITY) {
+            // Ultima fila tentativa de esta hoja (indice 0-based en `rows`).
+            let pageEnd = pageStart + CAPACITY - 1;
+
+            // Si esa fila parte una OP-PTDA, retrocede hasta el ultimo limite
+            // de grupo dentro de la hoja para no cortar el grupo.
+            while (pageEnd > pageStart && rows[pageEnd].opPtda === rows[pageEnd + 1].opPtda) {
+                pageEnd -= 1;
+            }
+
+            // Caso extremo: un solo grupo mas grande que una hoja. No se puede
+            // evitar el corte; se usa la hoja completa.
+            if (pageEnd === pageStart && rows[pageEnd].opPtda === rows[pageEnd + 1].opPtda) {
+                pageEnd = pageStart + CAPACITY - 1;
+            }
+
+            // Fila de datos `pageEnd` -> fila `pageEnd + 2` en el Excel (hay 1
+            // encabezado). El salto se inserta debajo de esa fila.
+            breaks.push(pageEnd + 2);
+            pageStart = pageEnd + 1;
+        }
+
+        return breaks;
+    }
+
+    function buildEmbalajeExportFileName() {
+        const now = new Date();
+        const year = String(now.getFullYear());
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+
+        return `embalaje_por_embalar_${year}${month}${day}_${hours}${minutes}.xlsx`;
+    }
+
+    function exportEmbalajeWorkbook() {
+        if (!window.TintoreriaExcelExport || typeof TintoreriaExcelExport.downloadStyledWorkbook !== 'function') {
+            TintoreriaApp.showToast('La utilidad de exportacion no esta disponible.', 'error', 'Exportacion fallida');
+            return;
+        }
+
+        try {
+            const records = embalajeLastRecords || TintoreriaApp.getRecords();
+            const state = embalajeLastState || TintoreriaApp.state;
+            const filtered = getFilteredEmbalajeRecords(records, state);
+
+            if (!filtered.length) {
+                TintoreriaApp.showToast('No hay filas para exportar en "Por embalar".', 'info', 'Sin datos');
+                return;
+            }
+
+            // Checkbox en blanco para que al imprimir marquen con check manual.
+            const EMPTY_CHECKBOX = '☐'; // ☐
+
+            // Banda por grupo OP-PTDA: alterna 0/1 cada vez que cambia la OP-PTDA,
+            // igual que el pintado de la tabla en pantalla.
+            let groupIndex = -1;
+            let previousOpPtda = null;
+
+            const rows = filtered.map((record) => {
+                const opPtda = TintoreriaUtils.formatOpPartida(record.op_tela, record.partida);
+
+                if (opPtda !== previousOpPtda) {
+                    groupIndex += 1;
+                    previousOpPtda = opPtda;
+                }
+
+                return {
+                    opPtda,
+                    band: groupIndex % 2,
+                    urgent: TintoreriaUtils.isUrgentPriority(record.embalaje_p),
+                    cells: [
+                        record.embalaje_p || '',
+                        TintoreriaUtils.formatDateDayMonth(record.calidad_fin) || '',
+                        record.cliente || '',
+                        opPtda,
+                        TintoreriaUtils.formatColorLabel(record.color) || '',
+                        record.articulo || '',
+                        record.peso_kg_crudo || '',
+                        record.cantidad_crudo || '',
+                        EMPTY_CHECKBOX
+                    ]
+                };
+            });
+
+            TintoreriaExcelExport.downloadStyledWorkbook({
+                filename: buildEmbalajeExportFileName(),
+                sheets: [{
+                    name: 'Por embalar',
+                    columns: getEmbalajeExportColumns(),
+                    rows,
+                    rowBreaks: computeOpPtdaRowBreaks(rows),
+                    repeatHeader: true,
+                    footerNote: 'NO OLVIDAR ACTUALIZAR EN LA APLICACION',
+                    pageSetup: {
+                        orientation: 'landscape',
+                        paperSize: 9, // A4
+                        fitToWidth: 1,
+                        fitToHeight: 0,
+                        // Margenes estrechos + superior/inferior reducidos para
+                        // aprovechar mas filas por hoja (pulgadas).
+                        margins: { left: 0.25, right: 0.25, top: 0.3, bottom: 0.3, header: 0.15, footer: 0.15 }
+                    }
+                }]
+            });
+
+            TintoreriaApp.showToast('Se descargo el Excel de Embalaje (Por embalar).', 'success', 'Exportacion completada');
+        } catch (error) {
+            console.error(error);
+            TintoreriaApp.showToast(error.message || 'No se pudo exportar el archivo Excel.', 'error', 'Exportacion fallida');
+        }
+    }
+
     function init() {
         const tbody = document.getElementById('tbody-embalaje');
         if (tbody) {
             tbody.addEventListener('change', handleEditableChange);
             tbody.addEventListener('contextmenu', handleEmbalajeContextMenu);
+        }
+
+        const exportButton = document.getElementById('btn-export-embalaje-excel');
+        if (exportButton) {
+            exportButton.addEventListener('click', exportEmbalajeWorkbook);
         }
 
         document.addEventListener('click', handleEmbalajeDocumentClick);
