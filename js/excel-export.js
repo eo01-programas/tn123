@@ -79,11 +79,54 @@
         }));
     }
 
+    function normalizePageSetup(pageSetup) {
+        if (!pageSetup || typeof pageSetup !== 'object') {
+            return null;
+        }
+
+        const margins = pageSetup.margins && typeof pageSetup.margins === 'object' ? pageSetup.margins : {};
+        const toMargin = (value, fallback) => (Number(value) >= 0 ? Number(value) : fallback);
+
+        return {
+            orientation: pageSetup.orientation === 'portrait' ? 'portrait' : 'landscape',
+            // 9 = A4 en la especificacion OpenXML
+            paperSize: Number(pageSetup.paperSize) > 0 ? Number(pageSetup.paperSize) : 9,
+            fitToWidth: Number(pageSetup.fitToWidth) >= 0 ? Number(pageSetup.fitToWidth) : 1,
+            fitToHeight: Number(pageSetup.fitToHeight) >= 0 ? Number(pageSetup.fitToHeight) : 0,
+            margins: {
+                left: toMargin(margins.left, 0.25),
+                right: toMargin(margins.right, 0.25),
+                top: toMargin(margins.top, 0.4),
+                bottom: toMargin(margins.bottom, 0.4),
+                header: toMargin(margins.header, 0.2),
+                footer: toMargin(margins.footer, 0.2)
+            }
+        };
+    }
+
+    function normalizeRowBreaks(rowBreaks, rowCount) {
+        if (!Array.isArray(rowBreaks)) {
+            return [];
+        }
+
+        // Cada valor es un numero de fila (1-based) DESPUES del cual se inserta el salto.
+        const unique = new Set();
+        rowBreaks.forEach((value) => {
+            const rowNumber = Math.floor(Number(value));
+            if (rowNumber >= 1 && rowNumber <= rowCount) {
+                unique.add(rowNumber);
+            }
+        });
+
+        return [...unique].sort((a, b) => a - b);
+    }
+
     function normalizeRows(rows, columnCount) {
         return (rows || []).map((row) => {
             const cells = Array.isArray(row && row.cells) ? row.cells : [];
             return {
                 urgent: Boolean(row && row.urgent),
+                band: (row && typeof row.band === 'number') ? (((row.band % 2) + 2) % 2) : undefined,
                 cells: Array.from({ length: columnCount }, (_, columnIndex) => (
                     columnIndex < cells.length ? String(cells[columnIndex] === undefined || cells[columnIndex] === null ? '' : cells[columnIndex]) : ''
                 ))
@@ -94,7 +137,7 @@
     function buildStylesXml() {
         return `${XML_HEADER}
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <fonts count="2">
+  <fonts count="3">
     <font>
       <sz val="11"/>
       <color rgb="FF1E293B"/>
@@ -105,6 +148,13 @@
       <b/>
       <sz val="11"/>
       <color rgb="FFFFFFFF"/>
+      <name val="Calibri"/>
+      <family val="2"/>
+    </font>
+    <font>
+      <b/>
+      <sz val="12"/>
+      <color rgb="FFC00000"/>
       <name val="Calibri"/>
       <family val="2"/>
     </font>
@@ -132,7 +182,7 @@
   <cellStyleXfs count="1">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
   </cellStyleXfs>
-  <cellXfs count="8">
+  <cellXfs count="9">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="left" vertical="center"/>
@@ -155,6 +205,9 @@
     <xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="center" vertical="center"/>
     </xf>
+    <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center"/>
+    </xf>
   </cellXfs>
   <cellStyles count="1">
     <cellStyle name="Normal" xfId="0" builtinId="0"/>
@@ -175,10 +228,14 @@
             return isCentered ? 7 : 4;
         }
 
-        const isOddVisualRow = rowIndex % 2 === 0;
+        // Si la fila trae `band` (0/1) se pinta por grupo OP-PTDA; si no, se
+        // usa el rayado clasico por indice de fila. band===0 => fila clara.
+        const isPlainBand = (typeof row.band === 'number')
+            ? (row.band === 0)
+            : (rowIndex % 2 === 0);
         return isCentered
-            ? (isOddVisualRow ? 5 : 6)
-            : (isOddVisualRow ? 2 : 3);
+            ? (isPlainBand ? 5 : 6)
+            : (isPlainBand ? 2 : 3);
     }
 
     function buildWorksheetXml(sheet) {
@@ -207,12 +264,52 @@
         }).join('');
 
         const lastColumn = columnName(Math.max(0, sheet.columns.length - 1));
-        const lastRow = Math.max(1, sheet.rows.length + 1);
-        const tableRef = `A1:${lastColumn}${lastRow}`;
+        const lastDataRow = Math.max(1, sheet.rows.length + 1);
+        const tableRef = `A1:${lastColumn}${lastDataRow}`;
+
+        // Nota final (negritas) que tambien aparece al imprimir.
+        let footerNoteRowXml = '';
+        let mergeCellsXml = '';
+        let lastSheetRow = lastDataRow;
+        if (sheet.footerNote) {
+            const noteRowNumber = sheet.rows.length + 2;
+            lastSheetRow = noteRowNumber;
+            const noteCellsXml = sheet.columns.map((column, columnIndex) => {
+                if (columnIndex === 0) {
+                    return `<c r="A${noteRowNumber}" s="8" t="inlineStr">${buildInlineString(sheet.footerNote)}</c>`;
+                }
+                return `<c r="${columnName(columnIndex)}${noteRowNumber}" s="8"/>`;
+            }).join('');
+            footerNoteRowXml = `<row r="${noteRowNumber}" spans="1:${sheet.columns.length}" ht="26" customHeight="1">${noteCellsXml}</row>`;
+            if (sheet.columns.length > 1) {
+                mergeCellsXml = `<mergeCells count="1"><mergeCell ref="A${noteRowNumber}:${lastColumn}${noteRowNumber}"/></mergeCells>`;
+            }
+        }
+
+        const dimensionRef = `A1:${lastColumn}${lastSheetRow}`;
+
+        const pageSetup = sheet.pageSetup;
+        const sheetPrXml = pageSetup ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : '';
+
+        let printXml = '';
+        if (pageSetup) {
+            const { margins } = pageSetup;
+            printXml += `<pageMargins left="${margins.left}" right="${margins.right}" top="${margins.top}" bottom="${margins.bottom}" header="${margins.header}" footer="${margins.footer}"/>`;
+            printXml += `<pageSetup paperSize="${pageSetup.paperSize}" orientation="${pageSetup.orientation}" fitToWidth="${pageSetup.fitToWidth}" fitToHeight="${pageSetup.fitToHeight}"/>`;
+        }
+
+        // Saltos de pagina manuales: <brk id="R"> rompe DEBAJO de la fila R.
+        const rowBreaks = Array.isArray(sheet.rowBreaks) ? sheet.rowBreaks : [];
+        let rowBreaksXml = '';
+        if (rowBreaks.length) {
+            const brks = rowBreaks.map((rowNumber) => `<brk id="${rowNumber}" max="16383" man="1"/>`).join('');
+            rowBreaksXml = `<rowBreaks count="${rowBreaks.length}" manualBreakCount="${rowBreaks.length}">${brks}</rowBreaks>`;
+        }
 
         return `${XML_HEADER}
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="${tableRef}"/>
+  ${sheetPrXml}
+  <dimension ref="${dimensionRef}"/>
   <sheetViews>
     <sheetView workbookViewId="0">
       <pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>
@@ -220,15 +317,32 @@
   </sheetViews>
   <sheetFormatPr defaultRowHeight="18"/>
   <cols>${columnsXml}</cols>
-  <sheetData>${headerRow}${bodyRows}</sheetData>
+  <sheetData>${headerRow}${bodyRows}${footerNoteRowXml}</sheetData>
   <autoFilter ref="${tableRef}"/>
+  ${mergeCellsXml}${printXml}${rowBreaksXml}
 </worksheet>`;
+    }
+
+    function quoteSheetNameForRef(name) {
+        // Las referencias a hojas se entrecomillan con apostrofes; los
+        // apostrofes internos se duplican.
+        return `'${String(name).replace(/'/g, "''")}'`;
     }
 
     function buildWorkbookXml(sheets) {
         const sheetsXml = sheets.map((sheet, index) => (
             `<sheet name="${escapeXml(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`
         )).join('');
+
+        // Print_Titles: repite la fila 1 (encabezado) en todas las hojas impresas.
+        const printTitles = sheets.map((sheet, index) => {
+            if (!sheet.repeatHeader) {
+                return '';
+            }
+            const ref = `${quoteSheetNameForRef(sheet.name)}!$1:$1`;
+            return `<definedName name="_xlnm.Print_Titles" localSheetId="${index}">${escapeXml(ref)}</definedName>`;
+        }).filter(Boolean).join('');
+        const definedNamesXml = printTitles ? `<definedNames>${printTitles}</definedNames>` : '';
 
         return `${XML_HEADER}
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -238,6 +352,7 @@
     <workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="12000"/>
   </bookViews>
   <sheets>${sheetsXml}</sheets>
+  ${definedNamesXml}
 </workbook>`;
     }
 
@@ -473,7 +588,11 @@
             return {
                 name: normalizeSheetName(sheet && sheet.name, usedNames),
                 columns,
-                rows
+                rows,
+                pageSetup: normalizePageSetup(sheet && sheet.pageSetup),
+                rowBreaks: normalizeRowBreaks(sheet && sheet.rowBreaks, rows.length + 1),
+                footerNote: sheet && sheet.footerNote ? String(sheet.footerNote) : '',
+                repeatHeader: Boolean(sheet && sheet.repeatHeader)
             };
         }).filter(Boolean);
 
