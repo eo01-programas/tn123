@@ -26,6 +26,7 @@
     <script defer src="./js/rama-tenido.js"></script>
     <script defer src="./js/acab-espec.js"></script>
     <script defer src="./js/excel-export.js"></script>
+    <script defer src="./js/lab-tinto.js"></script>
     <script defer src="./js/calidad.js"></script>
     <script defer src="./js/embalaje.js"></script>
     <script defer src="./js/stock.js"></script>
@@ -144,6 +145,9 @@
                 </button>
                 <button class="main-tab" type="button" data-view-target="acab-espec">
                     <span>Acab Espec.</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="lab-tinto">
+                    <span>Lab Tinto</span>
                 </button>
                 <button class="main-tab" type="button" data-view-target="calidad">
                     <span>Calidad</span>
@@ -557,6 +561,52 @@
                                 </tr>
                             </thead>
                             <tbody id="tbody-acab-espec"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-lab-tinto" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de lab tinto">
+                        <button class="subtab active" type="button" data-lab-tinto-filter="MUESTRA">
+                            Por pasar muestra
+                            <span class="count-pill" id="count-lab-tinto-muestra">0</span>
+                            <span class="subtab-summary" id="summary-lab-tinto-muestra">[0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-lab-tinto-filter="RECETA">
+                            Por receta
+                            <span class="count-pill" id="count-lab-tinto-receta">0</span>
+                            <span class="subtab-summary" id="summary-lab-tinto-receta">[0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-lab-tinto-filter="OK">
+                            Receta OK
+                            <span class="count-pill" id="count-lab-tinto-ok">0</span>
+                            <span class="subtab-summary" id="summary-lab-tinto-ok">[0.00kg]</span>
+                        </button>
+                    </div>
+
+                    <div class="quality-toolbar-actions">
+                        <label class="quality-search-field quality-search-field-top" for="lab-tinto-toolbar-search">
+                            <span>Busqueda:</span>
+                            <input type="text" id="lab-tinto-toolbar-search" class="table-input" placeholder="OP-PTDA" maxlength="10">
+                        </label>
+                        <label class="quality-search-field quality-search-field-top" for="lab-tinto-toolbar-search-art">
+                            <input type="text" id="lab-tinto-toolbar-search-art" class="table-input" placeholder="cod_art" maxlength="12">
+                        </label>
+                        <button class="primary-button lab-tinto-solicita-button" id="btn-lab-tinto-solicita" type="button" title="Solicita Receta">
+                            <i class="ph ph-flask" aria-hidden="true"></i>
+                            <span>Solicita Receta</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table lab-tinto-table">
+                            <colgroup id="colgroup-lab-tinto"></colgroup>
+                            <thead id="thead-lab-tinto"></thead>
+                            <tbody id="tbody-lab-tinto"></tbody>
                         </table>
                     </div>
                 </div>
@@ -1121,6 +1171,67 @@
                     <span class="quality-info-label">Observacion de Calidad</span>
                     <p class="quality-info-text" id="calidad-info-observacion">Sin observaciones registradas.</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="lab-tinto-solicita-modal">
+        <div class="modal-card modal-card-form lab-tinto-solicita-card">
+            <div class="modal-card-head">
+                <div>
+                    <h3>Solicita Receta</h3>
+                    <p class="modal-subtitle">Pega desde Excel: op_tela, partida y lote (una fila por partida).</p>
+                </div>
+                <button class="modal-close-button" id="lab-tinto-solicita-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <div class="lab-tinto-solicita-body">
+                <div class="lab-tinto-solicita-left">
+                    <label for="lab-tinto-paste">Lista pegada (op_tela | partida | lote)</label>
+                    <textarea
+                        id="lab-tinto-paste"
+                        class="table-textarea lab-tinto-paste"
+                        rows="16"
+                        spellcheck="false"
+                        placeholder="op_tela	partida	lote&#10;1234	5	A-1&#10;1234	6	A-2"
+                    ></textarea>
+                </div>
+
+                <div class="lab-tinto-solicita-arrow">
+                    <button class="primary-button icon-only-button" id="lab-tinto-solicita-build" type="button" title="Llevar a la derecha" aria-label="Llevar a la derecha">
+                        <i class="ph ph-arrow-right"></i>
+                    </button>
+                </div>
+
+                <div class="lab-tinto-solicita-right">
+                    <div class="table-container lab-tinto-preview-container">
+                        <table class="data-table lab-tinto-preview-table">
+                            <thead>
+                                <tr>
+                                    <th>cliente</th>
+                                    <th>reserva</th>
+                                    <th>cod_color</th>
+                                    <th>color</th>
+                                    <th>cod_art</th>
+                                    <th>articulo</th>
+                                    <th>tipo_tela</th>
+                                    <th>op_tela</th>
+                                    <th>partida</th>
+                                    <th>peso_kg_crudo</th>
+                                    <th>lote</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lab-tinto-preview-tbody">
+                                <tr class="empty-state"><td colspan="11">Pega la lista y presiona la flecha para armar el cuadro.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="lab-tinto-solicita-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="lab-tinto-solicita-save" type="button">Solicitar Receta</button>
             </div>
         </div>
     </div>
