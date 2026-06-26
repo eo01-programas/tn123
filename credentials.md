@@ -8,5 +8,6 @@
 | Supervisor02 | 477lf |
 | Calidad | 023sb |
 | Embalaje | 050jl |
+| Asis_tintoreria | asis123 |
 | lab_tintoreria | 123lab |
 | lab_calidad | lc123 |
