@@ -1180,20 +1180,20 @@
             <div class="modal-card-head">
                 <div>
                     <h3>Solicita Receta</h3>
-                    <p class="modal-subtitle">Pega desde Excel: op_tela, partida y lote (una fila por partida).</p>
+                    <p class="modal-subtitle">Pega desde Excel: op_tela, partida, lote y observaciones (una fila por partida).</p>
                 </div>
                 <button class="modal-close-button" id="lab-tinto-solicita-close" type="button" aria-label="Cerrar">x</button>
             </div>
 
             <div class="lab-tinto-solicita-body">
                 <div class="lab-tinto-solicita-left">
-                    <label for="lab-tinto-paste">Lista pegada (op_tela | partida | lote)</label>
+                    <label for="lab-tinto-paste">Lista pegada (op_tela | partida | lote | observaciones)</label>
                     <textarea
                         id="lab-tinto-paste"
                         class="table-textarea lab-tinto-paste"
                         rows="16"
                         spellcheck="false"
-                        placeholder="op_tela	partida	lote&#10;1234	5	A-1&#10;1234	6	A-2"
+                        placeholder="op_tela	partida	lote	observaciones&#10;1234	5	A-1	urgente&#10;1234	6	A-2	"
                     ></textarea>
                 </div>
 
@@ -1219,10 +1219,11 @@
                                     <th>partida</th>
                                     <th>peso_kg_crudo</th>
                                     <th>lote</th>
+                                    <th>observaciones</th>
                                 </tr>
                             </thead>
                             <tbody id="lab-tinto-preview-tbody">
-                                <tr class="empty-state"><td colspan="11">Pega la lista y presiona la flecha para armar el cuadro.</td></tr>
+                                <tr class="empty-state"><td colspan="12">Pega la lista y presiona la flecha para armar el cuadro.</td></tr>
                             </tbody>
                         </table>
                     </div>
