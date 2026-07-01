@@ -21,6 +21,30 @@
         return String(record.preparado_estado || 'X PROG').trim() || 'X PROG';
     }
 
+    // Tipos parciales: solo doblan, NO completan el preparado (falta el cosido).
+    const PREPARADO_PARTIAL_TIPOS = new Set(['DOBLADO', 'DOB-REPROCESO']);
+
+    // ¿Los tipos registrados son TODOS parciales (solo DOBLADO/DOB-REPROCESO)?
+    function hasOnlyPartialPreparadoTipos(record) {
+        const tipos = String(record.preparado_tipo || '')
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean);
+        if (!tipos.length) {
+            return false;
+        }
+        return tipos.every((tipo) => PREPARADO_PARTIAL_TIPOS.has(tipo.toUpperCase()));
+    }
+
+    // "Terminado/PROCESADO": estado OK y con al menos un tipo de cierre
+    // (COSIDO, COS-REPROCESO o cualquiera de los combinados/legacy).
+    function isPreparadoDone(record) {
+        if (normalizePreparadoState(record) !== 'OK') {
+            return false;
+        }
+        return !hasOnlyPartialPreparadoTipos(record);
+    }
+
     function getEligibleRecords(records) {
         return records.filter((record) => {
             const preparadoState = normalizePreparadoState(record);
@@ -39,7 +63,7 @@
         const eligible = getEligibleRecords(records);
         if (currentFilter === 'PROG') {
             const sorted = TintoreriaUtils.sortRecordsByPriority(
-                eligible.filter((record) => normalizePreparadoState(record) === 'OK'),
+                eligible.filter((record) => isPreparadoDone(record)),
                 'preparado_p'
             ).sort((a, b) => {
                 const dateA = TintoreriaUtils.parseDateish(a.preparado_fin);
@@ -52,7 +76,7 @@
         }
 
         return TintoreriaUtils.sortRecordsByPriority(
-            eligible.filter((record) => normalizePreparadoState(record) !== 'OK'),
+            eligible.filter((record) => !isPreparadoDone(record)),
             'preparado_p'
         ).sort((a, b) => {
             const aHasInicio = Boolean(a.preparado_inicio);
@@ -238,8 +262,8 @@
 
     function renderSubtabCounts(records) {
         const eligible = getEligibleRecords(records);
-        const xprogRecords = eligible.filter((record) => normalizePreparadoState(record) !== 'OK');
-        const progRecords = eligible.filter((record) => normalizePreparadoState(record) === 'OK');
+        const xprogRecords = eligible.filter((record) => !isPreparadoDone(record));
+        const progRecords = eligible.filter((record) => isPreparadoDone(record));
         const progWindowed = TintoreriaProcessedWindow.filterToWindow('preparado', progRecords, getProcessedDate);
 
         document.getElementById('count-preparado-xprog').textContent = `${new Set(xprogRecords.map((r) => TintoreriaUtils.formatOpPartida(r.op_tela, r.partida))).size} ptds`;
@@ -673,16 +697,16 @@
             syncVisibleSubtabSummary();
         },
         count(records) {
-            return getEligibleRecords(records).filter((r) => normalizePreparadoState(r) !== 'OK').length;
+            return getEligibleRecords(records).filter((r) => !isPreparadoDone(r)).length;
         },
         locateRecord(record, state) {
             if (!getEligibleRecords([record]).length) {
                 return null;
             }
 
-            if (normalizePreparadoState(record) === 'OK') {
+            if (isPreparadoDone(record)) {
                 const allProg = getEligibleRecords(state.records || [])
-                    .filter((r) => normalizePreparadoState(r) === 'OK');
+                    .filter((r) => isPreparadoDone(r));
                 const visible = TintoreriaProcessedWindow.filterToWindow('preparado', allProg, getProcessedDate);
                 if (!visible.some((r) => r.id_registro === record.id_registro)) {
                     return null;
