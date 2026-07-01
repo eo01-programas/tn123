@@ -77,7 +77,26 @@
 
     // ── lógica de datos compartida ───────────────────────────────────────────
 
-    function accumulateRecord(record, dayMap, weekMap) {
+    // Índices de registros que sustentan cada celda numérica, usados para
+    // abrir el modal de detalle al hacer click. Se repueblan en cada render().
+    let dailyRecordsIndex = {};
+    let processRecordsIndex = {};
+
+    const FIELD_LABELS = {
+        termofijado: 'Termofijado',
+        humectado: 'Humectado',
+        secado: 'Secado',
+        acabado: 'Acabado',
+        reproceso: 'Reproceso',
+        total: 'Total',
+        plegado: 'Plegado',
+        preparado: 'Preparado',
+        abridora: 'Abridora',
+        acabEspec: 'Acab. Especial',
+        embalaje: 'Embalaje'
+    };
+
+    function accumulateRecord(record, dayMap, weekMap, dayRecordsIndex) {
         const kg = TintoreriaUtils.toNumber(record.peso_kg_crudo);
         if (!kg) return;
 
@@ -88,7 +107,10 @@
 
         function addToDay(dateValue, field) {
             const key = toDateKey(dateValue);
-            if (key && dayMap[key]) dayMap[key][field] += kg;
+            if (key && dayMap[key]) {
+                dayMap[key][field] += kg;
+                if (dayRecordsIndex[key]) dayRecordsIndex[key][field].push(record);
+            }
         }
 
         function addToWeek(dateValue) {
@@ -125,13 +147,17 @@
     function buildDailyReport(records) {
         const days = getLast7DayKeys(7);
         const dayMap = {};
-        days.forEach(d => { dayMap[d] = { termofijado: 0, humectado: 0, secado: 0, acabado: 0, reproceso: 0 }; });
+        const dayRecordsIndex = {};
+        days.forEach(d => {
+            dayMap[d] = { termofijado: 0, humectado: 0, secado: 0, acabado: 0, reproceso: 0 };
+            dayRecordsIndex[d] = { termofijado: [], humectado: [], secado: [], acabado: [], reproceso: [] };
+        });
 
         const weeks = getLast5Weeks();
         const weekMap = {};
         weeks.forEach(w => { weekMap[w.key] = 0; });
 
-        records.forEach(r => accumulateRecord(r, dayMap, weekMap));
+        records.forEach(r => accumulateRecord(r, dayMap, weekMap, dayRecordsIndex));
 
         const rows = days
             .map(key => {
@@ -140,18 +166,24 @@
                 return { key, ...row, total };
             });
 
-        return { rows, weekMap, weeks };
+        return { rows, weekMap, weeks, recordsIndex: dayRecordsIndex };
     }
 
-    function fmt(value) {
+    function cellButton(inner, source, day, field) {
+        return `<button type="button" class="rr-cell-btn" data-source="${source}" data-day="${day}" data-field="${field}">${inner}</button>`;
+    }
+
+    function fmt(value, source, day, field) {
         if (!value) return '<span class="rr-empty">—</span>';
-        return `<strong>${TintoreriaUtils.formatNumber(value)}</strong><span class="rr-unit"> kg</span>`;
+        const inner = `<strong>${TintoreriaUtils.formatNumber(value)}</strong><span class="rr-unit"> kg</span>`;
+        return cellButton(inner, source, day, field);
     }
 
-    function fmtPct(value, total) {
+    function fmtPct(value, total, source, day, field) {
         if (!value) return '<span class="rr-empty">—</span>';
         const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-        return `<strong>${TintoreriaUtils.formatNumber(value)}</strong><span class="rr-unit"> kg (${pct}%)</span>`;
+        const inner = `<strong>${TintoreriaUtils.formatNumber(value)}</strong><span class="rr-unit"> kg (${pct}%)</span>`;
+        return cellButton(inner, source, day, field);
     }
 
     function renderTable(rows) {
@@ -166,12 +198,12 @@
         tbody.innerHTML = rows.map(row => `
             <tr>
                 <td class="rr-fecha">${formatDateLabel(row.key)}</td>
-                <td class="rr-value">${fmtPct(row.termofijado, row.total)}</td>
-                <td class="rr-value">${fmtPct(row.humectado, row.total)}</td>
-                <td class="rr-value">${fmtPct(row.secado, row.total)}</td>
-                <td class="rr-value">${fmtPct(row.acabado, row.total)}</td>
-                <td class="rr-value">${fmtPct(row.reproceso, row.total)}</td>
-                <td class="rr-total">${fmt(row.total)}</td>
+                <td class="rr-value">${fmtPct(row.termofijado, row.total, 'daily', row.key, 'termofijado')}</td>
+                <td class="rr-value">${fmtPct(row.humectado, row.total, 'daily', row.key, 'humectado')}</td>
+                <td class="rr-value">${fmtPct(row.secado, row.total, 'daily', row.key, 'secado')}</td>
+                <td class="rr-value">${fmtPct(row.acabado, row.total, 'daily', row.key, 'acabado')}</td>
+                <td class="rr-value">${fmtPct(row.reproceso, row.total, 'daily', row.key, 'reproceso')}</td>
+                <td class="rr-total">${fmt(row.total, 'daily', row.key, 'total')}</td>
             </tr>
         `).join('');
     }
@@ -256,8 +288,10 @@
     function buildProcessReport(records) {
         const days = getLast7DayKeys(7);
         const map = {};
+        const recordsIndex = {};
         days.forEach(d => {
             map[d] = { plegado: 0, preparado: 0, abridora: 0, secado: 0, acabEspec: 0, embalaje: 0 };
+            recordsIndex[d] = { plegado: [], preparado: [], abridora: [], secado: [], acabEspec: [], embalaje: [] };
         });
 
         records.forEach(record => {
@@ -273,31 +307,31 @@
 
             if (plegadoEstado === 'OK') {
                 const key = toDateKey(record.plegado_fecha);
-                if (key && map[key]) map[key].plegado += kg;
+                if (key && map[key]) { map[key].plegado += kg; recordsIndex[key].plegado.push(record); }
             }
             if (preparadoEstado === 'OK') {
                 const key = toDateKey(record.preparado_fin);
-                if (key && map[key]) map[key].preparado += kg;
+                if (key && map[key]) { map[key].preparado += kg; recordsIndex[key].preparado.push(record); }
             }
             if (abridoraEstado === 'OK') {
                 const key = toDateKey(record.abridora_fin);
-                if (key && map[key]) map[key].abridora += kg;
+                if (key && map[key]) { map[key].abridora += kg; recordsIndex[key].abridora.push(record); }
             }
             if (secadoEstado === 'OK') {
                 const key = toDateKey(record.secado_fin);
-                if (key && map[key]) map[key].secado += kg;
+                if (key && map[key]) { map[key].secado += kg; recordsIndex[key].secado.push(record); }
             }
             if (acabEspecEstado === 'OK') {
                 const key = toDateKey(record.acabado_especial_fecha);
-                if (key && map[key]) map[key].acabEspec += kg;
+                if (key && map[key]) { map[key].acabEspec += kg; recordsIndex[key].acabEspec.push(record); }
             }
             if (embalajeEstado === 'OK') {
                 const key = toDateKey(record.embalaje_fecha);
-                if (key && map[key]) map[key].embalaje += kg;
+                if (key && map[key]) { map[key].embalaje += kg; recordsIndex[key].embalaje.push(record); }
             }
         });
 
-        return days.map(key => ({ key, ...map[key] }));
+        return { rows: days.map(key => ({ key, ...map[key] })), recordsIndex };
     }
 
     function renderProcessTable(rows) {
@@ -312,12 +346,12 @@
         tbody.innerHTML = rows.map(row => `
             <tr>
                 <td class="rr-fecha">${formatDateLabel(row.key)}</td>
-                <td class="rr-value">${fmt(row.plegado)}</td>
-                <td class="rr-value">${fmt(row.preparado)}</td>
-                <td class="rr-value">${fmt(row.abridora)}</td>
-                <td class="rr-value">${fmt(row.secado)}</td>
-                <td class="rr-value">${fmt(row.acabEspec)}</td>
-                <td class="rr-total">${fmt(row.embalaje)}</td>
+                <td class="rr-value">${fmt(row.plegado, 'process', row.key, 'plegado')}</td>
+                <td class="rr-value">${fmt(row.preparado, 'process', row.key, 'preparado')}</td>
+                <td class="rr-value">${fmt(row.abridora, 'process', row.key, 'abridora')}</td>
+                <td class="rr-value">${fmt(row.secado, 'process', row.key, 'secado')}</td>
+                <td class="rr-value">${fmt(row.acabEspec, 'process', row.key, 'acabEspec')}</td>
+                <td class="rr-total">${fmt(row.embalaje, 'process', row.key, 'embalaje')}</td>
             </tr>
         `).join('');
     }
@@ -411,18 +445,130 @@
         svg.innerHTML = html;
     }
 
+    // ── modal de detalle (drill-down por celda) ─────────────────────────────
+
+    function getCellRecords(source, day, field) {
+        if (source === 'daily') {
+            const bucket = dailyRecordsIndex[day];
+            if (!bucket) return [];
+            if (field === 'total') {
+                return ['termofijado', 'humectado', 'secado', 'acabado', 'reproceso']
+                    .reduce((acc, f) => acc.concat(bucket[f] || []), []);
+            }
+            return bucket[field] || [];
+        }
+        if (source === 'process') {
+            const bucket = processRecordsIndex[day];
+            return (bucket && bucket[field]) || [];
+        }
+        return [];
+    }
+
+    function getDetailModalElements() {
+        return {
+            modal: document.getElementById('rr-detail-modal'),
+            title: document.getElementById('rr-detail-title'),
+            tbody: document.getElementById('rr-detail-tbody'),
+            close: document.getElementById('rr-detail-close')
+        };
+    }
+
+    function renderDetailRows(records) {
+        if (!records.length) {
+            return '<tr><td colspan="7" class="rr-no-data">Sin registros.</td></tr>';
+        }
+
+        // Agrupadas por OP-PTDA para que la pintura de filas (igual que en las
+        // vistas principales) resalte cada partida como bloque continuo.
+        const sorted = [...records].sort((a, b) => {
+            const opA = TintoreriaUtils.formatOpPartida(a.op_tela, a.partida);
+            const opB = TintoreriaUtils.formatOpPartida(b.op_tela, b.partida);
+            return opA.localeCompare(opB, 'es', { numeric: true });
+        });
+
+        let previousOp = null;
+        let groupIndex = -1;
+
+        return sorted.map(record => {
+            const opPartida = TintoreriaUtils.formatOpPartida(record.op_tela, record.partida);
+            if (opPartida !== previousOp) {
+                groupIndex += 1;
+                previousOp = opPartida;
+            }
+            const groupClass = groupIndex % 2 === 0 ? 'op-group-plain' : 'op-group-painted';
+
+            return `
+            <tr class="${groupClass}">
+                <td><span class="cell-text">${TintoreriaUtils.escapeHtml(record.cliente || '')}</span></td>
+                <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.tipo_tela || '')}</span></td>
+                <td><strong class="cell-text">${TintoreriaUtils.escapeHtml(opPartida)}</strong></td>
+                <td class="rr-detail-color-cell">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatColorLabel(record.color))}</td>
+                <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.articulo || '')}">${TintoreriaUtils.escapeHtml(record.articulo || '')}</span></td>
+                <td style="text-align:right">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatNumber(record.peso_kg_crudo))}</td>
+                <td style="text-align:center">${TintoreriaUtils.escapeHtml(record.cantidad_crudo || '0')}</td>
+            </tr>
+        `;
+        }).join('');
+    }
+
+    function openDetailModal(titleText, records) {
+        const { modal, title, tbody } = getDetailModalElements();
+        if (!modal) return;
+        if (title) title.textContent = titleText;
+        if (tbody) tbody.innerHTML = renderDetailRows(records);
+        modal.classList.remove('hidden');
+    }
+
+    function closeDetailModal() {
+        const { modal } = getDetailModalElements();
+        if (modal) modal.classList.add('hidden');
+    }
+
+    function handleCellClick(event) {
+        const button = event.target.closest('.rr-cell-btn');
+        if (!button) return;
+        const { source, day, field } = button.dataset;
+        const records = getCellRecords(source, day, field);
+        const label = FIELD_LABELS[field] || field;
+        openDetailModal(`${label} · ${formatDateLabel(day)}`, records);
+    }
+
+    function bindDetailModal() {
+        document.getElementById('tbody-reporte-ramas')?.addEventListener('click', handleCellClick);
+        document.getElementById('tbody-procesos')?.addEventListener('click', handleCellClick);
+
+        const { modal, close } = getDetailModalElements();
+        if (close) close.addEventListener('click', closeDetailModal);
+        if (modal) {
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) closeDetailModal();
+            });
+        }
+        document.addEventListener('keydown', (event) => {
+            const { modal: currentModal } = getDetailModalElements();
+            if (event.key === 'Escape' && currentModal && !currentModal.classList.contains('hidden')) {
+                closeDetailModal();
+            }
+        });
+    }
+
     // ── render principal ─────────────────────────────────────────────────────
 
     function render(records) {
-        const { rows, weekMap, weeks } = buildDailyReport(records);
-        renderTable(rows);
-        renderWeeklyChart(weeks, weekMap);
-        renderProcessTable(buildProcessReport(records));
+        const daily = buildDailyReport(records);
+        dailyRecordsIndex = daily.recordsIndex;
+        renderTable(daily.rows);
+        renderWeeklyChart(daily.weeks, daily.weekMap);
+
+        const process = buildProcessReport(records);
+        processRecordsIndex = process.recordsIndex;
+        renderProcessTable(process.rows);
+
         renderEmbalajeChart(buildEmbalajeReport(records));
     }
 
     TintoreriaApp.registerView('reporte-ramas', {
-        init() {},
+        init: bindDetailModal,
         render
     });
 })();
