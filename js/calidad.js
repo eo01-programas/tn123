@@ -1192,6 +1192,10 @@
             return;
         }
 
+        // Reubica el modal al final del body para que quede por encima de
+        // cualquier otro modal ya abierto (mismo z-index, gana el orden en el DOM).
+        document.body.appendChild(modal);
+
         if (title) title.textContent = `${record.cliente || ''} - ${TintoreriaUtils.formatOpPartida(record.op_tela, record.partida)} - ${TintoreriaUtils.formatColorLabel(record.color)}`;
         if (subtitle) subtitle.textContent = `${record.cod_art || ''} - ${record.articulo || ''}`;
         if (cantidadRechazos) {
@@ -1906,7 +1910,8 @@
     }
 
     window.TintoreriaCalidad = {
-        sortRecordsForPageLoad
+        sortRecordsForPageLoad,
+        openInfoModal
     };
 })();
 
