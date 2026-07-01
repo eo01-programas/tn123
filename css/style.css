@@ -817,6 +817,30 @@ table.rr-table {
     font-weight: 400;
 }
 
+.rr-cell-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.rr-detail-color-cell {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.rr-cell-btn:hover,
+.rr-cell-btn:focus-visible {
+    text-decoration: underline;
+    color: var(--primary);
+    outline: none;
+}
+
 .rr-no-data {
     text-align: center;
     color: var(--gray-500);
