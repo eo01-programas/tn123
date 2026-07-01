@@ -473,7 +473,24 @@
         };
     }
 
-    function renderDetailRows(records) {
+    // Mismo botón/ícono que el "ver información de calidad" del subtab AUDITADAS
+    // en Calidad (calidad.js renderInfoButtonMarkup), para abrir el modal idéntico.
+    function renderQualityEyeButton(record) {
+        return `
+            <button
+                class="ghost-button icon-only-button quality-info-button"
+                type="button"
+                data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}"
+                data-action="rr-show-quality-info"
+                title="Ver información de calidad"
+                aria-label="Ver información de calidad"
+            >
+                <i class="ph ph-eye"></i>
+            </button>
+        `;
+    }
+
+    function renderDetailRows(records, showQualityEye) {
         if (!records.length) {
             return '<tr><td colspan="7" class="rr-no-data">Sin registros.</td></tr>';
         }
@@ -501,7 +518,12 @@
             <tr class="${groupClass}">
                 <td><span class="cell-text">${TintoreriaUtils.escapeHtml(record.cliente || '')}</span></td>
                 <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.tipo_tela || '')}</span></td>
-                <td><strong class="cell-text">${TintoreriaUtils.escapeHtml(opPartida)}</strong></td>
+                <td>
+                    <div class="quality-op-cell">
+                        ${showQualityEye ? renderQualityEyeButton(record) : ''}
+                        <strong class="cell-text">${TintoreriaUtils.escapeHtml(opPartida)}</strong>
+                    </div>
+                </td>
                 <td class="rr-detail-color-cell">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatColorLabel(record.color))}</td>
                 <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.articulo || '')}">${TintoreriaUtils.escapeHtml(record.articulo || '')}</span></td>
                 <td style="text-align:right">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatNumber(record.peso_kg_crudo))}</td>
@@ -511,11 +533,11 @@
         }).join('');
     }
 
-    function openDetailModal(titleText, records) {
+    function openDetailModal(titleText, records, showQualityEye) {
         const { modal, title, tbody } = getDetailModalElements();
         if (!modal) return;
         if (title) title.textContent = titleText;
-        if (tbody) tbody.innerHTML = renderDetailRows(records);
+        if (tbody) tbody.innerHTML = renderDetailRows(records, showQualityEye);
         modal.classList.remove('hidden');
     }
 
@@ -530,12 +552,23 @@
         const { source, day, field } = button.dataset;
         const records = getCellRecords(source, day, field);
         const label = FIELD_LABELS[field] || field;
-        openDetailModal(`${label} · ${formatDateLabel(day)}`, records);
+        const showQualityEye = source === 'process' && field === 'embalaje';
+        openDetailModal(`${label} · ${formatDateLabel(day)}`, records, showQualityEye);
+    }
+
+    function handleDetailQualityEyeClick(event) {
+        const button = event.target.closest('[data-action="rr-show-quality-info"]');
+        if (!button) return;
+        const record = TintoreriaApp.findRecord(button.dataset.recordId);
+        if (record && window.TintoreriaCalidad && typeof window.TintoreriaCalidad.openInfoModal === 'function') {
+            window.TintoreriaCalidad.openInfoModal(record);
+        }
     }
 
     function bindDetailModal() {
         document.getElementById('tbody-reporte-ramas')?.addEventListener('click', handleCellClick);
         document.getElementById('tbody-procesos')?.addEventListener('click', handleCellClick);
+        document.getElementById('rr-detail-tbody')?.addEventListener('click', handleDetailQualityEyeClick);
 
         const { modal, close } = getDetailModalElements();
         if (close) close.addEventListener('click', closeDetailModal);
