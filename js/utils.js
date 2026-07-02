@@ -509,6 +509,19 @@
         return buildMaestroDuplicateKey(record.op_tela, record.partida, record.cod_art, record.color);
     }
 
+    function buildMaestroIdentityKey(tipoTela, opTela, partida, codArt) {
+        const tipoValue = normalizeRecordKeyPart(tipoTela);
+        const opValue = normalizeRecordKeyPart(opTela);
+        const partidaValue = normalizeRecordKeyPart(partida);
+        const codArtValue = normalizeRecordKeyPart(codArt);
+
+        if (!tipoValue && !opValue && !partidaValue && !codArtValue) {
+            return '';
+        }
+
+        return `${tipoValue}|${opValue}|${partidaValue}|${codArtValue}`;
+    }
+
     function getPriorityValue(value) {
         const digits = String(value === undefined || value === null ? '' : value)
             .replace(/\D/g, '')
@@ -703,6 +716,7 @@
         formatOpPartida,
         buildMaestroDuplicateKey,
         buildRecordMatchKey,
+        buildMaestroIdentityKey,
         sortRecordsByPriority,
         isUrgentPriority,
         summarizeWeight,
