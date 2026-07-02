@@ -179,44 +179,107 @@
         });
     }
 
-    function filterImportedDuplicates(records, existingRecords) {
-        const existingKeys = new Set(
-            existingRecords
-                .map((record) => TintoreriaUtils.buildMaestroDuplicateKey(record.op_tela, record.partida, record.cod_art, record.color))
-                .filter(Boolean)
+    function buildImportIdentityKey(record) {
+        return TintoreriaUtils.buildMaestroIdentityKey(
+            record.tipo_tela,
+            record.op_tela,
+            record.partida,
+            record.cod_art
         );
-        const fileKeys = new Set();
-        const recordsToImport = [];
-        const duplicatesInSheet = [];
-        const duplicatesInFile = [];
+    }
+
+    function normalizeColorValue(value) {
+        return String(value === undefined || value === null ? '' : value).trim();
+    }
+
+    // La identidad de una partida es tipo_tela+op_tela+partida+cod_art (sin color).
+    // Cuando esa combinacion se repite gana el ultimo ingresado, pero solo se
+    // sobrescribe el color del registro que ya existe para no perder datos.
+    function planImportedRecords(records, existingRecords) {
+        const existingByIdentity = new Map();
+
+        existingRecords.forEach((record) => {
+            const key = buildImportIdentityKey(record);
+            if (!key) {
+                return;
+            }
+
+            const bucket = existingByIdentity.get(key);
+            if (bucket) {
+                bucket.push(record);
+            } else {
+                existingByIdentity.set(key, [record]);
+            }
+        });
+
+        const directImports = [];
+        const newByIdentity = new Map();
+        const latestColorByIdentity = new Map();
+        let collapsedInFile = 0;
 
         records.forEach((record) => {
-            const duplicateKey = TintoreriaUtils.buildMaestroDuplicateKey(record.op_tela, record.partida, record.cod_art, record.color);
+            const key = buildImportIdentityKey(record);
 
-            if (!duplicateKey) {
-                recordsToImport.push(record);
+            if (!key) {
+                directImports.push(record);
                 return;
             }
 
-            if (existingKeys.has(duplicateKey)) {
-                duplicatesInSheet.push(record);
+            if (existingByIdentity.has(key)) {
+                if (latestColorByIdentity.has(key)) {
+                    collapsedInFile += 1;
+                }
+                latestColorByIdentity.set(key, record.color);
                 return;
             }
 
-            if (fileKeys.has(duplicateKey)) {
-                duplicatesInFile.push(record);
-                return;
+            if (newByIdentity.has(key)) {
+                collapsedInFile += 1;
             }
+            newByIdentity.set(key, record);
+        });
 
-            fileKeys.add(duplicateKey);
-            recordsToImport.push(record);
+        const colorUpdates = [];
+        latestColorByIdentity.forEach((color, key) => {
+            const nextColor = normalizeColorValue(color);
+            existingByIdentity.get(key).forEach((existing) => {
+                if (normalizeColorValue(existing.color) === nextColor) {
+                    return;
+                }
+                colorUpdates.push({ record: existing, color: nextColor });
+            });
         });
 
         return {
-            recordsToImport,
-            duplicatesInSheet,
-            duplicatesInFile
+            recordsToImport: [...directImports, ...Array.from(newByIdentity.values())],
+            colorUpdates,
+            matchedInSheet: latestColorByIdentity.size,
+            collapsedInFile
         };
+    }
+
+    async function applyColorUpdates(colorUpdates) {
+        let updatedCount = 0;
+
+        for (const update of colorUpdates) {
+            const targetId = String(update.record.id_registro || '').trim();
+            if (!targetId) {
+                continue;
+            }
+
+            try {
+                await TintoreriaAPI.updateRecord(targetId, { color: update.color }, {
+                    match: {
+                        record_key: TintoreriaUtils.buildRecordMatchKey(update.record)
+                    }
+                });
+                updatedCount += 1;
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        return updatedCount;
     }
 
     function transformEntregaRow(row) {
@@ -336,39 +399,44 @@
 
             const {
                 recordsToImport,
-                duplicatesInSheet,
-                duplicatesInFile
-            } = filterImportedDuplicates(transformed, TintoreriaApp.getRecords());
-            const omittedCount = duplicatesInSheet.length + duplicatesInFile.length;
+                colorUpdates,
+                collapsedInFile
+            } = planImportedRecords(transformed, TintoreriaApp.getRecords());
 
-            if (!recordsToImport.length) {
+            const colorUpdatedCount = await applyColorUpdates(colorUpdates);
+
+            let appended = [];
+            if (recordsToImport.length) {
+                appended = await TintoreriaApp.importRecords(recordsToImport);
+            }
+
+            if (colorUpdatedCount > 0) {
+                await TintoreriaApp.refreshData({ silent: true });
+            }
+
+            renderMetrics(getVisibleRecords(TintoreriaApp.getRecords()));
+
+            if (!appended.length && !colorUpdatedCount) {
                 TintoreriaApp.showToast(
-                    `No se importo ninguna fila. ${omittedCount} duplicados omitidos.`,
+                    'No hubo cambios: las partidas del archivo ya estaban registradas con el mismo color.',
                     'error',
-                    'Importacion omitida'
+                    'Importacion sin cambios'
                 );
                 return;
             }
 
-            const appended = await TintoreriaApp.importRecords(recordsToImport);
-            renderMetrics(getVisibleRecords(TintoreriaApp.getRecords()));
-
-            let importMessage = `Se importaron ${appended.length} filas.`;
-            if (omittedCount > 0) {
-                const duplicateParts = [];
-
-                if (duplicatesInSheet.length > 0) {
-                    duplicateParts.push(`${duplicatesInSheet.length} ya existian en el sheet`);
-                }
-
-                if (duplicatesInFile.length > 0) {
-                    duplicateParts.push(`${duplicatesInFile.length} venian duplicadas en el archivo`);
-                }
-
-                importMessage += ` ${duplicateParts.join('. ')}.`;
+            const messageParts = [];
+            if (appended.length) {
+                messageParts.push(`Se importaron ${appended.length} filas.`);
+            }
+            if (colorUpdatedCount > 0) {
+                messageParts.push(`${colorUpdatedCount} colores actualizados (ultimo ingresado).`);
+            }
+            if (collapsedInFile > 0) {
+                messageParts.push(`${collapsedInFile} duplicados en el archivo colapsados.`);
             }
 
-            TintoreriaApp.showToast(importMessage, 'success', 'Importacion completada');
+            TintoreriaApp.showToast(messageParts.join(' '), 'success', 'Importacion completada');
         } catch (error) {
             console.error(error);
             TintoreriaApp.showToast(error.message || 'No se pudo procesar el archivo Excel.', 'error', 'Importacion fallida');
