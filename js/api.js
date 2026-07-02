@@ -252,6 +252,135 @@
         return parseJsonResponse(response);
     }
 
+    const GVIZ_TIMEOUT_MS = 15000;
+
+    function canUseGvizReader() {
+        return typeof SHEET_ID === 'string' && SHEET_ID.trim() !== '' && typeof document !== 'undefined';
+    }
+
+    function loadGvizJson() {
+        return new Promise((resolve, reject) => {
+            const callbackName = `tintoreriaGviz_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+            const script = document.createElement('script');
+            let done = false;
+            let timeoutId = null;
+
+            const cleanup = () => {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+                try {
+                    delete window[callbackName];
+                } catch (error) {
+                    window[callbackName] = undefined;
+                }
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+            };
+
+            window[callbackName] = (json) => {
+                if (done) return;
+                done = true;
+                cleanup();
+                resolve(json);
+            };
+
+            const queryParts = [
+                `tqx=responseHandler:${callbackName}`,
+                `sheet=${encodeURIComponent(DATA_SHEET_NAME)}`,
+                'headers=1',
+                `_=${Date.now()}`
+            ];
+
+            script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?${queryParts.join('&')}`;
+            script.onerror = () => {
+                if (done) return;
+                done = true;
+                cleanup();
+                reject(new Error('No se pudo leer la hoja compartida (gviz).'));
+            };
+            timeoutId = setTimeout(() => {
+                if (done) return;
+                done = true;
+                cleanup();
+                reject(new Error('Tiempo de espera agotado leyendo la hoja compartida (gviz).'));
+            }, GVIZ_TIMEOUT_MS);
+
+            document.body.appendChild(script);
+        });
+    }
+
+    function gvizCellToDisplayValue(cell) {
+        if (!cell) {
+            return '';
+        }
+
+        if (cell.f !== undefined && cell.f !== null) {
+            return String(cell.f);
+        }
+
+        if (cell.v === null || cell.v === undefined) {
+            return '';
+        }
+
+        return typeof cell.v === 'string' ? cell.v : String(cell.v);
+    }
+
+    function gvizJsonToRecords(json) {
+        const table = json && json.table;
+        if (!table || !Array.isArray(table.cols)) {
+            throw new Error('Respuesta invalida de la hoja compartida (gviz).');
+        }
+
+        let headers = table.cols.map((col) => String((col && col.label) || '').trim());
+        let rows = Array.isArray(table.rows) ? table.rows : [];
+
+        // Si gviz no detecto la fila de encabezados, llega como primera fila de datos.
+        if (!headers.includes('id_registro')) {
+            const firstRow = rows[0];
+            const firstCells = firstRow && Array.isArray(firstRow.c) ? firstRow.c : [];
+            headers = table.cols.map((_, index) => gvizCellToDisplayValue(firstCells[index]).trim());
+            rows = rows.slice(1);
+        }
+
+        if (!headers.includes('id_registro')) {
+            throw new Error('No se encontraron encabezados validos en la hoja compartida (gviz).');
+        }
+
+        const records = [];
+
+        rows.forEach((row) => {
+            const cells = row && Array.isArray(row.c) ? row.c : [];
+            const record = {};
+            let hasContent = false;
+
+            headers.forEach((header, index) => {
+                if (!header) {
+                    return;
+                }
+
+                const value = gvizCellToDisplayValue(cells[index]);
+                record[header] = value;
+
+                if (!hasContent && String(value).trim() !== '') {
+                    hasContent = true;
+                }
+            });
+
+            if (hasContent) {
+                records.push(record);
+            }
+        });
+
+        return records;
+    }
+
+    async function listRecordsViaGviz() {
+        const json = await loadGvizJson();
+        return gvizJsonToRecords(json);
+    }
+
     window.TintoreriaAPI = {
         getCachedRecords() {
             if (!TintoreriaUtils.hasConfiguredWebAppUrl()) {
@@ -274,8 +403,22 @@
                 };
             }
 
-            const data = await listRemoteRecords();
-            const records = updateRemoteCache(data.records || []);
+            let rawRecords = null;
+
+            if (canUseGvizReader()) {
+                try {
+                    rawRecords = await listRecordsViaGviz();
+                } catch (error) {
+                    console.warn('Lectura rapida (gviz) no disponible; usando Apps Script.', error);
+                }
+            }
+
+            if (rawRecords === null) {
+                const data = await listRemoteRecords();
+                rawRecords = data.records || [];
+            }
+
+            const records = updateRemoteCache(rawRecords);
             return {
                 success: true,
                 source: 'remote',
