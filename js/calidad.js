@@ -721,15 +721,26 @@
         `;
     }
 
+    function renderRutaTelaCell(record) {
+        const ruta = String(record.ruta_tela_final || '').trim().toUpperCase();
+        let markup = '<span class="process-pill process-pill-muted ruta-tela-pill">--</span>';
+        if (ruta === 'ACABADA') {
+            markup = '<span class="process-pill ruta-tela-pill ruta-tela-pill-ac" title="ACABADA">AC</span>';
+        } else if (ruta === 'LAVADA') {
+            markup = '<span class="process-pill ruta-tela-pill ruta-tela-pill-lv" title="LAVADA">LV</span>';
+        }
+        return `<td style="text-align:center">${markup}</td>`;
+    }
+
     function renderTableHead() {
         const thead = document.getElementById('thead-calidad');
         if (!thead) return;
         const isRejected = currentFilter === 'REJECTED';
         const headers = isRejected
-            ? ['Fecha_registro', 'cliente', 'OP-PTDA', 'cod_color', 'color', 'cod_art', 'articulo', 'kg(crudo)', '#rollos/cntd', 'Auditor', 'Supervisor', 'Turno', 'Status']
+            ? ['Fecha_registro', 'cliente', 'OP-PTDA', 'cod_color', 'color', 'cod_art', 'articulo', 'kg(crudo)', '#rollos/cntd', 'Ruta_tela', 'Auditor', 'Supervisor', 'Turno', 'Status']
             : ['cliente', 'OP-PTDA', 'cod_color', 'color', 'cod_art', 'articulo', 'kg(crudo)', '#rollos/cntd', 'Auditor', 'Turno', 'Inicio', 'Fin', 'Situacion', 'Status'];
         const widths = isRejected
-            ? [86, 60, 90, 66, 96, 66, 226, 62, 68, 104, 90, 40, 90]
+            ? [86, 60, 90, 66, 96, 66, 182, 62, 68, 44, 104, 90, 40, 90]
             : [60, 60, 66, 96, 66, 242, 62, 68, 112, 40, 60, 60, 80, 80];
         thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
         const colgroup = document.getElementById('colgroup-calidad');
@@ -777,7 +788,7 @@
             const emptyLabel = qualityLookupQuery
                 ? `No se encontraron filas para ${TintoreriaUtils.escapeHtml(qualityLookupQuery)} en este subtab.`
                 : (currentFilter === 'REJECTED' ? 'No hay partidas auditadas.' : 'No hay filas en Calidad.');
-            tbody.innerHTML = `<tr class="empty-state"><td colspan="${currentFilter === 'ACTIVE' ? 14 : 13}">${emptyLabel}</td></tr>`;
+            tbody.innerHTML = `<tr class="empty-state"><td colspan="14">${emptyLabel}</td></tr>`;
             syncDurationTimer(records);
             return;
         }
@@ -810,8 +821,9 @@
                 : `<td><select class="${selectClass}" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="calidad_estado"${readonlyAttrs}>${optionMarkup(getDisplayCalidadState(record), currentFilter === 'REJECTED' ? TintoreriaConfig.CALIDAD_ESTADO_RECHAZADAS_OPTIONS : TintoreriaConfig.CALIDAD_ESTADO_OPTIONS, 'AUDITANDO')}</select></td>`;
 
             const tdFechaRegistro = buildFechaRegistroCell(record);
+            const tdRutaTela = renderRutaTelaCell(record);
             const cells = currentFilter === 'REJECTED'
-                ? [tdFechaRegistro, tdCliente, tdOpptda, tdCodColor, tdColor, tdCodArt, tdArticulo, tdKg, tdRollos, tdAuditor, tdSupervisor, tdTurno, tdStatus]
+                ? [tdFechaRegistro, tdCliente, tdOpptda, tdCodColor, tdColor, tdCodArt, tdArticulo, tdKg, tdRollos, tdRutaTela, tdAuditor, tdSupervisor, tdTurno, tdStatus]
                 : [tdCliente, tdOpptda, tdCodColor, tdColor, tdCodArt, tdArticulo, tdKg, tdRollos, tdAuditor, tdTurno, tdInicio, tdFin, tdSituacion, tdStatus];
 
             return `<tr${rowClass}>${cells.join('')}</tr>`;
