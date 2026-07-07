@@ -169,7 +169,8 @@ const MASTER_HEADERS = [
     'tipo_receta_lab_tinto',
     'observaciones_receta_lab_tinto',
     'status_receta_lab_tinto',
-    'fecha_receta_lab_tinto'
+    'fecha_receta_lab_tinto',
+    'ruta_tela_final'
 ];
 
 const ROUTE_OPTIONS = ['', 'Termofijado', 'Humectado', 'Directo'];
