@@ -2647,6 +2647,22 @@ button.process-pill {
     color: #b91c1c;
 }
 
+/* Pill compacto para la columna Ruta_tela (Calidad, subtab AUDITADAS) */
+table.quality-table .ruta-tela-pill {
+    min-width: 28px;
+    padding: 3px 4px;
+}
+
+.ruta-tela-pill-ac {
+    background: var(--success-light);
+    color: #047857;
+}
+
+.ruta-tela-pill-lv {
+    background: #bfdbfe;
+    color: #1e3a8a;
+}
+
 .inicio-time-tooltip {
     position: fixed;
     z-index: 2000;
