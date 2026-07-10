@@ -641,6 +641,20 @@
         return { tipoTela, opTela };
     }
 
+    const SPANDEX_ARTICLE_KEYWORDS = ['SPANDEX', 'SPDX', 'SPAND1:1', 'SPAND', 'SPAN', 'SPD', 'SP'];
+    const SPANDEX_ARTICLE_PATTERN = new RegExp(
+        `(?<![A-Z0-9])(?:${SPANDEX_ARTICLE_KEYWORDS.join('|')})(?![A-Z0-9])`,
+        'i'
+    );
+
+    function isSpandexArticle(value) {
+        const normalized = String(value === undefined || value === null ? '' : value).toUpperCase();
+        if (!normalized) {
+            return false;
+        }
+        return SPANDEX_ARTICLE_PATTERN.test(normalized);
+    }
+
     function normalizeClienteName(value) {
         const raw = String(value || '').trim();
         const upper = raw.toUpperCase();
@@ -741,6 +755,7 @@
         normalizeOpPartidaSearchValue,
         filterRecordsForSearch,
         extractTelaData,
+        isSpandexArticle,
         defaultRecord,
         sortRecords,
         hasConfiguredWebAppUrl,
