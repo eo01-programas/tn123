@@ -17,6 +17,7 @@
 
         const cliente = String(normalized.CLIENTE === undefined || normalized.CLIENTE === null ? '' : normalized.CLIENTE).trim();
         const partida = String(normalized['PARTIDA GUIA'] === undefined || normalized['PARTIDA GUIA'] === null ? '' : normalized['PARTIDA GUIA']).trim();
+        const articulo = String(normalized.ARTICULO === undefined || normalized.ARTICULO === null ? '' : normalized.ARTICULO).trim();
 
         if (!cliente && !partida) {
             return null;
@@ -29,7 +30,7 @@
             op_tela: opTela,
             partida,
             cod_art: String(normalized['COD. ART.'] === undefined || normalized['COD. ART.'] === null ? '' : normalized['COD. ART.']).trim(),
-            articulo: String(normalized.ARTICULO === undefined || normalized.ARTICULO === null ? '' : normalized.ARTICULO).trim(),
+            articulo,
             cod_color: String(normalized['COD. COLOR'] === undefined || normalized['COD. COLOR'] === null ? '' : normalized['COD. COLOR']).trim(),
             color: String(normalized.COLOR === undefined || normalized.COLOR === null ? '' : normalized.COLOR).trim(),
             peso_kg_crudo: TintoreriaUtils.parseNumericCell(normalized['PESO (KG)']),
@@ -37,7 +38,8 @@
             tipo_guia: String(normalized['TIPO GUIA'] === undefined || normalized['TIPO GUIA'] === null ? '' : normalized['TIPO GUIA']).trim(),
             motivo_guia: String(normalized['MOTIVO TIPO GUIA'] === undefined || normalized['MOTIVO TIPO GUIA'] === null ? '' : normalized['MOTIVO TIPO GUIA']).trim(),
             reserva: String(normalized.RESERVA === undefined || normalized.RESERVA === null ? '' : normalized.RESERVA).trim(),
-            certificado: String(normalized['O/P CERT.'] === undefined || normalized['O/P CERT.'] === null ? '' : normalized['O/P CERT.']).trim()
+            certificado: String(normalized['O/P CERT.'] === undefined || normalized['O/P CERT.'] === null ? '' : normalized['O/P CERT.']).trim(),
+            ruta: TintoreriaUtils.isSpandexArticle(articulo) ? 'Termofijado' : ''
         });
     }
 
