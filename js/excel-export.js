@@ -75,7 +75,10 @@
             key: column && column.key ? String(column.key) : `col_${index + 1}`,
             header: String(column && column.header ? column.header : ''),
             width: Number(column && column.width) > 0 ? Number(column.width) : 12,
-            align: column && column.align === 'center' ? 'center' : 'left'
+            align: column && column.align === 'center' ? 'center' : 'left',
+            numberFormat: column && ['decimal2', 'integer'].includes(column.numberFormat)
+                ? column.numberFormat
+                : ''
         }));
     }
 
@@ -128,7 +131,9 @@
                 urgent: Boolean(row && row.urgent),
                 band: (row && typeof row.band === 'number') ? (((row.band % 2) + 2) % 2) : undefined,
                 cells: Array.from({ length: columnCount }, (_, columnIndex) => (
-                    columnIndex < cells.length ? String(cells[columnIndex] === undefined || cells[columnIndex] === null ? '' : cells[columnIndex]) : ''
+                    columnIndex < cells.length && cells[columnIndex] !== undefined && cells[columnIndex] !== null
+                        ? cells[columnIndex]
+                        : ''
                 ))
             };
         });
@@ -182,7 +187,7 @@
   <cellStyleXfs count="1">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
   </cellStyleXfs>
-  <cellXfs count="9">
+  <cellXfs count="21">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="left" vertical="center"/>
@@ -208,6 +213,18 @@
     <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">
       <alignment horizontal="left" vertical="center"/>
     </xf>
+    <xf numFmtId="2" fontId="0" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="left" vertical="center"/></xf>
+    <xf numFmtId="2" fontId="0" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="left" vertical="center"/></xf>
+    <xf numFmtId="2" fontId="0" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="left" vertical="center"/></xf>
+    <xf numFmtId="2" fontId="0" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="2" fontId="0" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="2" fontId="0" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="1" fontId="0" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="left" vertical="center"/></xf>
+    <xf numFmtId="1" fontId="0" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="left" vertical="center"/></xf>
+    <xf numFmtId="1" fontId="0" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="left" vertical="center"/></xf>
+    <xf numFmtId="1" fontId="0" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="1" fontId="0" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="1" fontId="0" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
   </cellXfs>
   <cellStyles count="1">
     <cellStyle name="Normal" xfId="0" builtinId="0"/>
@@ -224,18 +241,24 @@
 
         const isCentered = column.align === 'center';
 
-        if (row.urgent) {
-            return isCentered ? 7 : 4;
-        }
-
         // Si la fila trae `band` (0/1) se pinta por grupo OP-PTDA; si no, se
         // usa el rayado clasico por indice de fila. band===0 => fila clara.
         const isPlainBand = (typeof row.band === 'number')
             ? (row.band === 0)
             : (rowIndex % 2 === 0);
-        return isCentered
-            ? (isPlainBand ? 5 : 6)
-            : (isPlainBand ? 2 : 3);
+        const baseStyleId = row.urgent
+            ? (isCentered ? 7 : 4)
+            : (isCentered
+                ? (isPlainBand ? 5 : 6)
+                : (isPlainBand ? 2 : 3));
+
+        if (column.numberFormat === 'decimal2') {
+            return baseStyleId + 7;
+        }
+        if (column.numberFormat === 'integer') {
+            return baseStyleId + 13;
+        }
+        return baseStyleId;
     }
 
     function buildWorksheetXml(sheet) {
