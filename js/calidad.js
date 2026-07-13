@@ -26,8 +26,8 @@
         { key: 'color', header: 'color', width: 20 },
         { key: 'cod_art', header: 'cod_art', width: 14 },
         { key: 'articulo', header: 'articulo', width: 34 },
-        { key: 'peso_kg_crudo', header: 'kg(crudo)', width: 11, align: 'center' },
-        { key: 'cantidad_crudo', header: '#rollos/cntd', width: 12, align: 'center' },
+        { key: 'peso_kg_crudo', header: 'kg(crudo)', width: 11, align: 'center', numberFormat: 'decimal2' },
+        { key: 'cantidad_crudo', header: '#rollos/cntd', width: 12, align: 'center', numberFormat: 'integer' },
         { key: 'calidad_auditor', header: 'Auditor', width: 18 },
         { key: 'supervisor_calidad', header: 'Supervisor', width: 18 },
         { key: 'calidad_turno', header: 'Turno', width: 10, align: 'center' },
@@ -50,6 +50,15 @@
         return filter === 'REJECTED'
             ? QUALITY_EXPORT_COLUMNS_AUDITADAS
             : QUALITY_EXPORT_COLUMNS_ACTIVE;
+    }
+
+    function getDecimalExportValue(value) {
+        return TintoreriaUtils.parseNumericCell(value);
+    }
+
+    function getIntegerExportValue(value) {
+        const numericValue = TintoreriaUtils.parseNumericCell(value);
+        return numericValue === '' ? '' : Math.trunc(numericValue);
     }
 
     function getCurrentUsername() {
@@ -425,8 +434,8 @@
                     TintoreriaUtils.formatColorLabel(record.color),
                     record.cod_art || '',
                     record.articulo || '',
-                    parseFloat(String(record.peso_kg_crudo || '').replace(',', '.')) || 0,
-                    record.cantidad_crudo || '',
+                    getDecimalExportValue(record.peso_kg_crudo),
+                    getIntegerExportValue(record.cantidad_crudo),
                     record.calidad_auditor || '',
                     getSupervisorCalidadLabel(record),
                     getTurnoExportLabel(record),
@@ -447,8 +456,8 @@
                 TintoreriaUtils.formatColorLabel(record.color),
                 record.cod_art || '',
                 record.articulo || '',
-                record.peso_kg_crudo || '',
-                record.cantidad_crudo || '',
+                getDecimalExportValue(record.peso_kg_crudo),
+                getIntegerExportValue(record.cantidad_crudo),
                 record.calidad_auditor || '',
                 getSupervisorCalidadLabel(record),
                 getTurnoExportLabel(record),
@@ -508,8 +517,8 @@
                             TintoreriaUtils.formatColorLabel(record.color),
                             record.cod_art || '',
                             record.articulo || '',
-                            parseFloat(String(record.peso_kg_crudo || '').replace(',', '.')) || 0,
-                            record.cantidad_crudo || '',
+                            getDecimalExportValue(record.peso_kg_crudo),
+                            getIntegerExportValue(record.cantidad_crudo),
                             record.calidad_auditor || '',
                             getSupervisorCalidadLabel(record),
                             getTurnoExportLabel(record),
@@ -529,8 +538,8 @@
                         TintoreriaUtils.formatColorLabel(record.color),
                         record.cod_art || '',
                         record.articulo || '',
-                        parseFloat(String(record.peso_kg_crudo || '').replace(',', '.')) || 0,
-                        record.cantidad_crudo || '',
+                        getDecimalExportValue(record.peso_kg_crudo),
+                        getIntegerExportValue(record.cantidad_crudo),
                         record.calidad_auditor || '',
                         getSupervisorCalidadLabel(record),
                         getTurnoExportLabel(record),
