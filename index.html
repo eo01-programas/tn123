@@ -824,9 +824,25 @@
 
                     <div class="rr-right-col">
                         <div class="rr-chart-card">
+                            <div class="rr-chart-menu" data-chart="ramas">
+                                <button type="button" class="rr-chart-menu-btn" aria-haspopup="true">Sem</button>
+                                <div class="rr-chart-menu-list hidden">
+                                    <button type="button" class="rr-chart-menu-option" data-period="dia">Día</button>
+                                    <button type="button" class="rr-chart-menu-option" data-period="sem">Sem</button>
+                                    <button type="button" class="rr-chart-menu-option" data-period="mes">Mes</button>
+                                </div>
+                            </div>
                             <svg id="rr-weekly-chart" class="rr-chart" viewBox="0 0 420 230" preserveAspectRatio="xMidYMid meet"></svg>
                         </div>
                         <div class="rr-chart-card">
+                            <div class="rr-chart-menu" data-chart="embalaje">
+                                <button type="button" class="rr-chart-menu-btn" aria-haspopup="true">Día</button>
+                                <div class="rr-chart-menu-list hidden">
+                                    <button type="button" class="rr-chart-menu-option" data-period="dia">Día</button>
+                                    <button type="button" class="rr-chart-menu-option" data-period="sem">Sem</button>
+                                    <button type="button" class="rr-chart-menu-option" data-period="mes">Mes</button>
+                                </div>
+                            </div>
                             <svg id="rr-embalaje-chart" class="rr-chart" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid meet"></svg>
                         </div>
                     </div>
@@ -1234,21 +1250,22 @@
     </div>
 
     <div class="modal-backdrop hidden" id="rr-detail-modal">
-        <div class="modal-card modal-card-form" style="max-width: 1188px;">
+        <div class="modal-card modal-card-form" style="width: min(1360px, 96vw);">
             <div class="modal-card-head">
                 <h3 id="rr-detail-title">Detalle</h3>
+                <div class="rr-detail-pills" id="rr-detail-pills"></div>
                 <button class="modal-close-button" id="rr-detail-close" type="button" aria-label="Cerrar">x</button>
             </div>
 
             <div class="table-container" style="max-height: 60vh; overflow-y: auto; margin-top: 16px; border: 1px solid var(--gray-200); border-radius: 4px;">
                 <table class="data-table" style="margin: 0; min-width: 100%;">
                     <thead>
-                        <tr>
+                        <tr id="rr-detail-head-row">
                             <th style="width: 70px;">cliente</th>
                             <th style="width: 70px;">tipo_tela</th>
                             <th style="width: 120px;">OP-PTDA</th>
-                            <th style="width: 120px;">color</th>
-                            <th style="min-width: 220px;">articulo</th>
+                            <th style="width: 190px;">color</th>
+                            <th style="min-width: 150px;">articulo</th>
                             <th style="width: 88px;">kg(crudo)</th>
                             <th style="width: 108px;">#rollos/cntd</th>
                         </tr>
