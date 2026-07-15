@@ -1109,6 +1109,38 @@ main.content {
     outline-offset: 3px;
 }
 
+/* Boton circular pequeno de exportacion Excel (vistas de proceso) */
+.process-export-circle-button {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #4f8f62, #3f7550);
+    color: var(--white);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(79, 143, 98, 0.22);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.process-export-circle-button i {
+    font-size: 16px;
+}
+
+.process-export-circle-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 24px rgba(79, 143, 98, 0.28);
+    filter: saturate(1.05);
+}
+
+.process-export-circle-button:focus-visible {
+    outline: 3px solid rgba(79, 143, 98, 0.24);
+    outline-offset: 3px;
+}
+
 .table-card {
     display: flex;
     flex-direction: column;
