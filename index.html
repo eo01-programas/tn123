@@ -26,6 +26,7 @@
     <script defer src="./js/rama-tenido.js"></script>
     <script defer src="./js/acab-espec.js"></script>
     <script defer src="./js/excel-export.js"></script>
+    <script defer src="./js/process-excel-export.js"></script>
     <script defer src="./js/lab-tinto.js"></script>
     <script defer src="./js/calidad.js"></script>
     <script defer src="./js/embalaje.js"></script>
@@ -228,17 +229,24 @@
             </section>
 
             <section id="view-plegado" class="view-section active">
-                <div class="subtabs" aria-label="Estado de plegado">
-                    <button class="subtab active" type="button" data-plegado-filter="X PROG">
-                        Por procesar
-                        <span class="count-pill" id="count-plegado-xprog">0</span>
-                        <span class="subtab-summary" id="summary-plegado-xprog">[0 partidas - 0.00kg]</span>
-                    </button>
-                    <button class="subtab" type="button" data-plegado-filter="PROG">
-                        Procesado
-                        <span class="count-pill" id="count-plegado-prog">0</span>
-                        <span class="subtab-summary" id="summary-plegado-prog">[0 partidas - 0.00kg]</span>
-                    </button>
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de plegado">
+                        <button class="subtab active" type="button" data-plegado-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-plegado-xprog">0</span>
+                            <span class="subtab-summary" id="summary-plegado-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-plegado-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-plegado-prog">0</span>
+                            <span class="subtab-summary" id="summary-plegado-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-plegado-excel" type="button" title="Descargar Excel de Plegado" aria-label="Descargar Excel de Plegado">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-card">
@@ -271,17 +279,24 @@
             </section>
 
             <section id="view-rama-crudo" class="view-section">
-                <div class="subtabs" aria-label="Estado de rama crudo">
-                    <button class="subtab active" type="button" data-rama-crudo-filter="X PROG">
-                        Por procesar
-                        <span class="count-pill" id="count-rama-crudo-xprog">0</span>
-                        <span class="subtab-summary" id="summary-rama-crudo-xprog">[0 partidas - 0.00kg]</span>
-                    </button>
-                    <button class="subtab" type="button" data-rama-crudo-filter="PROG">
-                        Procesado
-                        <span class="count-pill" id="count-rama-crudo-prog">0</span>
-                        <span class="subtab-summary" id="summary-rama-crudo-prog">[0 partidas - 0.00kg]</span>
-                    </button>
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de rama crudo">
+                        <button class="subtab active" type="button" data-rama-crudo-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-rama-crudo-xprog">0</span>
+                            <span class="subtab-summary" id="summary-rama-crudo-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-rama-crudo-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-rama-crudo-prog">0</span>
+                            <span class="subtab-summary" id="summary-rama-crudo-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-rama-crudo-excel" type="button" title="Descargar Excel de Rama Crudo" aria-label="Descargar Excel de Rama Crudo">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-card">
@@ -316,17 +331,24 @@
             </section>
 
             <section id="view-preparado" class="view-section">
-                <div class="subtabs" aria-label="Estado de preparado">
-                    <button class="subtab active" type="button" data-preparado-filter="X PROG">
-                        Por procesar
-                        <span class="count-pill" id="count-preparado-xprog">0</span>
-                        <span class="subtab-summary" id="summary-preparado-xprog">[0 partidas - 0.00kg]</span>
-                    </button>
-                    <button class="subtab" type="button" data-preparado-filter="PROG">
-                        Procesado
-                        <span class="count-pill" id="count-preparado-prog">0</span>
-                        <span class="subtab-summary" id="summary-preparado-prog">[0 partidas - 0.00kg]</span>
-                    </button>
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de preparado">
+                        <button class="subtab active" type="button" data-preparado-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-preparado-xprog">0</span>
+                            <span class="subtab-summary" id="summary-preparado-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-preparado-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-preparado-prog">0</span>
+                            <span class="subtab-summary" id="summary-preparado-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-preparado-excel" type="button" title="Descargar Excel de Preparado" aria-label="Descargar Excel de Preparado">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-card">
@@ -406,17 +428,24 @@
             </section>
 
             <section id="view-abridora" class="view-section">
-                <div class="subtabs" aria-label="Estado de abridora">
-                    <button class="subtab active" type="button" data-abridora-filter="X PROG">
-                        Por procesar
-                        <span class="count-pill" id="count-abridora-xprog">0</span>
-                        <span class="subtab-summary" id="summary-abridora-xprog">[0 partidas - 0.00kg]</span>
-                    </button>
-                    <button class="subtab" type="button" data-abridora-filter="PROG">
-                        Procesado
-                        <span class="count-pill" id="count-abridora-prog">0</span>
-                        <span class="subtab-summary" id="summary-abridora-prog">[0 partidas - 0.00kg]</span>
-                    </button>
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de abridora">
+                        <button class="subtab active" type="button" data-abridora-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-abridora-xprog">0</span>
+                            <span class="subtab-summary" id="summary-abridora-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-abridora-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-abridora-prog">0</span>
+                            <span class="subtab-summary" id="summary-abridora-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-abridora-excel" type="button" title="Descargar Excel de Abridora" aria-label="Descargar Excel de Abridora">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-card">
@@ -448,17 +477,24 @@
             </section>
 
             <section id="view-secado" class="view-section">
-                <div class="subtabs" aria-label="Estado de secado">
-                    <button class="subtab active" type="button" data-secado-filter="X PROG">
-                        Por procesar
-                        <span class="count-pill" id="count-secado-xprog">0</span>
-                        <span class="subtab-summary" id="summary-secado-xprog">[0 partidas - 0.00kg]</span>
-                    </button>
-                    <button class="subtab" type="button" data-secado-filter="PROG">
-                        Procesado
-                        <span class="count-pill" id="count-secado-prog">0</span>
-                        <span class="subtab-summary" id="summary-secado-prog">[0 partidas - 0.00kg]</span>
-                    </button>
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de secado">
+                        <button class="subtab active" type="button" data-secado-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-secado-xprog">0</span>
+                            <span class="subtab-summary" id="summary-secado-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-secado-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-secado-prog">0</span>
+                            <span class="subtab-summary" id="summary-secado-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-secado-excel" type="button" title="Descargar Excel de Secado" aria-label="Descargar Excel de Secado">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-card">
@@ -490,17 +526,24 @@
             </section>
 
             <section id="view-rama-tenido" class="view-section">
-                <div class="subtabs" aria-label="Estado de rama tenido">
-                    <button class="subtab active" type="button" data-rama-tenido-filter="X PROG">
-                        Por procesar
-                        <span class="count-pill" id="count-rama-tenido-xprog">0</span>
-                        <span class="subtab-summary" id="summary-rama-tenido-xprog">[0 partidas - 0.00kg]</span>
-                    </button>
-                    <button class="subtab" type="button" data-rama-tenido-filter="PROG">
-                        Procesado
-                        <span class="count-pill" id="count-rama-tenido-prog">0</span>
-                        <span class="subtab-summary" id="summary-rama-tenido-prog">[0 partidas - 0.00kg]</span>
-                    </button>
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de rama tenido">
+                        <button class="subtab active" type="button" data-rama-tenido-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-rama-tenido-xprog">0</span>
+                            <span class="subtab-summary" id="summary-rama-tenido-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-rama-tenido-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-rama-tenido-prog">0</span>
+                            <span class="subtab-summary" id="summary-rama-tenido-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-rama-tenido-excel" type="button" title="Descargar Excel de Rama Acabado" aria-label="Descargar Excel de Rama Acabado">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-card">
@@ -535,17 +578,24 @@
             </section>
 
             <section id="view-acab-espec" class="view-section">
-                <div class="subtabs" aria-label="Estado de acabado especial">
-                    <button class="subtab active" type="button" data-acab-espec-filter="POR PROCESAR">
-                        Por procesar
-                        <span class="count-pill" id="count-acab-espec-xprog">0</span>
-                        <span class="subtab-summary" id="summary-acab-espec-xprog">[0 partidas - 0.00kg]</span>
-                    </button>
-                    <button class="subtab" type="button" data-acab-espec-filter="PROCESADO">
-                        Procesado
-                        <span class="count-pill" id="count-acab-espec-prog">0</span>
-                        <span class="subtab-summary" id="summary-acab-espec-prog">[0 partidas - 0.00kg]</span>
-                    </button>
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de acabado especial">
+                        <button class="subtab active" type="button" data-acab-espec-filter="POR PROCESAR">
+                            Por procesar
+                            <span class="count-pill" id="count-acab-espec-xprog">0</span>
+                            <span class="subtab-summary" id="summary-acab-espec-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-acab-espec-filter="PROCESADO">
+                            Procesado
+                            <span class="count-pill" id="count-acab-espec-prog">0</span>
+                            <span class="subtab-summary" id="summary-acab-espec-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-acab-espec-excel" type="button" title="Descargar Excel de Acab Espec" aria-label="Descargar Excel de Acab Espec">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-card">
