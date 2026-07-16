@@ -1,10 +1,10 @@
 (() => {
     // Exportacion a Excel de las vistas de proceso: genera un .xlsx con las
-    // hojas "Por procesar" y "Procesado" tomando la tabla TAL CUAL se ve en
-    // pantalla (mismas columnas visibles y mismos filtros de cliente/OP
-    // aplicados). Para capturar el subtab que no esta activo se hace click
-    // programatico en su boton (el render es sincrono) y al final se
-    // restaura el subtab que tenia el usuario.
+    // hojas "Procesado" (primera) y "Por procesar" (segunda) tomando la tabla
+    // TAL CUAL se ve en pantalla (mismas columnas visibles y mismos filtros
+    // de cliente/OP aplicados). Para capturar el subtab que no esta activo se
+    // hace click programatico en su boton (el render es sincrono) y al final
+    // se restaura el subtab que tenia el usuario.
 
     const EXPORT_VIEWS = [
         { id: 'plegado', filterAttr: 'data-plegado-filter', porProcesar: 'X PROG', procesado: 'PROG', label: 'Plegado' },
@@ -117,6 +117,13 @@
         return { columns, rows };
     }
 
+    // Titulo de la fila 1 de cada hoja; se repite en cada pagina impresa.
+    // Ej: "PROCESO: Abridora - Impresion 16/Jul/2026".
+    function buildSheetTitle(label) {
+        const printDate = TintoreriaUtils.formatDateForUi(new Date());
+        return `PROCESO: ${label} - Impresion ${printDate}`;
+    }
+
     function buildExportFileName(viewId) {
         const now = new Date();
         const year = String(now.getFullYear());
@@ -172,16 +179,18 @@
                 filename: buildExportFileName(view.id),
                 sheets: [
                     {
-                        name: 'Por procesar',
-                        columns: porProcesar.columns,
-                        rows: porProcesar.rows,
+                        name: 'Procesado',
+                        title: buildSheetTitle(view.label),
+                        columns: procesado.columns,
+                        rows: procesado.rows,
                         repeatHeader: true,
                         pageSetup: PAGE_SETUP
                     },
                     {
-                        name: 'Procesado',
-                        columns: procesado.columns,
-                        rows: procesado.rows,
+                        name: 'Por procesar',
+                        title: buildSheetTitle(view.label),
+                        columns: porProcesar.columns,
+                        rows: porProcesar.rows,
                         repeatHeader: true,
                         pageSetup: PAGE_SETUP
                     }
