@@ -524,9 +524,10 @@
                 pageEnd = pageStart + CAPACITY - 1;
             }
 
-            // Fila de datos `pageEnd` -> fila `pageEnd + 2` en el Excel (hay 1
-            // encabezado). El salto se inserta debajo de esa fila.
-            breaks.push(pageEnd + 2);
+            // Fila de datos `pageEnd` -> fila `pageEnd + 3` en el Excel (hay 1
+            // fila de titulo + 1 encabezado). El salto se inserta debajo de
+            // esa fila.
+            breaks.push(pageEnd + 3);
             pageStart = pageEnd + 1;
         }
 
@@ -598,6 +599,8 @@
                 filename: buildEmbalajeExportFileName(),
                 sheets: [{
                     name: 'Por embalar',
+                    // Titulo en fila 1; se repite en cada pagina impresa.
+                    title: `PROCESO: Embalaje - Impresion ${TintoreriaUtils.formatDateForUi(new Date())}`,
                     columns: getEmbalajeExportColumns(),
                     rows,
                     rowBreaks: computeOpPtdaRowBreaks(rows),
