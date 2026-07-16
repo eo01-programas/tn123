@@ -118,10 +118,10 @@
     }
 
     // Titulo de la fila 1 de cada hoja; se repite en cada pagina impresa.
-    // Ej: "PROCESO: Abridora - Impresion 16/Jul/2026".
+    // Ej: "PROCESO: ABRIDORA   -   impreso 16/jul/2026".
     function buildSheetTitle(label) {
-        const printDate = TintoreriaUtils.formatDateForUi(new Date());
-        return `PROCESO: ${label} - Impresion ${printDate}`;
+        const printDate = TintoreriaUtils.formatDateForUi(new Date()).toLowerCase();
+        return `PROCESO: ${label.toUpperCase()}   -   impreso ${printDate}`;
     }
 
     function buildExportFileName(viewId) {
