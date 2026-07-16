@@ -600,7 +600,7 @@
                 sheets: [{
                     name: 'Por embalar',
                     // Titulo en fila 1; se repite en cada pagina impresa.
-                    title: `PROCESO: Embalaje - Impresion ${TintoreriaUtils.formatDateForUi(new Date())}`,
+                    title: `PROCESO: EMBALAJE   -   impreso ${TintoreriaUtils.formatDateForUi(new Date()).toLowerCase()}`,
                     columns: getEmbalajeExportColumns(),
                     rows,
                     rowBreaks: computeOpPtdaRowBreaks(rows),
