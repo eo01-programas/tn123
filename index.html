@@ -824,23 +824,35 @@
 
                     <div class="rr-right-col">
                         <div class="rr-chart-card">
-                            <div class="rr-chart-menu" data-chart="ramas">
-                                <button type="button" class="rr-chart-menu-btn" aria-haspopup="true">Sem</button>
-                                <div class="rr-chart-menu-list hidden">
-                                    <button type="button" class="rr-chart-menu-option" data-period="dia">Día</button>
-                                    <button type="button" class="rr-chart-menu-option" data-period="sem">Sem</button>
-                                    <button type="button" class="rr-chart-menu-option" data-period="mes">Mes</button>
+                            <div class="rr-chart-menus">
+                                <div class="rr-chart-menu rr-chart-menu-cliente" data-chart-cliente="ramas">
+                                    <button type="button" class="rr-chart-menu-btn" aria-haspopup="true"><span class="rr-cliente-label">Todos</span></button>
+                                    <div class="rr-chart-menu-list hidden"></div>
+                                </div>
+                                <div class="rr-chart-menu" data-chart="ramas">
+                                    <button type="button" class="rr-chart-menu-btn" aria-haspopup="true">Sem</button>
+                                    <div class="rr-chart-menu-list hidden">
+                                        <button type="button" class="rr-chart-menu-option" data-period="dia">Día</button>
+                                        <button type="button" class="rr-chart-menu-option" data-period="sem">Sem</button>
+                                        <button type="button" class="rr-chart-menu-option" data-period="mes">Mes</button>
+                                    </div>
                                 </div>
                             </div>
                             <svg id="rr-weekly-chart" class="rr-chart" viewBox="0 0 420 230" preserveAspectRatio="xMidYMid meet"></svg>
                         </div>
                         <div class="rr-chart-card">
-                            <div class="rr-chart-menu" data-chart="embalaje">
-                                <button type="button" class="rr-chart-menu-btn" aria-haspopup="true">Día</button>
-                                <div class="rr-chart-menu-list hidden">
-                                    <button type="button" class="rr-chart-menu-option" data-period="dia">Día</button>
-                                    <button type="button" class="rr-chart-menu-option" data-period="sem">Sem</button>
-                                    <button type="button" class="rr-chart-menu-option" data-period="mes">Mes</button>
+                            <div class="rr-chart-menus">
+                                <div class="rr-chart-menu rr-chart-menu-cliente" data-chart-cliente="embalaje">
+                                    <button type="button" class="rr-chart-menu-btn" aria-haspopup="true"><span class="rr-cliente-label">Todos</span></button>
+                                    <div class="rr-chart-menu-list hidden"></div>
+                                </div>
+                                <div class="rr-chart-menu" data-chart="embalaje">
+                                    <button type="button" class="rr-chart-menu-btn" aria-haspopup="true">Día</button>
+                                    <div class="rr-chart-menu-list hidden">
+                                        <button type="button" class="rr-chart-menu-option" data-period="dia">Día</button>
+                                        <button type="button" class="rr-chart-menu-option" data-period="sem">Sem</button>
+                                        <button type="button" class="rr-chart-menu-option" data-period="mes">Mes</button>
+                                    </div>
                                 </div>
                             </div>
                             <svg id="rr-embalaje-chart" class="rr-chart" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid meet"></svg>
