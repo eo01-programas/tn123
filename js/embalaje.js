@@ -70,19 +70,6 @@
         }
     }
 
-    function optionMarkup(selectedValue, options, defaultLabel = 'Selec') {
-        const values = [...options];
-        if (selectedValue && !values.includes(selectedValue)) {
-            values.push(selectedValue);
-        }
-
-        return values.map((optionValue) => {
-            const label = optionValue || defaultLabel;
-            const selected = selectedValue === optionValue ? 'selected' : '';
-            return `<option value="${TintoreriaUtils.escapeHtml(optionValue)}" ${selected}>${TintoreriaUtils.escapeHtml(label)}</option>`;
-        }).join('');
-    }
-
     // ── "Devolver a Calidad" context menu ────────────────────────────────
 
     function ensureEmbalajeContextMenu() {
@@ -396,10 +383,8 @@
                 <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.articulo)}">${TintoreriaUtils.escapeHtml(record.articulo)}</span></td>
                 <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.peso_kg_crudo)}</span></td>
                 <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.cantidad_crudo)}</span></td>
-                <td>
-                    <select class="table-select" ${readOnly ? 'tabindex="-1" style="pointer-events:none; appearance:none; -webkit-appearance:none;"' : `data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="embalaje_estado"`}>
-                        ${optionMarkup(normalizeEmbalajeState(record), EMBALAJE_ESTADO_OPTIONS)}
-                    </select>
+                <td class="embalaje-status-cell">
+                    <input class="embalaje-status-checkbox" type="checkbox" title="Marcar como embalado (OK)" aria-label="Marcar como embalado (OK)"${normalizeEmbalajeState(record) === 'OK' ? ' checked' : ''} ${readOnly ? 'disabled' : `data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="embalaje_estado"`}>
                 </td>
             </tr>
         `).join('');
@@ -427,8 +412,20 @@
             return;
         }
 
-        let nextValue = target.value;
+        // El status es un checkbox: marcado equivale a 'OK', desmarcado a ''.
+        const isStatusCheckbox = target instanceof HTMLInputElement && target.type === 'checkbox';
+        let nextValue = isStatusCheckbox ? (target.checked ? 'OK' : '') : target.value;
         const changes = {};
+
+        function revertTarget() {
+            if (isStatusCheckbox) {
+                target.checked = normalizeEmbalajeState(currentRecord) === 'OK';
+            } else if (field === 'embalaje_estado') {
+                target.value = normalizeEmbalajeState(currentRecord);
+            } else {
+                target.value = currentRecord[field] || '';
+            }
+        }
 
         if (field === 'embalaje_p') {
             nextValue = TintoreriaUtils.sanitizePlegadoP(nextValue);
@@ -442,7 +439,7 @@
                 });
 
                 if (!confirmed) {
-                    target.value = normalizeEmbalajeState(currentRecord);
+                    revertTarget();
                     return;
                 }
 
@@ -453,21 +450,17 @@
         }
 
         if (String(currentRecord[field] || '') === String(nextValue || '') && !Object.keys(changes).length) {
-            target.value = nextValue;
+            if (!isStatusCheckbox) target.value = nextValue;
             return;
         }
 
-        target.value = nextValue;
+        if (!isStatusCheckbox) target.value = nextValue;
         changes[field] = nextValue;
 
         try {
             await TintoreriaApp.saveRecordChanges(recordId, changes, { silent: true });
         } catch (error) {
-            if (field === 'embalaje_estado') {
-                target.value = normalizeEmbalajeState(currentRecord);
-            } else {
-                target.value = currentRecord[field] || '';
-            }
+            revertTarget();
             TintoreriaApp.showToast(error.message || 'No se pudo guardar el cambio.', 'error', 'Error al guardar');
         }
     }
