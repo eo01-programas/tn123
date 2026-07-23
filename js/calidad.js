@@ -19,6 +19,7 @@
         'supervisor_rechazo_7'
     ];
     const CALIDAD_UNPROGRAMMED_STATES = new Set(['', 'X PROG']);
+    const AUDITADAS_WINDOW_DAYS = 14;
     const QUALITY_EXPORT_BASE_COLUMNS = [
         { key: 'cliente', header: 'cliente', width: 12 },
         { key: 'op_ptda', header: 'OP-PTDA', width: 14 },
@@ -199,7 +200,7 @@
     function getVisibleRecords(records, filter = currentFilter) {
         if (filter === 'REJECTED') {
             return TintoreriaProcessedWindow.filterToWindow(
-                'calidad', getRejectedRecords(records), getFechaRegistroDate, 7
+                'calidad', getRejectedRecords(records), getFechaRegistroDate, AUDITADAS_WINDOW_DAYS
             );
         }
 
@@ -605,7 +606,7 @@
     function renderSubtabCounts(records) {
         const activeRecords = getActiveRecords(records);
         const rejectedRecords = TintoreriaProcessedWindow.filterToWindow(
-            'calidad', getRejectedRecords(records), getFechaRegistroDate, 7
+            'calidad', getRejectedRecords(records), getFechaRegistroDate, AUDITADAS_WINDOW_DAYS
         );
 
         const activeCount = document.getElementById('count-calidad-active');
@@ -1889,7 +1890,7 @@
             columnLabel: 'FECHA_REGISTRO',
             getDate: getFechaRegistroDate,
             subtabFilter: 'REJECTED',
-            windowDays: 7,
+            windowDays: AUDITADAS_WINDOW_DAYS,
             showAllButton: true
         },
         render(records, state) {
@@ -1902,7 +1903,9 @@
             const calState = normalizeCalidadState(record);
             if (calState === 'OK' || isRejectedRecord(record)) {
                 const allRejected = getRejectedRecords((state && state.records) || []);
-                const visible = TintoreriaProcessedWindow.filterToWindow('calidad', allRejected, getFechaRegistroDate, 7);
+                const visible = TintoreriaProcessedWindow.filterToWindow(
+                    'calidad', allRejected, getFechaRegistroDate, AUDITADAS_WINDOW_DAYS
+                );
                 if (!visible.some((r) => r.id_registro === record.id_registro)) return null;
                 return { filter: 'REJECTED' };
             }
