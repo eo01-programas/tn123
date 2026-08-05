@@ -3129,6 +3129,14 @@ table.quality-table .ruta-tela-pill {
     grid-column: 1 / -1;
 }
 
+/* Columna izquierda del modal de informacion: #Rechazos y Ruta tela apilados. */
+.quality-info-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
 .quality-info-label {
     font-size: 12px;
     font-weight: 700;
@@ -3145,6 +3153,11 @@ table.quality-table .ruta-tela-pill {
 .quality-info-value-inline {
     font-size: 18px;
     line-height: 1;
+}
+
+/* Ruta tela es texto (ACABADA/LAVADA), no un numero: va mas chico que #Rechazos. */
+#calidad-info-ruta-tela {
+    font-size: 14px;
 }
 
 .quality-info-list {
