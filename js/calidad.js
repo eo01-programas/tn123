@@ -1152,6 +1152,7 @@
             subtitle: document.getElementById('calidad-info-subtitle'),
             closeBtn: document.getElementById('calidad-info-close'),
             cantidadRechazos: document.getElementById('calidad-info-cantidad-rechazos'),
+            rutaTela: document.getElementById('calidad-info-ruta-tela'),
             motivosBlock: document.getElementById('calidad-info-motivos-block'),
             motivos: document.getElementById('calidad-info-motivos'),
             aprobacionBlock: document.getElementById('calidad-info-aprobacion-block'),
@@ -1204,6 +1205,7 @@
             title,
             subtitle,
             cantidadRechazos,
+            rutaTela,
             motivosBlock,
             motivos,
             aprobacionBlock,
@@ -1222,6 +1224,10 @@
         if (subtitle) subtitle.textContent = `${record.cod_art || ''} - ${record.articulo || ''}`;
         if (cantidadRechazos) {
             cantidadRechazos.textContent = String(record.cantidad_rechazos || '0').trim() || '0';
+        }
+        if (rutaTela) {
+            // La ruta se define recien al aprobar/rechazar; mientras tanto va "-".
+            rutaTela.textContent = String(record.ruta_tela_final || '').trim().toUpperCase() || '-';
         }
 
         const reasonEntries = getRejectReasonEntries(record);
