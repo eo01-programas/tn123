@@ -1,734 +1,1371 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard de Teñido — Trazabilidad de Reprocesos | COFACO</title>
-<link rel="stylesheet" href="css/estilos.css">
-<!-- Librerías: SheetJS (lectura de Excel) y Chart.js (gráficos) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tintoreria Telas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/style.css">
+    <script defer src="https://unpkg.com/@phosphor-icons/web"></script>
+<script defer src="./js/config.js"></script>
+    <script defer src="./js/login.js"></script>
+    <script defer src="./js/utils.js"></script>
+    <script defer src="./js/processed-date-window.js"></script>
+    <script defer src="./js/api.js"></script>
+    <script defer src="./js/app.js"></script>
+    <script defer src="./js/maestro.js"></script>
+    <script defer src="./js/plegado.js"></script>
+    <script defer src="./js/process-view-base.js"></script>
+    <script defer src="./js/rama-crudo.js"></script>
+    <script defer src="./js/preparado.js"></script>
+    <script defer src="./js/tenido.js"></script>
+    <script defer src="./js/abridora.js"></script>
+    <script defer src="./js/secado.js"></script>
+    <script defer src="./js/rama-tenido.js"></script>
+    <script defer src="./js/acab-espec.js"></script>
+    <script defer src="./js/excel-export.js"></script>
+    <script defer src="./js/process-excel-export.js"></script>
+    <script defer src="./js/lab-tinto.js"></script>
+    <script defer src="./js/calidad.js"></script>
+    <script defer src="./js/embalaje.js"></script>
+    <script defer src="./js/stock.js"></script>
+    <script defer src="./js/reporte-ramas.js"></script>
 </head>
-<body>
+<body class="auth-locked">
+    <section class="login-screen" id="login-screen" aria-labelledby="login-title">
+        <div class="login-panel">
+            <div class="login-copy">
+                <span class="login-kicker">COFACO Industries</span>
+                <h1 id="login-title">Control de Tintoreria</h1>
+                <p class="login-text">
+                    Ingresa con tu usuario autorizado para acceder a la programacion, seguimiento y control de las vistas de planta.
+                </p>
+            </div>
 
-<!-- Estado de importación / carga (aviso flotante) -->
-<div id="estadoImportacion" class="sc8-estado" role="status" aria-live="polite"></div>
+            <form class="login-form" id="login-form" novalidate>
+                <label class="login-field">
+                    <span>Usuario</span>
+                    <select
+                        id="login-username"
+                        name="username"
+                        autocomplete="username"
+                        required
+                    >
+                        <option value="" selected disabled>Selecciona usuario</option>
+                    </select>
+                </label>
 
-<div class="sc8-app">
+                <label class="login-field">
+                    <span>Contraseña</span>
+                    <input
+                        id="login-password"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="Ingresa tu contraseña"
+                        required
+                    >
+                </label>
 
-  <!-- ================= BARRA SUPERIOR ================= -->
-  <header class="sc8-topbar">
-    <div class="sc8-titulos">
-      <h1>DASHBOARD DE TEÑIDO</h1>
+                <p class="login-feedback hidden" id="login-feedback" role="alert" aria-live="polite"></p>
+
+                <button class="login-submit" id="login-submit" type="submit">
+                    Ingresar
+                </button>
+            </form>
+        </div>
+
+        <div class="login-hero" aria-hidden="true">
+            <div class="login-hero-badge">Innovacion textil en cada fibra</div>
+            <div class="login-hero-card">
+                <img
+                    class="login-hero-image"
+                    src="https://www.cofaco.com/es/img/logo-marco-verde.png"
+                    alt="COFACO Industries"
+                >
+            </div>
+            <p class="login-hero-text">
+                Plataforma interna para el seguimiento operativo de tintoreria de telas.
+            </p>
+        </div>
+    </section>
+
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="header-left">
+                <div class="brand">
+                    <button class="brand-logo-button" type="button" data-view-target="maestro" aria-label="Ir a Maestro">
+                        <i class="ph ph-drop-half-bottom" aria-hidden="true"></i>
+                    </button>
+                    <span>Tintoreria Telas</span>
+                </div>
+            </div>
+
+            <form class="header-search" id="op-search-form" role="search" aria-label="Buscar OP-PTDA">
+                <input
+                    class="header-search-input"
+                    id="op-search-input"
+                    type="search"
+                    inputmode="search"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Buscar OP-PTDA"
+                    aria-label="Buscar OP-PTDA"
+                >
+                <button class="ghost-button icon-only-button header-search-clear hidden" id="op-search-clear" type="button" title="Limpiar busqueda" aria-label="Limpiar busqueda">
+                    <i class="ph ph-x"></i>
+                </button>
+            </form>
+
+            <nav class="main-tabs" aria-label="Procesos de tintoreria">
+                <button class="main-tab active" type="button" data-view-target="plegado">
+                    <span>Plegado</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="rama-crudo">
+                    <span>Rama Crudo</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="preparado">
+                    <span>Preparado</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="tenido">
+                    <span>Tenido</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="abridora">
+                    <span>Abridora</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="secado">
+                    <span>Secado</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="rama-tenido">
+                    <span>Rama Acabado</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="acab-espec">
+                    <span>Acab Espec.</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="lab-tinto">
+                    <span>Lab Tinto</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="calidad">
+                    <span>Calidad</span>
+                </button>
+                <button class="main-tab" type="button" data-view-target="embalaje">
+                    <span>Embalaje</span>
+                </button>
+            </nav>
+
+            <div class="topbar-actions">
+                <button class="ghost-button icon-only-button" id="btn-refresh-data" type="button" title="Recargar" aria-label="Recargar">
+                    <i class="ph ph-arrows-clockwise"></i>
+                </button>
+                <button class="ghost-button icon-only-button btn-logout" id="btn-logout" type="button" title="Cerrar sesion" aria-label="Cerrar sesion">
+                    <i class="ph ph-sign-out"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="config-banner hidden" id="config-banner"></div>
+
+        <main class="content">
+            <section id="view-maestro" class="view-section">
+                <div class="panel-header panel-header-maestro">
+                    <div>
+                        <div class="maestro-title-group">
+                            <h2>Ingreso Tela Cruda</h2>
+                            <button class="maestro-upload-circle-button" id="btn-open-entrega-excel" type="button" title="Cargar fecha entrega tela acabada" aria-label="Cargar fecha entrega tela acabada">
+                                <i class="ph ph-calendar-check"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="panel-actions">
+                        <input type="file" id="excel-input" accept=".xls,.xlsx" hidden>
+                        <input type="file" id="excel-entrega-input" accept=".xls,.xlsx" hidden>
+                        <div class="metric-grid" aria-label="Resumen de maestro">
+                            <article class="metric-card">
+                                <strong id="metric-total-records">0 Partidas</strong>
+                            </article>
+                            <article class="metric-card">
+                                <strong id="metric-total-weight">0.00kg</strong>
+                            </article>
+                        </div>
+                        <button class="primary-button" id="btn-open-excel" type="button">
+                            <i class="ph ph-file-xls"></i>
+                            Cargar Excel
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table maestro-table">
+                            <thead>
+                                <tr>
+                                    <th>F.ing</th>
+                                    <th>Cliente</th>
+                                    <th>Tipo</th>
+                                    <th>OP-PTDA</th>
+                                    <th>cod_art</th>
+                                    <th>articulo</th>
+                                    <th>cod_color</th>
+                                    <th>color</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Rollos/und</th>
+                                    <th>Guia</th>
+                                    <th>Motivo</th>
+                                    <th>RSV</th>
+                                    <th>CERTF</th>
+                                    <th>ruta</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-maestro"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-plegado" class="view-section active">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de plegado">
+                        <button class="subtab active" type="button" data-plegado-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-plegado-xprog">0</span>
+                            <span class="subtab-summary" id="summary-plegado-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-plegado-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-plegado-prog">0</span>
+                            <span class="subtab-summary" id="summary-plegado-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-plegado-excel" type="button" title="Descargar Excel de Plegado" aria-label="Descargar Excel de Plegado">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table plegado-table">
+                            <colgroup id="colgroup-plegado"></colgroup>
+                            <thead>
+                                <tr>
+                                    <th id="th-plegado-p">P</th>
+                                    <th>F_ing_crudo</th>
+                                    <th id="th-plegado-fecha">F_plegado</th>
+                                    <th>cliente</th>
+                                    <th>tela</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>ruta</th>
+                                    <th>#dias</th>
+                                    <th>Turno</th>
+                                    <th id="th-plegado-supervisor">Supervisor</th>
+                                    <th id="th-plegado-equipo">Equipo</th>
+                                    <th>status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-plegado"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-rama-crudo" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de rama crudo">
+                        <button class="subtab active" type="button" data-rama-crudo-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-rama-crudo-xprog">0</span>
+                            <span class="subtab-summary" id="summary-rama-crudo-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-rama-crudo-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-rama-crudo-prog">0</span>
+                            <span class="subtab-summary" id="summary-rama-crudo-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-rama-crudo-excel" type="button" title="Descargar Excel de Rama Crudo" aria-label="Descargar Excel de Rama Crudo">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table rama-crudo-table">
+                            <colgroup id="colgroup-rama-crudo"></colgroup>
+                            <thead>
+                                <tr id="thead-tr-rama-crudo">
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>tela</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>cod_art</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th>Oper</th>
+                                    <th>MAQ</th>
+                                    <th>ruta</th>
+                                    <th>Insp</th>
+                                    <th>Superv</th>
+                                    <th>Inico</th>
+                                    <th>Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-rama-crudo"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-preparado" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de preparado">
+                        <button class="subtab active" type="button" data-preparado-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-preparado-xprog">0</span>
+                            <span class="subtab-summary" id="summary-preparado-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-preparado-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-preparado-prog">0</span>
+                            <span class="subtab-summary" id="summary-preparado-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-preparado-excel" type="button" title="Descargar Excel de Preparado" aria-label="Descargar Excel de Preparado">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table preparado-table">
+                            <colgroup id="colgroup-preparado"></colgroup>
+                            <thead>
+                                <tr>
+                                    <th id="th-preparado-p">P</th>
+                                    <th id="th-preparado-fing">F_ing_crudo</th>
+                                    <th id="th-preparado-fprep">F_preparado</th>
+                                    <th>cliente</th>
+                                    <th>tela</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>ruta</th>
+                                    <th>Turno</th>
+                                    <th id="th-preparado-supervisor">Responsable</th>
+                                    <th id="th-preparado-equipo">Equipo</th>
+                                    <th>Tipo</th>
+                                    <th id="th-preparado-inicio">Inicio</th>
+                                    <th id="th-preparado-fin">Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-preparado"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-tenido" class="view-section">
+                <div class="subtabs" aria-label="Estado de tenido">
+                    <button class="subtab active" type="button" data-tenido-filter="X PROG">
+                        Por Programar
+                        <span class="count-pill" id="count-tenido-xprog">0</span>
+                        <span class="subtab-summary" id="summary-tenido-xprog">[0 partidas - 0.00kg]</span>
+                    </button>
+                    <button class="subtab" type="button" data-tenido-filter="PROG">
+                        Programado
+                        <span class="count-pill" id="count-tenido-prog">0</span>
+                        <span class="subtab-summary" id="summary-tenido-prog">[0 partidas - 0.00kg]</span>
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table tenido-table">
+                            <colgroup id="colgroup-tenido"></colgroup>
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>OP-PTDA</th>
+                                    <th>cod_color</th>
+                                    <th>color</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th>Oper</th>
+                                    <th>MAQ</th>
+                                    <th>Proceso</th>
+                                    <th>Tipo_proceso</th>
+                                    <th>Kg(teÃ±ido)</th>
+                                    <th>Control@</th>
+                                    <th>Superv</th>
+                                    <th>Inicio</th>
+                                    <th>Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-tenido"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-abridora" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de abridora">
+                        <button class="subtab active" type="button" data-abridora-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-abridora-xprog">0</span>
+                            <span class="subtab-summary" id="summary-abridora-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-abridora-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-abridora-prog">0</span>
+                            <span class="subtab-summary" id="summary-abridora-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-abridora-excel" type="button" title="Descargar Excel de Abridora" aria-label="Descargar Excel de Abridora">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table abridora-table">
+                            <colgroup id="colgroup-abridora"></colgroup>
+                            <thead>
+                                <tr>
+                                    <th id="th-abridora-p">P</th>
+                                    <th id="th-abridora-fing">F_ing_crudo</th>
+                                    <th id="th-abridora-fabridora">F_abridora</th>
+                                    <th>cliente</th>
+                                    <th>tela</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th id="th-abridora-oper">Oper</th>
+                                    <th id="th-abridora-inicio">Inicio</th>
+                                    <th id="th-abridora-fin">Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-abridora"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-secado" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de secado">
+                        <button class="subtab active" type="button" data-secado-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-secado-xprog">0</span>
+                            <span class="subtab-summary" id="summary-secado-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-secado-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-secado-prog">0</span>
+                            <span class="subtab-summary" id="summary-secado-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-secado-excel" type="button" title="Descargar Excel de Secado" aria-label="Descargar Excel de Secado">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table secado-table">
+                            <colgroup id="colgroup-secado"></colgroup>
+                            <thead>
+                                <tr>
+                                    <th id="th-secado-p">P</th>
+                                    <th id="th-secado-fing">F_ing_crudo</th>
+                                    <th id="th-secado-fsecado">F_secado</th>
+                                    <th>cliente</th>
+                                    <th>tela</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th id="th-secado-oper">Oper</th>
+                                    <th id="th-secado-inicio">Inicio</th>
+                                    <th id="th-secado-fin">Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-secado"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-rama-tenido" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de rama tenido">
+                        <button class="subtab active" type="button" data-rama-tenido-filter="X PROG">
+                            Por procesar
+                            <span class="count-pill" id="count-rama-tenido-xprog">0</span>
+                            <span class="subtab-summary" id="summary-rama-tenido-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-rama-tenido-filter="PROG">
+                            Procesado
+                            <span class="count-pill" id="count-rama-tenido-prog">0</span>
+                            <span class="subtab-summary" id="summary-rama-tenido-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-rama-tenido-excel" type="button" title="Descargar Excel de Rama Acabado" aria-label="Descargar Excel de Rama Acabado">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table rama-tenido-table">
+                            <colgroup id="colgroup-rama-tenido"></colgroup>
+                            <thead>
+                                <tr id="thead-tr-rama-tenido">
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>tela</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>cod_art</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Turno</th>
+                                    <th>Oper</th>
+                                    <th>MAQ</th>
+                                    <th>Proceso</th>
+                                    <th>Insp@</th>
+                                    <th>Superv</th>
+                                    <th>Inicio</th>
+                                    <th>Fin</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-rama-tenido"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-acab-espec" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de acabado especial">
+                        <button class="subtab active" type="button" data-acab-espec-filter="POR PROCESAR">
+                            Por procesar
+                            <span class="count-pill" id="count-acab-espec-xprog">0</span>
+                            <span class="subtab-summary" id="summary-acab-espec-xprog">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-acab-espec-filter="PROCESADO">
+                            Procesado
+                            <span class="count-pill" id="count-acab-espec-prog">0</span>
+                            <span class="subtab-summary" id="summary-acab-espec-prog">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+                    <div class="quality-toolbar-actions">
+                        <button class="process-export-circle-button" id="btn-export-acab-espec-excel" type="button" title="Descargar Excel de Acab Espec" aria-label="Descargar Excel de Acab Espec">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table acab-espec-table">
+                            <colgroup id="colgroup-acab-espec"></colgroup>
+                            <thead>
+                                <tr id="thead-acab-espec-row">
+                                    <th>P</th>
+                                    <th>cliente</th>
+                                    <th>tela</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>Tipo</th>
+                                    <th>Turno</th>
+                                    <th>MAQ</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-acab-espec"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-lab-tinto" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de lab tinto">
+                        <button class="subtab active" type="button" data-lab-tinto-filter="MUESTRA">
+                            Por pasar muestra
+                            <span class="count-pill" id="count-lab-tinto-muestra">0</span>
+                            <span class="subtab-summary" id="summary-lab-tinto-muestra">[0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-lab-tinto-filter="RECETA">
+                            Por receta
+                            <span class="count-pill" id="count-lab-tinto-receta">0</span>
+                            <span class="subtab-summary" id="summary-lab-tinto-receta">[0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-lab-tinto-filter="OK">
+                            Receta OK
+                            <span class="count-pill" id="count-lab-tinto-ok">0</span>
+                            <span class="subtab-summary" id="summary-lab-tinto-ok">[0.00kg]</span>
+                        </button>
+                    </div>
+
+                    <div class="quality-toolbar-actions">
+                        <label class="quality-search-field quality-search-field-top" for="lab-tinto-toolbar-search">
+                            <span>Busqueda:</span>
+                            <input type="text" id="lab-tinto-toolbar-search" class="table-input" placeholder="OP-PTDA" maxlength="10">
+                        </label>
+                        <label class="quality-search-field quality-search-field-top" for="lab-tinto-toolbar-search-art">
+                            <input type="text" id="lab-tinto-toolbar-search-art" class="table-input" placeholder="cod_art" maxlength="12">
+                        </label>
+                        <button class="primary-button lab-tinto-solicita-button" id="btn-lab-tinto-solicita" type="button" title="Solicita Receta">
+                            <i class="ph ph-flask" aria-hidden="true"></i>
+                            <span>Solicita Receta</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table lab-tinto-table">
+                            <colgroup id="colgroup-lab-tinto"></colgroup>
+                            <thead id="thead-lab-tinto"></thead>
+                            <tbody id="tbody-lab-tinto"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-calidad" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de calidad">
+                        <button class="subtab active" type="button" data-calidad-filter="ACTIVE">
+                            En calidad
+                            <span class="count-pill" id="count-calidad-active">0</span>
+                            <span class="subtab-summary" id="summary-calidad-active">[0 partidas - 0.00kg]</span>
+                        </button>
+                        <button class="subtab" type="button" data-calidad-filter="REJECTED">
+                            AUDITADAS
+                            <span class="count-pill" id="count-calidad-rejected">0</span>
+                            <span class="subtab-summary" id="summary-calidad-rejected">[0 partidas - 0.00kg]</span>
+                        </button>
+                    </div>
+
+                    <div class="quality-toolbar-actions">
+                        <label class="quality-search-field quality-search-field-top" for="calidad-toolbar-search">
+                            <span>Busqueda:</span>
+                            <input type="text" id="calidad-toolbar-search" class="table-input" placeholder="OP-PTDA" maxlength="10">
+                        </label>
+                        <button class="primary-button" id="btn-auditoria-calidad" type="button" style="background-color: var(--warning); border-color: var(--warning); color: var(--white);" title="Auditoria Masiva">
+                            <i class="ph ph-clipboard-text" aria-hidden="true"></i>
+                            <span>AUDITORIA</span>
+                        </button>
+                        <button class="quality-export-button" id="btn-export-calidad-excel" type="button" title="Descargar Excel de Calidad" aria-label="Descargar Excel de Calidad">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                            <span>Excel</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table quality-table">
+                            <colgroup id="colgroup-calidad"></colgroup>
+                            <thead id="thead-calidad"></thead>
+                            <tbody id="tbody-calidad"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-embalaje" class="view-section">
+                <div class="quality-toolbar">
+                    <div class="subtabs" aria-label="Estado de embalaje">
+                        <button class="subtab active" type="button">
+                            Por embalar
+                            <span class="count-pill" id="count-embalaje-pending">0 ptds</span>
+                            <span class="subtab-summary" id="summary-embalaje-pending">[0.00kg]</span>
+                        </button>
+                    </div>
+
+                    <div class="quality-toolbar-actions">
+                        <button class="quality-export-button" id="btn-export-embalaje-excel" type="button" title="Descargar Excel de Embalaje" aria-label="Descargar Excel de Embalaje">
+                            <i class="ph ph-file-xls" aria-hidden="true"></i>
+                            <span>Excel</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table class="data-table embalaje-table">
+                            <colgroup id="colgroup-embalaje"></colgroup>
+                            <thead>
+                                <tr>
+                                    <th>P</th>
+                                    <th id="th-embalaje-calidad-fin">calidad_fin</th>
+                                    <th>cliente</th>
+                                    <th>tela</th>
+                                    <th>OP-PTDA</th>
+                                    <th>color</th>
+                                    <th>articulo</th>
+                                    <th>kg(crudo)</th>
+                                    <th>#rollos/cntd</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-embalaje"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-reporte-ramas" class="view-section">
+                <div class="panel-header">
+                    <div class="stock-title-group">
+                        <button class="stock-home-button" id="btn-reporte-ramas-back" type="button" title="Volver a la pagina principal" aria-label="Volver a la pagina principal">
+                            <i class="ph ph-house" aria-hidden="true"></i>
+                        </button>
+                        <h2>Reporte de Produccion</h2>
+                    </div>
+                    <!-- La carpeta destino lleva enye ("dashboard_tenido" con ñ); se deja
+                         percent-encoded para que el enlace funcione igual en GitHub Pages. -->
+                    <a class="rr-dashboard-button" href="./dashboard_te%C3%B1ido/index.html"
+                       title="Abrir Dashboard de Tenido" aria-label="Abrir Dashboard de Tenido">
+                        <i class="ph ph-chart-bar" aria-hidden="true"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+
+                <div class="rr-layout">
+                    <div class="rr-left-col">
+                        <div class="table-card rr-card">
+                            <div class="table-container">
+                                <table class="data-table rr-table">
+                                    <colgroup>
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                    </colgroup>
+                                    <thead>
+                                        <tr>
+                                            <th class="rr-th-fecha">Fecha</th>
+                                            <th>Termofijado</th>
+                                            <th>Humectado</th>
+                                            <th>Secado</th>
+                                            <th>Acabado</th>
+                                            <th>Reproceso</th>
+                                            <th class="rr-th-total">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-reporte-ramas"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="table-card rr-card">
+                            <div class="table-container">
+                                <table class="data-table rr-table">
+                                    <colgroup>
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                    </colgroup>
+                                    <thead>
+                                        <tr>
+                                            <th class="rr-th-fecha">Fecha</th>
+                                            <th>Plegado</th>
+                                            <th>Preparado</th>
+                                            <th>Abridora</th>
+                                            <th>Secado</th>
+                                            <th>Acab. Especial</th>
+                                            <th class="rr-th-total">Embalaje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-procesos"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rr-right-col">
+                        <div class="rr-chart-card">
+                            <div class="rr-chart-menus">
+                                <div class="rr-chart-menu rr-chart-menu-cliente" data-chart-cliente="ramas">
+                                    <button type="button" class="rr-chart-menu-btn" aria-haspopup="true"><span class="rr-cliente-label">Todos</span></button>
+                                    <div class="rr-chart-menu-list hidden"></div>
+                                </div>
+                                <div class="rr-chart-menu" data-chart="ramas">
+                                    <button type="button" class="rr-chart-menu-btn" aria-haspopup="true">Sem</button>
+                                    <div class="rr-chart-menu-list hidden">
+                                        <button type="button" class="rr-chart-menu-option" data-period="dia">Día</button>
+                                        <button type="button" class="rr-chart-menu-option" data-period="sem">Sem</button>
+                                        <button type="button" class="rr-chart-menu-option" data-period="mes">Mes</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <svg id="rr-weekly-chart" class="rr-chart" viewBox="0 0 420 230" preserveAspectRatio="xMidYMid meet"></svg>
+                        </div>
+                        <div class="rr-chart-card">
+                            <div class="rr-chart-menus">
+                                <div class="rr-chart-menu rr-chart-menu-cliente" data-chart-cliente="embalaje">
+                                    <button type="button" class="rr-chart-menu-btn" aria-haspopup="true"><span class="rr-cliente-label">Todos</span></button>
+                                    <div class="rr-chart-menu-list hidden"></div>
+                                </div>
+                                <div class="rr-chart-menu" data-chart="embalaje">
+                                    <button type="button" class="rr-chart-menu-btn" aria-haspopup="true">Día</button>
+                                    <div class="rr-chart-menu-list hidden">
+                                        <button type="button" class="rr-chart-menu-option" data-period="dia">Día</button>
+                                        <button type="button" class="rr-chart-menu-option" data-period="sem">Sem</button>
+                                        <button type="button" class="rr-chart-menu-option" data-period="mes">Mes</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <svg id="rr-embalaje-chart" class="rr-chart" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid meet"></svg>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-stock" class="view-section">
+                <div class="panel-header">
+                    <div class="stock-title-group">
+                        <button class="stock-home-button" id="btn-stock-back" type="button" title="Volver a la pagina principal" aria-label="Volver a la pagina principal">
+                            <i class="ph ph-house" aria-hidden="true"></i>
+                        </button>
+                        <h2>STOCK TINTORERIA TELAS</h2>
+                    </div>
+
+                    <div class="stock-filters">
+                        <label class="stock-filter-field" for="stock-article-type-filter">
+                            <span>tipo articulo</span>
+                            <select class="table-select stock-filter-select" id="stock-article-type-filter">
+                                <option value="all" selected>Todos</option>
+                                <option value="rectilineos">Rectilineos</option>
+                                <option value="no-rectilineos">No rectilineos</option>
+                            </select>
+                        </label>
+
+                        <label class="stock-filter-field" for="stock-type-tela-filter">
+                            <span>tipo_tela</span>
+                            <select class="table-select stock-filter-select" id="stock-type-tela-filter">
+                                <option value="all" selected>Todos</option>
+                            </select>
+                        </label>
+
+                        <label class="stock-filter-field" for="stock-client-filter">
+                            <span>cliente</span>
+                            <select class="table-select stock-filter-select" id="stock-client-filter">
+                                <option value="all" selected>Todos</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="table-card stock-card">
+                    <div class="table-card-head stock-card-head">
+                        <div class="stock-heading-group">
+                            <span class="muted-note stock-chart-subtitle" id="stock-chart-subtitle">Tipo articulo: Todos | Tipo tela: Todos | Cliente: Todos</span>
+                        </div>
+
+                        <div class="stock-legend" aria-label="Leyenda del grafico">
+                            <span class="stock-legend-item">
+                                <span class="stock-legend-swatch stock-legend-prog" aria-hidden="true"></span>
+                                PROG
+                            </span>
+                            <span class="stock-legend-item">
+                                <span class="stock-legend-swatch stock-legend-xprog" aria-hidden="true"></span>
+                                X PROG
+                            </span>
+                            <span class="stock-legend-item">
+                                <span class="stock-legend-swatch stock-legend-rejected" aria-hidden="true"></span>
+                                Rechazos
+                            </span>
+                            <span class="stock-salida-rama-pill">Salida de Rama <strong id="stock-salida-rama-value">--</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="stock-chart-scroll">
+                        <svg
+                            class="stock-chart"
+                            id="stock-chart"
+                            role="img"
+                            aria-label="Grafico de barras de stock tintoreria telas"
+                        ></svg>
+                    </div>
+
+                    <div class="stock-chart-tooltip hidden" id="stock-chart-tooltip" role="tooltip" aria-hidden="true"></div>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <div class="sc8-topbar-acciones">
-      <nav class="sc8-nav" aria-label="Navegación del dashboard">
-        <button type="button" class="activo" data-vista="vistaResumen">RESUMEN</button>
-        <button type="button" data-vista="vistaPxMaq">PxMAQ</button>
-        <button type="button" data-vista="vistaDashboard">REPROCESO</button>
-        <button type="button" data-vista="vistaProgramacion">LAV</button>
-        <button type="button" data-vista="vistaDetalle">DETALLE</button>
-        <button type="button" data-vista="vistaCosto">$COSTOS</button>
-        <button type="button" data-vista="vistaH2O">H2O</button>
-        <button type="button" data-vista="vistaTrazabilidad">TRAZABILIDAD</button>
-        <button type="button" id="btnInstrucciones" class="sc8-nav-icono"
-                title="Instrucciones" aria-label="Instrucciones">i</button>
-      </nav>
-
-      <input type="file" id="inputExcel" accept=".xlsx,.xls"
-             style="display:none" aria-hidden="true" tabindex="-1">
-      <button type="button" id="btnImportar" class="sc8-btn-icono"
-              title="Importar Excel" aria-label="Importar Excel">
-        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 16 V4 M7 9 l5 -5 5 5" fill="none" stroke="currentColor"
-                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M4 15 v4 a1.5 1.5 0 0 0 1.5 1.5 h13 a1.5 1.5 0 0 0 1.5 -1.5 v-4"
-                fill="none" stroke="currentColor" stroke-width="2.2"
-                stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <button type="button" id="btnActualizarTodo" class="sc8-btn-icono"
-              title="Actualizar todo" aria-label="Actualizar todo">
-        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M20 11 A8 8 0 1 0 19.5 15.5 M20 5 v6 h-6"
-                fill="none" stroke="currentColor" stroke-width="2.2"
-                stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <!-- Regreso al modulo principal, directo a la vista Reporte de Produccion
-           (el hash lo lee app.js al iniciar). -->
-      <a id="btnInicioReportes" class="sc8-btn-icono"
-         href="../index.html#reporte-ramas"
-         title="Ir a Reporte de Produccion" aria-label="Ir a Reporte de Produccion">
-        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M3 11 L12 3.5 L21 11 M5.5 9.2 V19.5 a1 1 0 0 0 1 1 h11 a1 1 0 0 0 1 -1 V9.2"
-                fill="none" stroke="currentColor" stroke-width="2.2"
-                stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M9.8 20.5 v-5.6 h4.4 v5.6"
-                fill="none" stroke="currentColor" stroke-width="2.2"
-                stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </a>
-    </div>
-  </header>
-
-  <!-- ================= PANEL LATERAL ================= -->
-  <aside class="sc8-sidebar">
-
-    <!-- Filtros -->
-    <section class="sc8-card">
-      <!-- Sem/Mes: granularidad del periodo. Ptda/Kg: unidad de medida
-           de las gráficas de Resumen y reproceso (# partidas o kilogramos). -->
-      <div class="sc8-fila-toggles">
-        <div class="sc8-toggle" id="togglePeriodo" role="group"
-             aria-label="Ver por semana o por mes">
-          <button type="button" class="activo" data-modo="semana">Sem</button>
-          <button type="button" data-modo="mes">Mes</button>
-        </div>
-        <div class="sc8-toggle" id="toggleMetrica" role="group"
-             aria-label="Medir en partidas o en kilogramos">
-          <button type="button" data-metrica="partidas">Ptda</button>
-          <button type="button" class="activo" data-metrica="kg">Kg</button>
-        </div>
-      </div>
-
-      <!-- Semana y Mes en dos columnas: el pill Sem/Mes decide cuál
-           filtra; el otro queda deshabilitado y en "Todas/Todos". -->
-      <div class="sc8-fila-doble">
-        <label class="sc8-field">
-          <span>Semana</span>
-          <div class="sc8-combo" id="comboSemana">
-            <button type="button" id="filtroSemanaBtn" class="sc8-select sc8-combo-toggle"
-                    aria-haspopup="listbox" aria-expanded="false" aria-controls="listaSemanas">
-              <span id="filtroSemanaTexto">Todas</span>
+    <div class="floating-menu-container" id="floating-menu-container">
+        <button class="floating-menu-toggle" id="floating-menu-toggle" type="button" title="Menú" aria-label="Abrir menú">
+            <i class="ph ph-caret-up" aria-hidden="true"></i>
+        </button>
+        <div class="floating-menu-items" id="floating-menu-items">
+            <button class="floating-menu-item stock-shortcut" id="btn-open-stock" type="button" title="STOCK" aria-label="Ir a STOCK">
+                <i class="ph ph-funnel" aria-hidden="true"></i>
+                <span>Stock</span>
             </button>
-            <div id="listaSemanas" class="sc8-combo-panel oculto" role="listbox"></div>
-          </div>
-        </label>
-        <label class="sc8-field">
-          <span>Mes</span>
-          <div class="sc8-combo" id="comboMes">
-            <button type="button" id="filtroMesBtn" class="sc8-select sc8-combo-toggle"
-                    aria-haspopup="listbox" aria-expanded="false" aria-controls="listaMeses">
-              <span id="filtroMesTexto">Todos</span>
+            <button class="floating-menu-item reporte-ramas-shortcut" id="btn-open-reporte-ramas" type="button" title="Reporte Ramas" aria-label="Ir a Reporte Ramas">
+                <i class="ph ph-cube" aria-hidden="true"></i>
+                <span>Reporte</span>
             </button>
-            <div id="listaMeses" class="sc8-combo-panel oculto" role="listbox"></div>
-          </div>
-        </label>
-      </div>
-
-      <label class="sc8-field">
-        <span>Defecto</span>
-        <div class="sc8-combo" id="comboDefecto">
-          <button type="button" id="filtroDefectoBtn" class="sc8-select sc8-combo-toggle"
-                  aria-haspopup="listbox" aria-expanded="false" aria-controls="listaDefectos">
-            <span id="filtroDefectoTexto">Todos</span>
-          </button>
-          <div id="listaDefectos" class="sc8-combo-panel oculto" role="listbox"></div>
         </div>
-      </label>
-
-      <label class="sc8-field">
-        <span>Artículo</span>
-        <div class="sc8-combo" id="comboArticulo">
-          <input type="text" id="filtroArticulo" class="sc8-input sc8-input-clearable"
-                 placeholder="Buscar código o artículo…" autocomplete="off"
-                 role="combobox" aria-expanded="false" aria-controls="listaArticulos">
-          <button type="button" id="btnLimpiarArticulo" class="sc8-input-clear oculto"
-                  aria-label="Limpiar artículo" title="Limpiar artículo">&times;</button>
-          <div id="listaArticulos" class="sc8-combo-panel oculto" role="listbox"></div>
-        </div>
-      </label>
-      <div id="chipsArticulo" class="sc8-chips-tags"></div>
-
-      <label class="sc8-field">
-        <span>Cliente</span>
-        <select id="filtroCliente" class="sc8-select"></select>
-      </label>
-
-      <label class="sc8-field">
-        <span>Color</span>
-        <select id="filtroColor" class="sc8-select"></select>
-      </label>
-
-      <label class="sc8-field">
-        <span>OP-Tela</span>
-        <input type="text" id="filtroOpTela" class="sc8-input"
-               placeholder="Ej: 40653 o 40653-107" autocomplete="off">
-      </label>
-
-      <label class="sc8-field">
-        <span>Máquina Origen</span>
-        <select id="filtroMaqOrigen" class="sc8-select"></select>
-      </label>
-
-      <label class="sc8-field">
-        <span>Máquina Recuperación</span>
-        <select id="filtroMaqRecuperacion" class="sc8-select"></select>
-      </label>
-
-      <button type="button" id="btnLimpiarFiltros" class="sc8-btn oscuro">
-        Limpiar filtros
-      </button>
-    </section>
-  </aside>
-
-  <!-- ================= CONTENIDO PRINCIPAL ================= -->
-  <main class="sc8-main">
-
-    <!-- Skeleton de carga: réplica atenuada de las cuatro gráficas que
-         parpadea mientras llegan los datos de Google Sheets. -->
-    <section id="estadoCarga" class="sc8-skeleton" aria-hidden="true">
-      <div class="sc8-resumen-grid">
-        <div class="sc8-skel-grafico sc8-skel-resumen-card"><div class="sc8-skel-hueso sc8-skel-titulo"></div><div class="sc8-skel-hueso sc8-skel-area"></div></div>
-        <div class="sc8-skel-grafico sc8-skel-resumen-card"><div class="sc8-skel-hueso sc8-skel-titulo"></div><div class="sc8-skel-hueso sc8-skel-area"></div></div>
-        <div class="sc8-skel-grafico sc8-skel-resumen-card"><div class="sc8-skel-hueso sc8-skel-titulo"></div><div class="sc8-skel-hueso sc8-skel-area"></div></div>
-        <div class="sc8-skel-grafico sc8-skel-resumen-card"><div class="sc8-skel-hueso sc8-skel-titulo"></div><div class="sc8-skel-hueso sc8-skel-area"></div></div>
-      </div>
-    </section>
-
-    <!-- Estado sin datos (hoja vacía, sin conexión o sin configurar) -->
-    <section id="estadoVacio" class="sc8-card sc8-vacio-inicial oculto">
-      <h2 id="estadoVacioTitulo">La hoja de Google Sheets está vacía</h2>
-      <p>El dashboard se construye con los datos guardados en Google Sheets.
-         Si la hoja está vacía, usa el botón circular de importación (↑) de la
-         barra superior con el archivo <em>grid_vista_consulta_tenido.xlsx</em>:
-         se guardará en la hoja y el dashboard calculará KPIs, Pareto de
-         defectos, trazabilidad por máquina y más.</p>
-    </section>
-
-    <div id="contenidoDashboard" class="oculto">
-
-      <!-- ========== VISTA 1: RESUMEN GERENCIAL (vista inicial) ========== -->
-      <div id="vistaResumen" class="sc8-vista">
-        <section class="sc8-resumen-grid" aria-label="Indicadores ejecutivos por período">
-          <article class="sc8-card sc8-resumen-card volumen">
-            <header class="sc8-resumen-card-header">
-              <h3 id="resumenTituloProcesados">KG PROCESADOS</h3>
-              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
-                <span><i class="azul" aria-hidden="true"></i><span id="resumenUnidadProcesados">Kg</span></span>
-                <span><i class="neutral" aria-hidden="true"></i>Prom</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chResumenProcesados"></canvas></div>
-            <p id="resumenCtxProcesados" class="sc8-resumen-contexto">Promedio: 0 kg por período</p>
-          </article>
-
-          <article class="sc8-card sc8-resumen-card reproceso">
-            <header class="sc8-resumen-card-header">
-              <h3 id="resumenTituloReprocesados">KG REPROCESADOS</h3>
-              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
-                <span><i class="rojo" aria-hidden="true"></i><span id="resumenUnidadReprocesados">Kg</span></span>
-                <span><i class="ambar" aria-hidden="true"></i><span id="resumenPctReprocesados">% Kg</span></span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chResumenReprocesados"></canvas></div>
-            <p id="resumenCtxReprocesados" class="sc8-resumen-contexto">Incidencia sobre los kg procesados</p>
-          </article>
-
-          <article class="sc8-card sc8-resumen-card bap">
-            <header class="sc8-resumen-card-header">
-              <h3 id="resumenTituloBap">KG BIEN A LA PRIMERA (BAP)</h3>
-              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
-                <span><i class="verde" aria-hidden="true"></i><span id="resumenUnidadBap">Kg</span></span>
-                <span><i class="azul" aria-hidden="true"></i><span id="resumenPctBap">% Kg</span></span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chResumenBap"></canvas></div>
-            <p id="resumenCtxBap" class="sc8-resumen-contexto">Kg procesados menos kg reprocesados</p>
-          </article>
-
-          <article class="sc8-card sc8-resumen-card costo">
-            <header class="sc8-resumen-card-header">
-              <h3>COSTO DE KG REPROCESADOS (Receta)</h3>
-              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
-                <span><i class="ambar" aria-hidden="true"></i>$</span>
-                <span><i class="neutral" aria-hidden="true"></i>Prom</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chResumenCosto"></canvas></div>
-            <p id="resumenCtxCosto" class="sc8-resumen-contexto">Costo según receta de cada carga</p>
-          </article>
-        </section>
-      </div>
-
-      <!-- ========== VISTA PxMAQ: producción y reproceso por máquina ========== -->
-      <div id="vistaPxMaq" class="sc8-vista oculto">
-        <section class="sc8-pxmaq-resumen sc8-card"
-                 aria-label="Clasificación de Tipo Recetas">
-          <div>
-            <h2>PRODUCCIÓN POR MÁQUINA</h2>
-            <p>Clasificación exclusiva de <strong>Tipo Recetas</strong>:
-               PRODUCCIÓN, PROCESO, REPROCESO, NINGUNO y NN.</p>
-          </div>
-          <div class="sc8-pxmaq-panel">
-            <div id="pxMaqClasificacion" class="sc8-pxmaq-tipos"></div>
-            <div class="sc8-pxmaq-filtros" aria-label="Período de PxMAQ">
-              <div id="togglePxMaqPeriodo" class="sc8-toggle sc8-pxmaq-toggle"
-                   role="group" aria-label="Agrupar PxMAQ por mes, semana o día">
-                <button type="button" data-pxmaq-modo="mes">Mes</button>
-                <button type="button" data-pxmaq-modo="semana">Sem</button>
-                <button type="button" class="activo" data-pxmaq-modo="dia">Día</button>
-              </div>
-              <select id="filtroPxMaqPeriodo" class="sc8-select sc8-pxmaq-select"
-                      aria-label="Elegir período de PxMAQ"></select>
-            </div>
-          </div>
-        </section>
-
-        <section class="sc8-resumen-grid sc8-pxmaq-grid"
-                 aria-label="Cargas y kilogramos por máquina">
-          <article class="sc8-card sc8-resumen-card pxmaq-combinada">
-            <header class="sc8-resumen-card-header">
-              <h3>CARGAS POR MÁQUINA</h3>
-              <div class="sc8-resumen-leyenda" aria-label="Series">
-                <span><i class="rojo" aria-hidden="true"></i>Reproceso</span>
-                <span><i class="verde" aria-hidden="true"></i>Producción</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chPxMaqCargas"></canvas></div>
-            <p id="pxMaqCtxCargas" class="sc8-resumen-contexto">0 cargas</p>
-          </article>
-
-          <article class="sc8-card sc8-resumen-card pxmaq-combinada">
-            <header class="sc8-resumen-card-header">
-              <h3>KG POR MÁQUINA</h3>
-              <div class="sc8-resumen-leyenda" aria-label="Series">
-                <span><i class="rojo" aria-hidden="true"></i>Reproceso</span>
-                <span><i class="verde" aria-hidden="true"></i>Producción</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chPxMaqKg"></canvas></div>
-            <p id="pxMaqCtxKg" class="sc8-resumen-contexto">0 kg</p>
-          </article>
-        </section>
-      </div>
-
-      <!-- ========== VISTA PROGRAMACIÓN: eficiencia de lavados ========== -->
-      <div id="vistaProgramacion" class="sc8-vista oculto">
-        <section class="sc8-programacion-encabezado sc8-card">
-          <div>
-            <h2>EFICIENCIA DE PROGRAMACIÓN</h2>
-            <p>Señales operativas basadas en lavados de máquina, volumen productivo y recursos consumidos.</p>
-          </div>
-          <div class="sc8-pxmaq-filtros" aria-label="Período de lavados">
-            <div id="toggleLavPeriodo" class="sc8-toggle sc8-pxmaq-toggle"
-                 role="group" aria-label="Agrupar lavados por mes, semana o día">
-              <button type="button" data-lav-modo="mes">Mes</button>
-              <button type="button" data-lav-modo="semana">Sem</button>
-              <button type="button" class="activo" data-lav-modo="dia">Día</button>
-            </div>
-            <select id="filtroLavPeriodo" class="sc8-select sc8-pxmaq-select"
-                    aria-label="Elegir período de lavados"></select>
-          </div>
-        </section>
-
-        <section class="sc8-resumen-grid sc8-programacion-grid"
-                 aria-label="Análisis de programación por máquina">
-          <article class="sc8-card sc8-resumen-card programacion">
-            <header class="sc8-resumen-card-header">
-              <h3>CARGAS Y LAVADOS POR MÁQUINA</h3>
-              <div class="sc8-resumen-leyenda">
-                <span><i class="rojo"></i>Reprocesos</span>
-                <span><i class="verde"></i>Productivas</span>
-                <span><i class="azul"></i>Lavados</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chProgFrecuencia"></canvas></div>
-            <p id="progCtxFrecuencia" class="sc8-resumen-contexto">Sin datos</p>
-          </article>
-
-          <article class="sc8-card sc8-resumen-card programacion evolucion-lav">
-            <header class="sc8-resumen-card-header">
-              <h3>EVOLUCIÓN DE LAVADOS</h3>
-              <div class="sc8-resumen-leyenda">
-                <span><i class="azul"></i>Litros</span>
-                <span><i class="ambar"></i>Cargas de lavado</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chProgRecursos"></canvas></div>
-            <div id="progTablaColores" class="sc8-tabla-eje-lav"
-                 aria-label="Colores y períodos de la evolución de lavados"></div>
-            <p id="progCtxRecursos" class="sc8-resumen-contexto"></p>
-          </article>
-        </section>
-      </div>
-
-      <!-- ========== VISTA REPROCESO: KPIs + gráficos ========== -->
-      <div id="vistaDashboard" class="sc8-vista oculto">
-
-        <!-- KPIs -->
-        <section class="sc8-kpis cols-7 sc8-fila-espaciada" aria-label="Indicadores principales">
-          <article class="sc8-kpi">
-            <h3>Ptdas procesadas</h3>
-            <div class="valor" id="kpiProcesadas">0</div>
-            <div class="sub">100%</div>
-          </article>
-          <article class="sc8-kpi rojo">
-            <h3>Ptdas reproc.</h3>
-            <div class="valor" id="kpiReprocesadas">0</div>
-            <div class="sub" id="kpiReprocesadasSub">—</div>
-          </article>
-          <article class="sc8-kpi azul">
-            <h3>Kg procesados</h3>
-            <div class="valor" id="kpiKgProc">0</div>
-            <div class="sub">100%</div>
-          </article>
-          <article class="sc8-kpi rojo">
-            <h3>Kg reproc.</h3>
-            <div class="valor" id="kpiKgRep">0</div>
-            <div class="sub" id="kpiKgRepSub">—</div>
-          </article>
-          <article class="sc8-kpi" title="Bien a la primera">
-            <h3>BAP</h3>
-            <div class="valor" id="kpiRft">0%</div>
-            <div class="sub">Ptdas sin reproc.</div>
-          </article>
-          <article class="sc8-kpi ambar">
-            <h3>% Reproc.</h3>
-            <div class="valor" id="kpiPctRep">0%</div>
-            <div class="sub">Ptdas reproc.</div>
-          </article>
-          <article class="sc8-kpi azul">
-            <h3>$ Reproc.</h3>
-            <div class="valor" id="kpiCosto">$ 0</div>
-            <div class="sub">Costo según receta</div>
-          </article>
-        </section>
-
-        <!-- Gráficos fila 1 -->
-        <section class="sc8-graficos cols-4 sc8-fila-espaciada">
-          <article class="sc8-card sc8-grafico">
-            <h2>PARETO DE DEFECTOS</h2>
-            <div class="sc8-canvas"><canvas id="chPareto"></canvas></div>
-          </article>
-          <article class="sc8-card sc8-grafico">
-            <h2 id="tituloTendencia">TENDENCIA SEM REPROC</h2>
-            <div class="sc8-canvas"><canvas id="chTendencia"></canvas></div>
-          </article>
-          <article class="sc8-card sc8-grafico">
-            <h2>REPROCESOS POR MÁQ ORIGEN<small class="sc8-sufijo-metrica"></small></h2>
-            <div class="sc8-canvas"><canvas id="chMaqOrigen"></canvas></div>
-          </article>
-          <article class="sc8-card sc8-grafico">
-            <h2>REPROC x MÁQ DE RECUPERAC<small class="sc8-sufijo-metrica"></small></h2>
-            <div class="sc8-canvas"><canvas id="chMaqRecuperacion"></canvas></div>
-          </article>
-        </section>
-
-        <!-- Gráficos fila 2 -->
-        <section class="sc8-graficos cols-4 sc8-graficos-fila2">
-          <article class="sc8-card sc8-grafico">
-            <h2>REPROCESOS POR DEFECTO</h2>
-            <div class="sc8-canvas"><canvas id="chDona"></canvas></div>
-          </article>
-          <article class="sc8-card sc8-grafico">
-            <h2>REPROCESOS POR ARTÍCULO <small>(Top 5)</small><small class="sc8-sufijo-metrica"></small></h2>
-            <div class="sc8-canvas"><canvas id="chArticulo"></canvas></div>
-          </article>
-          <article class="sc8-card sc8-grafico">
-            <h2>REPROCESOS POR COLOR <small>(Top 5)</small><small class="sc8-sufijo-metrica"></small></h2>
-            <div class="sc8-canvas"><canvas id="chColor"></canvas></div>
-          </article>
-          <article class="sc8-card sc8-grafico">
-            <h2>REPROCESOS POR CLIENTE <small>(Top 5)</small><small class="sc8-sufijo-metrica"></small></h2>
-            <div class="sc8-canvas"><canvas id="chCliente"></canvas></div>
-          </article>
-        </section>
-      </div>
-
-      <!-- ========== VISTA 2: DETALLE (tabla completa) ========== -->
-      <div id="vistaDetalle" class="sc8-vista oculto">
-        <article class="sc8-card">
-          <h2 class="sc8-section-title">DETALLE DE OP-PARTIDAS (según filtros seleccionados)</h2>
-          <div class="responsive-table-wrap">
-            <table class="sc8-table">
-              <thead>
-                <tr>
-                  <th>OP-Partida</th><th>Fecha</th><th>Cliente</th><th>Artículo</th>
-                  <th>Color</th><th>Máquina Origen</th><th>Defecto</th>
-                  <th>Tipo Reproceso</th><th>Máquina Recuperación</th><th>Estado</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyDetalle"></tbody>
-            </table>
-          </div>
-          <div class="sc8-total" id="totalRegistros">Total registros: 0</div>
-        </article>
-      </div>
-
-      <!-- ========== VISTA: COSTO DE REPROCESOS ========== -->
-      <div id="vistaCosto" class="sc8-vista oculto">
-        <section class="sc8-card sc8-costo-encabezado">
-          <div class="sc8-costo-titulo">
-            <h2>COSTOS TEÑIDO</h2>
-          </div>
-
-          <section class="sc8-costo-kpis" aria-label="Indicadores económicos">
-            <article class="sc8-card sc8-costo-kpi total">
-              <span class="sc8-costo-kpi-icono">$</span>
-              <div>
-                <h3>COSTO TOTAL</h3>
-                <strong id="costoKpiTotal">$ 0</strong>
-                <small id="costoKpiTotalSub">0 cargas reprocesadas</small>
-              </div>
-            </article>
-            <article class="sc8-card sc8-costo-kpi intensidad">
-              <span class="sc8-costo-kpi-icono">1k</span>
-              <div>
-                <h3>COSTO / 1.000 KG</h3>
-                <strong id="costoKpiMilKg">$ 0</strong>
-                <small id="costoKpiMilKgSub">0 kg de producción</small>
-              </div>
-            </article>
-            <article class="sc8-card sc8-costo-kpi carga">
-              <span class="sc8-costo-kpi-icono">#</span>
-              <div>
-                <h3>PROMEDIO POR CARGA</h3>
-                <strong id="costoKpiCarga">$ 0</strong>
-                <small id="costoKpiCargaSub">0 kg reprocesados</small>
-              </div>
-            </article>
-            <article class="sc8-card sc8-costo-kpi tarifa">
-              <span class="sc8-costo-kpi-icono">kg</span>
-              <div>
-                <h3>COSTO / KG REPROCESADO</h3>
-                <strong id="costoKpiKg">US$ 0,00</strong>
-                <small id="costoKpiKgSub">Tarifa ponderada por volumen</small>
-              </div>
-            </article>
-          </section>
-
-          <div class="sc8-costo-formula" aria-label="Fórmula del costo">
-            <span>Costo por carga</span>
-            <strong>Kg Carga × US$/kg</strong>
-          </div>
-        </section>
-
-        <section class="sc8-costo-grid" aria-label="Análisis de costos">
-          <article class="sc8-card sc8-costo-grafico tenido">
-            <header class="sc8-costo-grafico-header">
-              <div>
-                <h3>COSTO POR TIPO DE TEÑIDO</h3>
-              </div>
-              <div class="sc8-costo-leyenda">
-                <i class="barra"></i>$ total <i class="linea"></i>% acum.
-              </div>
-            </header>
-            <div class="sc8-costo-canvas"><canvas id="chCostoTenido"></canvas></div>
-          </article>
-
-          <article class="sc8-card sc8-costo-grafico defecto">
-            <header class="sc8-costo-grafico-header">
-              <div>
-                <h3>COSTO POR DEFECTO</h3>
-              </div>
-              <div class="sc8-costo-leyenda">
-                <i class="barra"></i>$ total <i class="linea"></i>% acum.
-              </div>
-            </header>
-            <div class="sc8-costo-canvas"><canvas id="chCostoDefecto"></canvas></div>
-          </article>
-
-          <article class="sc8-card sc8-costo-grafico maquina">
-            <header class="sc8-costo-grafico-header">
-              <div>
-                <h3>COSTO POR MÁQUINA DE ORIGEN</h3>
-              </div>
-              <div class="sc8-costo-leyenda"><i class="barra"></i>$ total</div>
-            </header>
-            <div class="sc8-costo-canvas"><canvas id="chCostoMaqOrigen"></canvas></div>
-          </article>
-
-          <article class="sc8-card sc8-costo-grafico receta">
-            <header class="sc8-costo-grafico-header">
-              <div>
-                <h3>COSTO POR RECETA DE RECUPERACIÓN</h3>
-              </div>
-              <div class="sc8-costo-leyenda"><i class="barra"></i>$ total</div>
-            </header>
-            <div class="sc8-costo-canvas"><canvas id="chCostoReceta"></canvas></div>
-          </article>
-
-          <article class="sc8-card sc8-costo-grafico prioridad">
-            <header class="sc8-costo-grafico-header">
-              <div>
-                <h3>FRECUENCIA VS. COSTO POR DEFECTO</h3>
-              </div>
-              <div class="sc8-costo-leyenda"><i class="burbuja"></i>Tamaño = costo total</div>
-            </header>
-            <div class="sc8-costo-canvas"><canvas id="chCostoPrioridad"></canvas></div>
-            <p id="costoCtxPrioridad" class="sc8-costo-contexto">Frecuencia y severidad</p>
-          </article>
-
-          <article class="sc8-card sc8-costo-grafico tendencia">
-            <header class="sc8-costo-grafico-header">
-              <div>
-                <h3 id="costoTituloTendencia">TENDENCIA DE COSTO</h3>
-              </div>
-              <div class="sc8-costo-leyenda">
-                <i class="barra"></i>$ por defecto <i class="linea"></i>$/1.000 kg
-              </div>
-            </header>
-            <div class="sc8-costo-canvas"><canvas id="chCostoTendencia"></canvas></div>
-          </article>
-        </section>
-      </div>
-
-      <!-- ========== VISTA: H2O (consumo de agua, matriz 2x2) ==========
-           Vol Lt Utilizados sobre los registros que pasan los filtros:
-           total por periodo, intensidad Lt/kg y desglose por artículo
-           y por color (Top 5 por litros, con su Lt/kg al final de la barra). -->
-      <div id="vistaH2O" class="sc8-vista oculto">
-        <section class="sc8-resumen-grid sc8-fila-espaciada"
-                 aria-label="Consumo de agua por período">
-          <article class="sc8-card sc8-resumen-card agua">
-            <header class="sc8-resumen-card-header">
-              <h3>AGUA CONSUMIDA (Lt)</h3>
-              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
-                <span><i class="ambar" aria-hidden="true"></i>Lavado máq.</span>
-                <span><i class="azul" aria-hidden="true"></i>Otros</span>
-                <span><i class="neutral" aria-hidden="true"></i>Prom</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chAguaLitros"></canvas></div>
-            <p id="h2oCtxLitros" class="sc8-resumen-contexto">Litros utilizados por período</p>
-          </article>
-
-          <article class="sc8-card sc8-resumen-card agua">
-            <header class="sc8-resumen-card-header">
-              <h3>AGUA POR KG PROCESADO (Lt/Kg)</h3>
-              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
-                <span><i class="azul" aria-hidden="true"></i>Lt/Kg</span>
-                <span><i class="neutral" aria-hidden="true"></i>Prom</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chAguaLtKg"></canvas></div>
-            <p id="h2oCtxLtKg" class="sc8-resumen-contexto">Litros por kg de carga en cada período</p>
-          </article>
-        </section>
-
-        <section class="sc8-resumen-grid cols-3"
-                 aria-label="Consumo de agua por artículo, color y proceso">
-          <article class="sc8-card sc8-resumen-card agua">
-            <header class="sc8-resumen-card-header">
-              <h3>AGUA POR ARTÍCULO <small>(Top 5)</small></h3>
-              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
-                <span><i class="azul" aria-hidden="true"></i>Lt</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chAguaArticulo"></canvas></div>
-            <p id="h2oCtxArticulo" class="sc8-resumen-contexto">Litros totales (eje en Lt); la etiqueta indica su Lt/kg</p>
-          </article>
-
-          <article class="sc8-card sc8-resumen-card agua">
-            <header class="sc8-resumen-card-header">
-              <h3>AGUA POR COLOR <small>(Top 5)</small></h3>
-              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
-                <span><i class="azul" aria-hidden="true"></i>Lt</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chAguaColor"></canvas></div>
-            <p id="h2oCtxColor" class="sc8-resumen-contexto">Litros totales (eje en Lt); la etiqueta indica su Lt/kg</p>
-          </article>
-
-          <article class="sc8-card sc8-resumen-card agua">
-            <header class="sc8-resumen-card-header">
-              <h3>AGUA POR PROCESO</h3>
-              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
-                <span><i class="azul" aria-hidden="true"></i>Lt</span>
-              </div>
-            </header>
-            <div class="sc8-resumen-canvas"><canvas id="chAguaProceso"></canvas></div>
-            <p id="h2oCtxProceso" class="sc8-resumen-contexto">Litros totales por valor de "Procesos"</p>
-          </article>
-        </section>
-      </div>
-
-      <!-- ========== VISTA 3: TRAZABILIDAD (ficha + resumen) ========== -->
-      <div id="vistaTrazabilidad" class="sc8-vista oculto">
-        <section class="sc8-graficos">
-          <article class="sc8-card">
-            <h2 class="sc8-section-title">FICHA RÁPIDA DE OP-PARTIDA</h2>
-            <div class="sc8-buscador">
-              <input type="text" id="buscarPartida" class="sc8-input"
-                     placeholder="Ej.: 1000040653-0040, 40653-40 o 4065340"
-                     aria-label="Buscar OP-Partida">
-              <button type="button" id="btnBuscarPartida" class="sc8-btn">Buscar</button>
-            </div>
-            <div id="fichaContenido">
-              <p class="sc8-vacio">Ingresa una OP-Partida o haz clic en una fila del detalle.</p>
-            </div>
-          </article>
-
-          <article class="sc8-card">
-            <h2 class="sc8-section-title">RESUMEN DEL PERIODO (según filtros)</h2>
-            <div id="resumenPeriodo"></div>
-          </article>
-        </section>
-      </div>
-
-    </div><!-- /contenidoDashboard -->
-  </main>
-</div>
-
-<!-- ================= MODAL DE INSTRUCCIONES ================= -->
-<div id="modalInstrucciones" class="sc8-modal oculto" role="dialog" aria-modal="true">
-  <div class="sc8-card">
-    <h2 class="sc8-section-title">INSTRUCCIONES DE USO</h2>
-    <ol>
-      <li><strong>Resumen:</strong> es la vista inicial. Usa el selector
-          <strong>Sem/Mes</strong> y los filtros laterales para analizar kg
-          procesados, reproceso, BAP y costo.</li>
-      <li><strong>PxMAQ:</strong> compara por máquina las cargas y los kg de
-          PRODUCCIÓN y REPROCESO. “Tipo Recetas” se clasifica con prioridad
-          PRODUCCIÓN → REPROCESO → PROCESO → NINGUNO → NN. Sus pills
-          Mes/Sem/Día y período exacto actualizan exclusivamente esta vista.</li>
-      <li><strong>H2O:</strong> consumo de agua (Vol Lt Utilizados): litros
-          por período (con el lavado de máquina como segmento propio),
-          intensidad Lt/kg y desglose por artículo, color y proceso.
-          Obedece los mismos filtros y el selector Sem/Mes.</li>
-      <li><strong>$Costo:</strong> analiza el costo real de las recetas de
-          reproceso por teñido de origen, defecto, máquina y recuperación;
-          cada gráfica permite abrir el detalle de las cargas.</li>
-      <li><strong>Importar:</strong> el botón circular de importación (↑) de
-          la barra superior lee el archivo Excel, lo guarda en la hoja
-          (las cargas existentes actualizan su costo sin duplicarse) y recarga
-          el dashboard desde la base de datos.</li>
-      <li><strong>Campos compuestos:</strong> Cod. Art. y Colores se separan por
-          <code>" | "</code> y Descripción Art. por doble espacio; la hoja
-          guarda tanto el valor original como los valores divididos.</li>
-      <li><strong>Costo de reproceso:</strong> se calcula para cada carga como
-          <code>Kg Carga × Costo US$ / kg</code> y luego se suman los resultados.</li>
-    </ol>
-    <button type="button" id="btnCerrarInstrucciones" class="sc8-btn">Cerrar</button>
-  </div>
-</div>
-
-<!-- ========== MODAL DE DETALLE (clic en una barra del Dashboard) ========== -->
-<div id="modalRegistros" class="sc8-modal sc8-modal-registros oculto"
-     role="dialog" aria-modal="true" aria-labelledby="modalRegistrosTitulo">
-  <div class="sc8-card">
-    <div class="sc8-modal-cab">
-      <h2 class="sc8-section-title" id="modalRegistrosTitulo">DETALLE</h2>
-      <button type="button" id="btnCerrarRegistros" class="sc8-cerrar-x"
-              aria-label="Cerrar" title="Cerrar">&times;</button>
     </div>
-    <div id="modalRegistrosCuerpo" class="responsive-table-wrap"></div>
-    <div class="sc8-total" id="modalRegistrosTotal"></div>
-  </div>
-</div>
 
-<!-- ================= SCRIPTS ================= -->
-<script src="js/config.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/datos.js"></script>
-<script src="js/filtros.js"></script>
-<script src="js/graficos.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/importar.js"></script>
-<script src="js/main.js"></script>
+    <div class="loader hidden" id="app-loader">
+        <div class="spinner"></div>
+        <span>Cargando informacion...</span>
+    </div>
+
+    <div class="toast-root" id="toast-root"></div>
+
+    <div class="modal-backdrop hidden" id="rama-crudo-detail-modal">
+        <div class="modal-card modal-card-form">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="rama-crudo-detail-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="rama-crudo-detail-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="rama-crudo-detail-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="rama-crudo-detail-form">
+                <div class="form-field">
+                    <label for="rama-crudo-ancho-crudo">Ancho crudo</label>
+                    <input class="table-input" id="rama-crudo-ancho-crudo" name="ancho_crudo" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-densidad-crudo">Densidad crudo</label>
+                    <input class="table-input" id="rama-crudo-densidad-crudo" name="densidad_crudo" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-ancho">Ancho</label>
+                    <input class="table-input" id="rama-crudo-ancho" name="rama_crudo_ancho" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-densidad">Densidad</label>
+                    <input class="table-input" id="rama-crudo-densidad" name="rama_crudo_densidad" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-temperatura">Temperatura</label>
+                    <input class="table-input" id="rama-crudo-temperatura" name="rama_crudo_temperatura" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-velocidad">Velocidad</label>
+                    <input class="table-input" id="rama-crudo-velocidad" name="rama_crudo_velocidad" type="text" inputmode="decimal">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-alimentacion">Alimentacion</label>
+                    <input class="table-input" id="rama-crudo-alimentacion" name="rama_crudo_alimentacion" type="text" inputmode="text">
+                </div>
+                <div class="form-field">
+                    <label for="rama-crudo-ancho-cadena">Ancho de cadena</label>
+                    <input class="table-input" id="rama-crudo-ancho-cadena" name="rama_crudo_ancho_de_cadena" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="rama-crudo-observaciones">Observaciones</label>
+                    <textarea class="table-textarea" id="rama-crudo-observaciones" name="rama_crudo_observaciones" rows="3"></textarea>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="rama-crudo-detail-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="rama-crudo-detail-save" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="rama-tenido-detail-modal">
+        <div class="modal-card modal-card-form">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="rama-tenido-detail-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="rama-tenido-detail-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="rama-tenido-detail-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="rama-tenido-detail-form">
+                <div class="form-field">
+                    <label for="rama-tenido-ancho">Ancho</label>
+                    <input class="table-input" id="rama-tenido-ancho" name="rama_tenido_ancho" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-densidad">Densidad</label>
+                    <input class="table-input" id="rama-tenido-densidad" name="rama_tenido_densidad" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-temperatura">Temperatura</label>
+                    <input class="table-input" id="rama-tenido-temperatura" name="rama_tenido_temperatura" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-velocidad">Velocidad</label>
+                    <input class="table-input" id="rama-tenido-velocidad" name="rama_tenido_velocidad" type="text" inputmode="decimal">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-alimentacion">Alimentacion</label>
+                    <input class="table-input" id="rama-tenido-alimentacion" name="rama_tenido_alimentacion" type="text" inputmode="text">
+                </div>
+                <div class="form-field">
+                    <label for="rama-tenido-ancho-cadena">Ancho de cadena</label>
+                    <input class="table-input" id="rama-tenido-ancho-cadena" name="rama_tenido_ancho_de_cadena" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="rama-tenido-observaciones">Observaciones</label>
+                    <textarea class="table-textarea" id="rama-tenido-observaciones" name="rama_tenido_observaciones" rows="3"></textarea>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="rama-tenido-detail-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="rama-tenido-detail-save" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="tenido-detail-modal">
+        <div class="modal-card modal-card-form">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="tenido-detail-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="tenido-detail-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="tenido-detail-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="tenido-detail-form">
+                <div class="form-field">
+                    <label for="tenido-rb">RB</label>
+                    <input class="table-input" id="tenido-rb" name="tenido_rb" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field">
+                    <label for="tenido-volumen">Volumen</label>
+                    <input class="table-input" id="tenido-volumen" name="tenido_volumen" type="text" inputmode="numeric">
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="tenido-observaciones">Observaciones</label>
+                    <textarea class="table-textarea" id="tenido-observaciones" name="tenido_observaciones" rows="3"></textarea>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="tenido-detail-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="tenido-detail-save" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="calidad-reject-modal">
+        <div class="modal-card modal-card-form" style="max-width: 612px;">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="calidad-reject-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="calidad-reject-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="calidad-reject-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="calidad-reject-form">
+                <div class="form-field form-field-full">
+                    <label for="calidad-motivo-rechazo">Motivo de Rechazo</label>
+                    <input class="table-input" id="calidad-motivo-rechazo" name="motivo_rechazo_1" list="calidad-motivo-rechazo-list" placeholder="Escribe para buscar motivo...">
+                    <datalist id="calidad-motivo-rechazo-list"></datalist>
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="calidad-supervisor-rechazo">Supervisor</label>
+                    <input type="text" class="table-input" id="calidad-supervisor-rechazo" name="supervisor_rechazo_1" placeholder="Nombre del Supervisor">
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="calidad-observacion">ObservaciÃ³n de Calidad</label>
+                    <div class="voice-textarea-wrapper" style="position: relative; display: flex; flex-direction: column;">
+                        <textarea class="table-textarea" id="calidad-observacion" name="observacion_calidad" rows="4" style="text-transform: none;"></textarea>
+                        <button type="button" class="ghost-button icon-only-button voice-dictation-btn" id="calidad-voice-btn" style="position: absolute; right: 8px; bottom: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;" title="Dictar por voz">
+                            <i class="ph ph-microphone"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="calidad-reject-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="calidad-reject-save" type="button">Guardar y Rechazar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="calidad-approve-modal">
+        <div class="modal-card modal-card-form" style="max-width: 612px;">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="calidad-approve-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="calidad-approve-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="calidad-approve-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <form class="detail-form-grid" id="calidad-approve-form">
+                <div class="form-field">
+                    <label for="calidad-tipo-aprobacion">Tipo de AprobaciÃ³n</label>
+                    <select class="table-select" id="calidad-tipo-aprobacion" name="tipo_aprobacion">
+                        <option value="">Seleccionar tipo...</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="calidad-quien-aprobo">Quien Aprobo</label>
+                    <select class="table-select" id="calidad-quien-aprobo" name="quien_aprobo">
+                        <option value="">Seleccionar quiÃ©n...</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="calidad-supervisor-aprobacion">Supervisor</label>
+                    <input type="text" class="table-input" id="calidad-supervisor-aprobacion" name="supervisor_aprobacion" placeholder="Nombre del Supervisor">
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="calidad-approve-observacion">ObservaciÃ³n de Calidad</label>
+                    <div class="voice-textarea-wrapper" style="position: relative; display: flex; flex-direction: column;">
+                        <textarea class="table-textarea" id="calidad-approve-observacion" name="observacion_calidad" rows="4" style="text-transform: none;"></textarea>
+                        <button type="button" class="ghost-button icon-only-button voice-dictation-btn" id="calidad-approve-voice-btn" style="position: absolute; right: 8px; bottom: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;" title="Dictar por voz">
+                            <i class="ph ph-microphone"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="calidad-approve-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="calidad-approve-save" type="button">Aprobar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="calidad-auditoria-modal">
+        <div class="modal-card modal-card-form" style="max-width: 800px;">
+            <div class="modal-card-head">
+                <h3 id="calidad-auditoria-title">Auditoria</h3>
+                <button class="modal-close-button" id="calidad-auditoria-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <div class="modal-search-section" style="margin-bottom: 20px;">
+                <label for="calidad-auditoria-search" style="display: block; font-weight: 500; margin-bottom: 8px; color: var(--gray-500);">Buscar OP-PTDA</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="calidad-auditoria-search" class="table-input" placeholder="Ingresar partida" style="flex: 1;">
+                    <button type="button" id="calidad-auditoria-search-btn" class="primary-button" style="padding: 0 16px;">
+                        <i class="ph ph-magnifying-glass"></i> Buscar
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--gray-200); border-radius: 4px;">
+                <table class="data-table" id="calidad-auditoria-table" style="margin: 0; min-width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px; text-align: center;"><input type="checkbox" id="calidad-auditoria-select-all" aria-label="Seleccionar todos"></th>
+                            <th style="width: 84px;">cliente</th>
+                            <th style="width: 104px;">OP-PTDA</th>
+                            <th>articulo</th>
+                            <th style="width: 88px;">kg(crudo)</th>
+                            <th style="width: 108px;">#rollos/cntd</th>
+                        </tr>
+                    </thead>
+                    <tbody id="calidad-auditoria-tbody">
+                        <tr><td colspan="6" style="text-align: center; color: var(--gray-500);">Realiza una busqueda para ver resultados</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <form class="detail-form-grid hidden" id="calidad-auditoria-form">
+                <div class="form-field">
+                    <label for="calidad-auditoria-turno">Turno (Calculado)</label>
+                    <select class="table-select" id="calidad-auditoria-turno" name="calidad_turno">
+                        <option value="1T">1T</option>
+                        <option value="2T">2T</option>
+                        <option value="3T">3T</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="calidad-auditoria-auditor">Auditor</label>
+                    <input type="text" class="table-input" id="calidad-auditoria-auditor" name="calidad_auditor" placeholder="Nombre del Auditor">
+                </div>
+            </form>
+
+            <div class="modal-actions hidden" id="calidad-auditoria-actions">
+                <button class="ghost-button" id="calidad-auditoria-clear" type="button">Limpiar Seleccion</button>
+                <button class="primary-button" id="calidad-auditoria-save" type="button" style="background-color: var(--warning); border-color: var(--warning); color: var(--white);">Guardar Auditoria</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="calidad-info-modal">
+        <div class="modal-card modal-card-form" style="max-width: 820px;">
+            <div class="modal-card-head">
+                <div>
+                    <h3 id="calidad-info-title">cliente - OP-PTDA - color</h3>
+                    <p class="modal-subtitle" id="calidad-info-subtitle">cod_art - articulo</p>
+                </div>
+                <button class="modal-close-button" id="calidad-info-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <div class="quality-info-grid">
+                <div class="quality-info-item quality-info-item-inline">
+                    <span class="quality-info-label">#Rechazos :</span>
+                    <strong class="quality-info-value quality-info-value-inline" id="calidad-info-cantidad-rechazos">0</strong>
+                </div>
+                <div class="quality-info-item" id="calidad-info-motivos-block">
+                    <span class="quality-info-label">Motivos de Rechazo</span>
+                    <div class="quality-info-list" id="calidad-info-motivos"></div>
+                    <div class="quality-info-list hidden" id="calidad-info-aprobacion-block"></div>
+                </div>
+                <div class="quality-info-item quality-info-item-full">
+                    <span class="quality-info-label">Observacion de Calidad</span>
+                    <p class="quality-info-text" id="calidad-info-observacion">Sin observaciones registradas.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="rr-detail-modal">
+        <div class="modal-card modal-card-form" style="width: min(1496px, 96vw);">
+            <div class="modal-card-head">
+                <h3 id="rr-detail-title">Detalle</h3>
+                <div class="rr-detail-pills" id="rr-detail-pills"></div>
+                <button class="modal-close-button" id="rr-detail-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <div class="table-container" style="max-height: 60vh; overflow-y: auto; margin-top: 16px; border: 1px solid var(--gray-200); border-radius: 4px;">
+                <table class="data-table" style="margin: 0; min-width: 100%;">
+                    <thead>
+                        <tr id="rr-detail-head-row">
+                            <th style="width: 70px;">cliente</th>
+                            <th style="width: 70px;">tipo_tela</th>
+                            <th style="width: 120px;">OP-PTDA</th>
+                            <th style="width: 190px;">color</th>
+                            <th style="min-width: 150px;">articulo</th>
+                            <th style="width: 88px;">kg(crudo)</th>
+                            <th style="width: 108px;">#rollos/cntd</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rr-detail-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="lab-tinto-solicita-modal">
+        <div class="modal-card modal-card-form lab-tinto-solicita-card">
+            <div class="modal-card-head">
+                <div>
+                    <h3>Solicita Receta</h3>
+                    <p class="modal-subtitle">Pega desde Excel: op_tela, partida, lote y observaciones (una fila por partida).</p>
+                </div>
+                <button class="modal-close-button" id="lab-tinto-solicita-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <div class="lab-tinto-solicita-body">
+                <div class="lab-tinto-solicita-left">
+                    <label for="lab-tinto-paste">Lista pegada (op_tela | partida | lote | observaciones)</label>
+                    <textarea
+                        id="lab-tinto-paste"
+                        class="table-textarea lab-tinto-paste"
+                        rows="16"
+                        spellcheck="false"
+                        placeholder="op_tela	partida	lote	observaciones&#10;1234	5	A-1	urgente&#10;1234	6	A-2	"
+                    ></textarea>
+                </div>
+
+                <div class="lab-tinto-solicita-arrow">
+                    <button class="primary-button icon-only-button" id="lab-tinto-solicita-build" type="button" title="Llevar a la derecha" aria-label="Llevar a la derecha">
+                        <i class="ph ph-arrow-right"></i>
+                    </button>
+                </div>
+
+                <div class="lab-tinto-solicita-right">
+                    <div class="table-container lab-tinto-preview-container">
+                        <table class="data-table lab-tinto-preview-table">
+                            <thead>
+                                <tr>
+                                    <th>cliente</th>
+                                    <th>reserva</th>
+                                    <th>cod_color</th>
+                                    <th>color</th>
+                                    <th>cod_art</th>
+                                    <th>articulo</th>
+                                    <th>tipo_tela</th>
+                                    <th>op_tela</th>
+                                    <th>partida</th>
+                                    <th>peso_kg_crudo</th>
+                                    <th>lote</th>
+                                    <th>observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lab-tinto-preview-tbody">
+                                <tr class="empty-state"><td colspan="12">Pega la lista y presiona la flecha para armar el cuadro.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="lab-tinto-solicita-clear" type="button">Limpiar</button>
+                <button class="primary-button" id="lab-tinto-solicita-save" type="button">Solicitar Receta</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="confirm-modal">
+        <div class="modal-card">
+            <h3 id="confirm-title">Confirmar accion</h3>
+            <p id="confirm-message"></p>
+            <div class="modal-actions">
+                <button class="ghost-button" id="confirm-cancel" type="button">Cancelar</button>
+                <button class="primary-button" id="confirm-accept" type="button">Confirmar</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
