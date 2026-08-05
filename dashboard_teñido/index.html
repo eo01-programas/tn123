@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Teñido — Trazabilidad de Reprocesos | COFACO</title>
+<link rel="stylesheet" href="css/estilos.css">
+<!-- Librerías: SheetJS (lectura de Excel) y Chart.js (gráficos) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+</head>
+<body>
+
+<!-- Estado de importación / carga (aviso flotante) -->
+<div id="estadoImportacion" class="sc8-estado" role="status" aria-live="polite"></div>
+
+<div class="sc8-app">
+
+  <!-- ================= BARRA SUPERIOR ================= -->
+  <header class="sc8-topbar">
+    <div class="sc8-titulos">
+      <h1>DASHBOARD DE TEÑIDO</h1>
+    </div>
+
+    <div class="sc8-topbar-acciones">
+      <nav class="sc8-nav" aria-label="Navegación del dashboard">
+        <button type="button" class="activo" data-vista="vistaResumen">RESUMEN</button>
+        <button type="button" data-vista="vistaPxMaq">PxMAQ</button>
+        <button type="button" data-vista="vistaDashboard">REPROCESO</button>
+        <button type="button" data-vista="vistaProgramacion">LAV</button>
+        <button type="button" data-vista="vistaDetalle">DETALLE</button>
+        <button type="button" data-vista="vistaCosto">$COSTOS</button>
+        <button type="button" data-vista="vistaH2O">H2O</button>
+        <button type="button" data-vista="vistaTrazabilidad">TRAZABILIDAD</button>
+        <button type="button" id="btnInstrucciones" class="sc8-nav-icono"
+                title="Instrucciones" aria-label="Instrucciones">i</button>
+      </nav>
+
+      <input type="file" id="inputExcel" accept=".xlsx,.xls"
+             style="display:none" aria-hidden="true" tabindex="-1">
+      <button type="button" id="btnImportar" class="sc8-btn-icono"
+              title="Importar Excel" aria-label="Importar Excel">
+        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 16 V4 M7 9 l5 -5 5 5" fill="none" stroke="currentColor"
+                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 15 v4 a1.5 1.5 0 0 0 1.5 1.5 h13 a1.5 1.5 0 0 0 1.5 -1.5 v-4"
+                fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button type="button" id="btnActualizarTodo" class="sc8-btn-icono"
+              title="Actualizar todo" aria-label="Actualizar todo">
+        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11 A8 8 0 1 0 19.5 15.5 M20 5 v6 h-6"
+                fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <!-- Regreso al modulo principal, directo a la vista Reporte de Produccion
+           (el hash lo lee app.js al iniciar). -->
+      <a id="btnInicioReportes" class="sc8-btn-icono"
+         href="../index.html#reporte-ramas"
+         title="Ir a Reporte de Produccion" aria-label="Ir a Reporte de Produccion">
+        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 11 L12 3.5 L21 11 M5.5 9.2 V19.5 a1 1 0 0 0 1 1 h11 a1 1 0 0 0 1 -1 V9.2"
+                fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9.8 20.5 v-5.6 h4.4 v5.6"
+                fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- ================= PANEL LATERAL ================= -->
+  <aside class="sc8-sidebar">
+
+    <!-- Filtros -->
+    <section class="sc8-card">
+      <!-- Sem/Mes: granularidad del periodo. Ptda/Kg: unidad de medida
+           de las gráficas de Resumen y reproceso (# partidas o kilogramos). -->
+      <div class="sc8-fila-toggles">
+        <div class="sc8-toggle" id="togglePeriodo" role="group"
+             aria-label="Ver por semana o por mes">
+          <button type="button" class="activo" data-modo="semana">Sem</button>
+          <button type="button" data-modo="mes">Mes</button>
+        </div>
+        <div class="sc8-toggle" id="toggleMetrica" role="group"
+             aria-label="Medir en partidas o en kilogramos">
+          <button type="button" data-metrica="partidas">Ptda</button>
+          <button type="button" class="activo" data-metrica="kg">Kg</button>
+        </div>
+      </div>
+
+      <!-- Semana y Mes en dos columnas: el pill Sem/Mes decide cuál
+           filtra; el otro queda deshabilitado y en "Todas/Todos". -->
+      <div class="sc8-fila-doble">
+        <label class="sc8-field">
+          <span>Semana</span>
+          <div class="sc8-combo" id="comboSemana">
+            <button type="button" id="filtroSemanaBtn" class="sc8-select sc8-combo-toggle"
+                    aria-haspopup="listbox" aria-expanded="false" aria-controls="listaSemanas">
+              <span id="filtroSemanaTexto">Todas</span>
+            </button>
+            <div id="listaSemanas" class="sc8-combo-panel oculto" role="listbox"></div>
+          </div>
+        </label>
+        <label class="sc8-field">
+          <span>Mes</span>
+          <div class="sc8-combo" id="comboMes">
+            <button type="button" id="filtroMesBtn" class="sc8-select sc8-combo-toggle"
+                    aria-haspopup="listbox" aria-expanded="false" aria-controls="listaMeses">
+              <span id="filtroMesTexto">Todos</span>
+            </button>
+            <div id="listaMeses" class="sc8-combo-panel oculto" role="listbox"></div>
+          </div>
+        </label>
+      </div>
+
+      <label class="sc8-field">
+        <span>Defecto</span>
+        <div class="sc8-combo" id="comboDefecto">
+          <button type="button" id="filtroDefectoBtn" class="sc8-select sc8-combo-toggle"
+                  aria-haspopup="listbox" aria-expanded="false" aria-controls="listaDefectos">
+            <span id="filtroDefectoTexto">Todos</span>
+          </button>
+          <div id="listaDefectos" class="sc8-combo-panel oculto" role="listbox"></div>
+        </div>
+      </label>
+
+      <label class="sc8-field">
+        <span>Artículo</span>
+        <div class="sc8-combo" id="comboArticulo">
+          <input type="text" id="filtroArticulo" class="sc8-input sc8-input-clearable"
+                 placeholder="Buscar código o artículo…" autocomplete="off"
+                 role="combobox" aria-expanded="false" aria-controls="listaArticulos">
+          <button type="button" id="btnLimpiarArticulo" class="sc8-input-clear oculto"
+                  aria-label="Limpiar artículo" title="Limpiar artículo">&times;</button>
+          <div id="listaArticulos" class="sc8-combo-panel oculto" role="listbox"></div>
+        </div>
+      </label>
+      <div id="chipsArticulo" class="sc8-chips-tags"></div>
+
+      <label class="sc8-field">
+        <span>Cliente</span>
+        <select id="filtroCliente" class="sc8-select"></select>
+      </label>
+
+      <label class="sc8-field">
+        <span>Color</span>
+        <select id="filtroColor" class="sc8-select"></select>
+      </label>
+
+      <label class="sc8-field">
+        <span>OP-Tela</span>
+        <input type="text" id="filtroOpTela" class="sc8-input"
+               placeholder="Ej: 40653 o 40653-107" autocomplete="off">
+      </label>
+
+      <label class="sc8-field">
+        <span>Máquina Origen</span>
+        <select id="filtroMaqOrigen" class="sc8-select"></select>
+      </label>
+
+      <label class="sc8-field">
+        <span>Máquina Recuperación</span>
+        <select id="filtroMaqRecuperacion" class="sc8-select"></select>
+      </label>
+
+      <button type="button" id="btnLimpiarFiltros" class="sc8-btn oscuro">
+        Limpiar filtros
+      </button>
+    </section>
+  </aside>
+
+  <!-- ================= CONTENIDO PRINCIPAL ================= -->
+  <main class="sc8-main">
+
+    <!-- Skeleton de carga: réplica atenuada de las cuatro gráficas que
+         parpadea mientras llegan los datos de Google Sheets. -->
+    <section id="estadoCarga" class="sc8-skeleton" aria-hidden="true">
+      <div class="sc8-resumen-grid">
+        <div class="sc8-skel-grafico sc8-skel-resumen-card"><div class="sc8-skel-hueso sc8-skel-titulo"></div><div class="sc8-skel-hueso sc8-skel-area"></div></div>
+        <div class="sc8-skel-grafico sc8-skel-resumen-card"><div class="sc8-skel-hueso sc8-skel-titulo"></div><div class="sc8-skel-hueso sc8-skel-area"></div></div>
+        <div class="sc8-skel-grafico sc8-skel-resumen-card"><div class="sc8-skel-hueso sc8-skel-titulo"></div><div class="sc8-skel-hueso sc8-skel-area"></div></div>
+        <div class="sc8-skel-grafico sc8-skel-resumen-card"><div class="sc8-skel-hueso sc8-skel-titulo"></div><div class="sc8-skel-hueso sc8-skel-area"></div></div>
+      </div>
+    </section>
+
+    <!-- Estado sin datos (hoja vacía, sin conexión o sin configurar) -->
+    <section id="estadoVacio" class="sc8-card sc8-vacio-inicial oculto">
+      <h2 id="estadoVacioTitulo">La hoja de Google Sheets está vacía</h2>
+      <p>El dashboard se construye con los datos guardados en Google Sheets.
+         Si la hoja está vacía, usa el botón circular de importación (↑) de la
+         barra superior con el archivo <em>grid_vista_consulta_tenido.xlsx</em>:
+         se guardará en la hoja y el dashboard calculará KPIs, Pareto de
+         defectos, trazabilidad por máquina y más.</p>
+    </section>
+
+    <div id="contenidoDashboard" class="oculto">
+
+      <!-- ========== VISTA 1: RESUMEN GERENCIAL (vista inicial) ========== -->
+      <div id="vistaResumen" class="sc8-vista">
+        <section class="sc8-resumen-grid" aria-label="Indicadores ejecutivos por período">
+          <article class="sc8-card sc8-resumen-card volumen">
+            <header class="sc8-resumen-card-header">
+              <h3 id="resumenTituloProcesados">KG PROCESADOS</h3>
+              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
+                <span><i class="azul" aria-hidden="true"></i><span id="resumenUnidadProcesados">Kg</span></span>
+                <span><i class="neutral" aria-hidden="true"></i>Prom</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chResumenProcesados"></canvas></div>
+            <p id="resumenCtxProcesados" class="sc8-resumen-contexto">Promedio: 0 kg por período</p>
+          </article>
+
+          <article class="sc8-card sc8-resumen-card reproceso">
+            <header class="sc8-resumen-card-header">
+              <h3 id="resumenTituloReprocesados">KG REPROCESADOS</h3>
+              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
+                <span><i class="rojo" aria-hidden="true"></i><span id="resumenUnidadReprocesados">Kg</span></span>
+                <span><i class="ambar" aria-hidden="true"></i><span id="resumenPctReprocesados">% Kg</span></span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chResumenReprocesados"></canvas></div>
+            <p id="resumenCtxReprocesados" class="sc8-resumen-contexto">Incidencia sobre los kg procesados</p>
+          </article>
+
+          <article class="sc8-card sc8-resumen-card bap">
+            <header class="sc8-resumen-card-header">
+              <h3 id="resumenTituloBap">KG BIEN A LA PRIMERA (BAP)</h3>
+              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
+                <span><i class="verde" aria-hidden="true"></i><span id="resumenUnidadBap">Kg</span></span>
+                <span><i class="azul" aria-hidden="true"></i><span id="resumenPctBap">% Kg</span></span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chResumenBap"></canvas></div>
+            <p id="resumenCtxBap" class="sc8-resumen-contexto">Kg procesados menos kg reprocesados</p>
+          </article>
+
+          <article class="sc8-card sc8-resumen-card costo">
+            <header class="sc8-resumen-card-header">
+              <h3>COSTO DE KG REPROCESADOS (Receta)</h3>
+              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
+                <span><i class="ambar" aria-hidden="true"></i>$</span>
+                <span><i class="neutral" aria-hidden="true"></i>Prom</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chResumenCosto"></canvas></div>
+            <p id="resumenCtxCosto" class="sc8-resumen-contexto">Costo según receta de cada carga</p>
+          </article>
+        </section>
+      </div>
+
+      <!-- ========== VISTA PxMAQ: producción y reproceso por máquina ========== -->
+      <div id="vistaPxMaq" class="sc8-vista oculto">
+        <section class="sc8-pxmaq-resumen sc8-card"
+                 aria-label="Clasificación de Tipo Recetas">
+          <div>
+            <h2>PRODUCCIÓN POR MÁQUINA</h2>
+            <p>Clasificación exclusiva de <strong>Tipo Recetas</strong>:
+               PRODUCCIÓN, PROCESO, REPROCESO, NINGUNO y NN.</p>
+          </div>
+          <div class="sc8-pxmaq-panel">
+            <div id="pxMaqClasificacion" class="sc8-pxmaq-tipos"></div>
+            <div class="sc8-pxmaq-filtros" aria-label="Período de PxMAQ">
+              <div id="togglePxMaqPeriodo" class="sc8-toggle sc8-pxmaq-toggle"
+                   role="group" aria-label="Agrupar PxMAQ por mes, semana o día">
+                <button type="button" data-pxmaq-modo="mes">Mes</button>
+                <button type="button" data-pxmaq-modo="semana">Sem</button>
+                <button type="button" class="activo" data-pxmaq-modo="dia">Día</button>
+              </div>
+              <select id="filtroPxMaqPeriodo" class="sc8-select sc8-pxmaq-select"
+                      aria-label="Elegir período de PxMAQ"></select>
+            </div>
+          </div>
+        </section>
+
+        <section class="sc8-resumen-grid sc8-pxmaq-grid"
+                 aria-label="Cargas y kilogramos por máquina">
+          <article class="sc8-card sc8-resumen-card pxmaq-combinada">
+            <header class="sc8-resumen-card-header">
+              <h3>CARGAS POR MÁQUINA</h3>
+              <div class="sc8-resumen-leyenda" aria-label="Series">
+                <span><i class="rojo" aria-hidden="true"></i>Reproceso</span>
+                <span><i class="verde" aria-hidden="true"></i>Producción</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chPxMaqCargas"></canvas></div>
+            <p id="pxMaqCtxCargas" class="sc8-resumen-contexto">0 cargas</p>
+          </article>
+
+          <article class="sc8-card sc8-resumen-card pxmaq-combinada">
+            <header class="sc8-resumen-card-header">
+              <h3>KG POR MÁQUINA</h3>
+              <div class="sc8-resumen-leyenda" aria-label="Series">
+                <span><i class="rojo" aria-hidden="true"></i>Reproceso</span>
+                <span><i class="verde" aria-hidden="true"></i>Producción</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chPxMaqKg"></canvas></div>
+            <p id="pxMaqCtxKg" class="sc8-resumen-contexto">0 kg</p>
+          </article>
+        </section>
+      </div>
+
+      <!-- ========== VISTA PROGRAMACIÓN: eficiencia de lavados ========== -->
+      <div id="vistaProgramacion" class="sc8-vista oculto">
+        <section class="sc8-programacion-encabezado sc8-card">
+          <div>
+            <h2>EFICIENCIA DE PROGRAMACIÓN</h2>
+            <p>Señales operativas basadas en lavados de máquina, volumen productivo y recursos consumidos.</p>
+          </div>
+          <div class="sc8-pxmaq-filtros" aria-label="Período de lavados">
+            <div id="toggleLavPeriodo" class="sc8-toggle sc8-pxmaq-toggle"
+                 role="group" aria-label="Agrupar lavados por mes, semana o día">
+              <button type="button" data-lav-modo="mes">Mes</button>
+              <button type="button" data-lav-modo="semana">Sem</button>
+              <button type="button" class="activo" data-lav-modo="dia">Día</button>
+            </div>
+            <select id="filtroLavPeriodo" class="sc8-select sc8-pxmaq-select"
+                    aria-label="Elegir período de lavados"></select>
+          </div>
+        </section>
+
+        <section class="sc8-resumen-grid sc8-programacion-grid"
+                 aria-label="Análisis de programación por máquina">
+          <article class="sc8-card sc8-resumen-card programacion">
+            <header class="sc8-resumen-card-header">
+              <h3>CARGAS Y LAVADOS POR MÁQUINA</h3>
+              <div class="sc8-resumen-leyenda">
+                <span><i class="rojo"></i>Reprocesos</span>
+                <span><i class="verde"></i>Productivas</span>
+                <span><i class="azul"></i>Lavados</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chProgFrecuencia"></canvas></div>
+            <p id="progCtxFrecuencia" class="sc8-resumen-contexto">Sin datos</p>
+          </article>
+
+          <article class="sc8-card sc8-resumen-card programacion evolucion-lav">
+            <header class="sc8-resumen-card-header">
+              <h3>EVOLUCIÓN DE LAVADOS</h3>
+              <div class="sc8-resumen-leyenda">
+                <span><i class="azul"></i>Litros</span>
+                <span><i class="ambar"></i>Cargas de lavado</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chProgRecursos"></canvas></div>
+            <div id="progTablaColores" class="sc8-tabla-eje-lav"
+                 aria-label="Colores y períodos de la evolución de lavados"></div>
+            <p id="progCtxRecursos" class="sc8-resumen-contexto"></p>
+          </article>
+        </section>
+      </div>
+
+      <!-- ========== VISTA REPROCESO: KPIs + gráficos ========== -->
+      <div id="vistaDashboard" class="sc8-vista oculto">
+
+        <!-- KPIs -->
+        <section class="sc8-kpis cols-7 sc8-fila-espaciada" aria-label="Indicadores principales">
+          <article class="sc8-kpi">
+            <h3>Ptdas procesadas</h3>
+            <div class="valor" id="kpiProcesadas">0</div>
+            <div class="sub">100%</div>
+          </article>
+          <article class="sc8-kpi rojo">
+            <h3>Ptdas reproc.</h3>
+            <div class="valor" id="kpiReprocesadas">0</div>
+            <div class="sub" id="kpiReprocesadasSub">—</div>
+          </article>
+          <article class="sc8-kpi azul">
+            <h3>Kg procesados</h3>
+            <div class="valor" id="kpiKgProc">0</div>
+            <div class="sub">100%</div>
+          </article>
+          <article class="sc8-kpi rojo">
+            <h3>Kg reproc.</h3>
+            <div class="valor" id="kpiKgRep">0</div>
+            <div class="sub" id="kpiKgRepSub">—</div>
+          </article>
+          <article class="sc8-kpi" title="Bien a la primera">
+            <h3>BAP</h3>
+            <div class="valor" id="kpiRft">0%</div>
+            <div class="sub">Ptdas sin reproc.</div>
+          </article>
+          <article class="sc8-kpi ambar">
+            <h3>% Reproc.</h3>
+            <div class="valor" id="kpiPctRep">0%</div>
+            <div class="sub">Ptdas reproc.</div>
+          </article>
+          <article class="sc8-kpi azul">
+            <h3>$ Reproc.</h3>
+            <div class="valor" id="kpiCosto">$ 0</div>
+            <div class="sub">Costo según receta</div>
+          </article>
+        </section>
+
+        <!-- Gráficos fila 1 -->
+        <section class="sc8-graficos cols-4 sc8-fila-espaciada">
+          <article class="sc8-card sc8-grafico">
+            <h2>PARETO DE DEFECTOS</h2>
+            <div class="sc8-canvas"><canvas id="chPareto"></canvas></div>
+          </article>
+          <article class="sc8-card sc8-grafico">
+            <h2 id="tituloTendencia">TENDENCIA SEM REPROC</h2>
+            <div class="sc8-canvas"><canvas id="chTendencia"></canvas></div>
+          </article>
+          <article class="sc8-card sc8-grafico">
+            <h2>REPROCESOS POR MÁQ ORIGEN<small class="sc8-sufijo-metrica"></small></h2>
+            <div class="sc8-canvas"><canvas id="chMaqOrigen"></canvas></div>
+          </article>
+          <article class="sc8-card sc8-grafico">
+            <h2>REPROC x MÁQ DE RECUPERAC<small class="sc8-sufijo-metrica"></small></h2>
+            <div class="sc8-canvas"><canvas id="chMaqRecuperacion"></canvas></div>
+          </article>
+        </section>
+
+        <!-- Gráficos fila 2 -->
+        <section class="sc8-graficos cols-4 sc8-graficos-fila2">
+          <article class="sc8-card sc8-grafico">
+            <h2>REPROCESOS POR DEFECTO</h2>
+            <div class="sc8-canvas"><canvas id="chDona"></canvas></div>
+          </article>
+          <article class="sc8-card sc8-grafico">
+            <h2>REPROCESOS POR ARTÍCULO <small>(Top 5)</small><small class="sc8-sufijo-metrica"></small></h2>
+            <div class="sc8-canvas"><canvas id="chArticulo"></canvas></div>
+          </article>
+          <article class="sc8-card sc8-grafico">
+            <h2>REPROCESOS POR COLOR <small>(Top 5)</small><small class="sc8-sufijo-metrica"></small></h2>
+            <div class="sc8-canvas"><canvas id="chColor"></canvas></div>
+          </article>
+          <article class="sc8-card sc8-grafico">
+            <h2>REPROCESOS POR CLIENTE <small>(Top 5)</small><small class="sc8-sufijo-metrica"></small></h2>
+            <div class="sc8-canvas"><canvas id="chCliente"></canvas></div>
+          </article>
+        </section>
+      </div>
+
+      <!-- ========== VISTA 2: DETALLE (tabla completa) ========== -->
+      <div id="vistaDetalle" class="sc8-vista oculto">
+        <article class="sc8-card">
+          <h2 class="sc8-section-title">DETALLE DE OP-PARTIDAS (según filtros seleccionados)</h2>
+          <div class="responsive-table-wrap">
+            <table class="sc8-table">
+              <thead>
+                <tr>
+                  <th>OP-Partida</th><th>Fecha</th><th>Cliente</th><th>Artículo</th>
+                  <th>Color</th><th>Máquina Origen</th><th>Defecto</th>
+                  <th>Tipo Reproceso</th><th>Máquina Recuperación</th><th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyDetalle"></tbody>
+            </table>
+          </div>
+          <div class="sc8-total" id="totalRegistros">Total registros: 0</div>
+        </article>
+      </div>
+
+      <!-- ========== VISTA: COSTO DE REPROCESOS ========== -->
+      <div id="vistaCosto" class="sc8-vista oculto">
+        <section class="sc8-card sc8-costo-encabezado">
+          <div class="sc8-costo-titulo">
+            <h2>COSTOS TEÑIDO</h2>
+          </div>
+
+          <section class="sc8-costo-kpis" aria-label="Indicadores económicos">
+            <article class="sc8-card sc8-costo-kpi total">
+              <span class="sc8-costo-kpi-icono">$</span>
+              <div>
+                <h3>COSTO TOTAL</h3>
+                <strong id="costoKpiTotal">$ 0</strong>
+                <small id="costoKpiTotalSub">0 cargas reprocesadas</small>
+              </div>
+            </article>
+            <article class="sc8-card sc8-costo-kpi intensidad">
+              <span class="sc8-costo-kpi-icono">1k</span>
+              <div>
+                <h3>COSTO / 1.000 KG</h3>
+                <strong id="costoKpiMilKg">$ 0</strong>
+                <small id="costoKpiMilKgSub">0 kg de producción</small>
+              </div>
+            </article>
+            <article class="sc8-card sc8-costo-kpi carga">
+              <span class="sc8-costo-kpi-icono">#</span>
+              <div>
+                <h3>PROMEDIO POR CARGA</h3>
+                <strong id="costoKpiCarga">$ 0</strong>
+                <small id="costoKpiCargaSub">0 kg reprocesados</small>
+              </div>
+            </article>
+            <article class="sc8-card sc8-costo-kpi tarifa">
+              <span class="sc8-costo-kpi-icono">kg</span>
+              <div>
+                <h3>COSTO / KG REPROCESADO</h3>
+                <strong id="costoKpiKg">US$ 0,00</strong>
+                <small id="costoKpiKgSub">Tarifa ponderada por volumen</small>
+              </div>
+            </article>
+          </section>
+
+          <div class="sc8-costo-formula" aria-label="Fórmula del costo">
+            <span>Costo por carga</span>
+            <strong>Kg Carga × US$/kg</strong>
+          </div>
+        </section>
+
+        <section class="sc8-costo-grid" aria-label="Análisis de costos">
+          <article class="sc8-card sc8-costo-grafico tenido">
+            <header class="sc8-costo-grafico-header">
+              <div>
+                <h3>COSTO POR TIPO DE TEÑIDO</h3>
+              </div>
+              <div class="sc8-costo-leyenda">
+                <i class="barra"></i>$ total <i class="linea"></i>% acum.
+              </div>
+            </header>
+            <div class="sc8-costo-canvas"><canvas id="chCostoTenido"></canvas></div>
+          </article>
+
+          <article class="sc8-card sc8-costo-grafico defecto">
+            <header class="sc8-costo-grafico-header">
+              <div>
+                <h3>COSTO POR DEFECTO</h3>
+              </div>
+              <div class="sc8-costo-leyenda">
+                <i class="barra"></i>$ total <i class="linea"></i>% acum.
+              </div>
+            </header>
+            <div class="sc8-costo-canvas"><canvas id="chCostoDefecto"></canvas></div>
+          </article>
+
+          <article class="sc8-card sc8-costo-grafico maquina">
+            <header class="sc8-costo-grafico-header">
+              <div>
+                <h3>COSTO POR MÁQUINA DE ORIGEN</h3>
+              </div>
+              <div class="sc8-costo-leyenda"><i class="barra"></i>$ total</div>
+            </header>
+            <div class="sc8-costo-canvas"><canvas id="chCostoMaqOrigen"></canvas></div>
+          </article>
+
+          <article class="sc8-card sc8-costo-grafico receta">
+            <header class="sc8-costo-grafico-header">
+              <div>
+                <h3>COSTO POR RECETA DE RECUPERACIÓN</h3>
+              </div>
+              <div class="sc8-costo-leyenda"><i class="barra"></i>$ total</div>
+            </header>
+            <div class="sc8-costo-canvas"><canvas id="chCostoReceta"></canvas></div>
+          </article>
+
+          <article class="sc8-card sc8-costo-grafico prioridad">
+            <header class="sc8-costo-grafico-header">
+              <div>
+                <h3>FRECUENCIA VS. COSTO POR DEFECTO</h3>
+              </div>
+              <div class="sc8-costo-leyenda"><i class="burbuja"></i>Tamaño = costo total</div>
+            </header>
+            <div class="sc8-costo-canvas"><canvas id="chCostoPrioridad"></canvas></div>
+            <p id="costoCtxPrioridad" class="sc8-costo-contexto">Frecuencia y severidad</p>
+          </article>
+
+          <article class="sc8-card sc8-costo-grafico tendencia">
+            <header class="sc8-costo-grafico-header">
+              <div>
+                <h3 id="costoTituloTendencia">TENDENCIA DE COSTO</h3>
+              </div>
+              <div class="sc8-costo-leyenda">
+                <i class="barra"></i>$ por defecto <i class="linea"></i>$/1.000 kg
+              </div>
+            </header>
+            <div class="sc8-costo-canvas"><canvas id="chCostoTendencia"></canvas></div>
+          </article>
+        </section>
+      </div>
+
+      <!-- ========== VISTA: H2O (consumo de agua, matriz 2x2) ==========
+           Vol Lt Utilizados sobre los registros que pasan los filtros:
+           total por periodo, intensidad Lt/kg y desglose por artículo
+           y por color (Top 5 por litros, con su Lt/kg al final de la barra). -->
+      <div id="vistaH2O" class="sc8-vista oculto">
+        <section class="sc8-resumen-grid sc8-fila-espaciada"
+                 aria-label="Consumo de agua por período">
+          <article class="sc8-card sc8-resumen-card agua">
+            <header class="sc8-resumen-card-header">
+              <h3>AGUA CONSUMIDA (Lt)</h3>
+              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
+                <span><i class="ambar" aria-hidden="true"></i>Lavado máq.</span>
+                <span><i class="azul" aria-hidden="true"></i>Otros</span>
+                <span><i class="neutral" aria-hidden="true"></i>Prom</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chAguaLitros"></canvas></div>
+            <p id="h2oCtxLitros" class="sc8-resumen-contexto">Litros utilizados por período</p>
+          </article>
+
+          <article class="sc8-card sc8-resumen-card agua">
+            <header class="sc8-resumen-card-header">
+              <h3>AGUA POR KG PROCESADO (Lt/Kg)</h3>
+              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
+                <span><i class="azul" aria-hidden="true"></i>Lt/Kg</span>
+                <span><i class="neutral" aria-hidden="true"></i>Prom</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chAguaLtKg"></canvas></div>
+            <p id="h2oCtxLtKg" class="sc8-resumen-contexto">Litros por kg de carga en cada período</p>
+          </article>
+        </section>
+
+        <section class="sc8-resumen-grid cols-3"
+                 aria-label="Consumo de agua por artículo, color y proceso">
+          <article class="sc8-card sc8-resumen-card agua">
+            <header class="sc8-resumen-card-header">
+              <h3>AGUA POR ARTÍCULO <small>(Top 5)</small></h3>
+              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
+                <span><i class="azul" aria-hidden="true"></i>Lt</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chAguaArticulo"></canvas></div>
+            <p id="h2oCtxArticulo" class="sc8-resumen-contexto">Litros totales (eje en Lt); la etiqueta indica su Lt/kg</p>
+          </article>
+
+          <article class="sc8-card sc8-resumen-card agua">
+            <header class="sc8-resumen-card-header">
+              <h3>AGUA POR COLOR <small>(Top 5)</small></h3>
+              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
+                <span><i class="azul" aria-hidden="true"></i>Lt</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chAguaColor"></canvas></div>
+            <p id="h2oCtxColor" class="sc8-resumen-contexto">Litros totales (eje en Lt); la etiqueta indica su Lt/kg</p>
+          </article>
+
+          <article class="sc8-card sc8-resumen-card agua">
+            <header class="sc8-resumen-card-header">
+              <h3>AGUA POR PROCESO</h3>
+              <div class="sc8-resumen-leyenda" aria-label="Leyenda">
+                <span><i class="azul" aria-hidden="true"></i>Lt</span>
+              </div>
+            </header>
+            <div class="sc8-resumen-canvas"><canvas id="chAguaProceso"></canvas></div>
+            <p id="h2oCtxProceso" class="sc8-resumen-contexto">Litros totales por valor de "Procesos"</p>
+          </article>
+        </section>
+      </div>
+
+      <!-- ========== VISTA 3: TRAZABILIDAD (ficha + resumen) ========== -->
+      <div id="vistaTrazabilidad" class="sc8-vista oculto">
+        <section class="sc8-graficos">
+          <article class="sc8-card">
+            <h2 class="sc8-section-title">FICHA RÁPIDA DE OP-PARTIDA</h2>
+            <div class="sc8-buscador">
+              <input type="text" id="buscarPartida" class="sc8-input"
+                     placeholder="Ej.: 1000040653-0040, 40653-40 o 4065340"
+                     aria-label="Buscar OP-Partida">
+              <button type="button" id="btnBuscarPartida" class="sc8-btn">Buscar</button>
+            </div>
+            <div id="fichaContenido">
+              <p class="sc8-vacio">Ingresa una OP-Partida o haz clic en una fila del detalle.</p>
+            </div>
+          </article>
+
+          <article class="sc8-card">
+            <h2 class="sc8-section-title">RESUMEN DEL PERIODO (según filtros)</h2>
+            <div id="resumenPeriodo"></div>
+          </article>
+        </section>
+      </div>
+
+    </div><!-- /contenidoDashboard -->
+  </main>
+</div>
+
+<!-- ================= MODAL DE INSTRUCCIONES ================= -->
+<div id="modalInstrucciones" class="sc8-modal oculto" role="dialog" aria-modal="true">
+  <div class="sc8-card">
+    <h2 class="sc8-section-title">INSTRUCCIONES DE USO</h2>
+    <ol>
+      <li><strong>Resumen:</strong> es la vista inicial. Usa el selector
+          <strong>Sem/Mes</strong> y los filtros laterales para analizar kg
+          procesados, reproceso, BAP y costo.</li>
+      <li><strong>PxMAQ:</strong> compara por máquina las cargas y los kg de
+          PRODUCCIÓN y REPROCESO. “Tipo Recetas” se clasifica con prioridad
+          PRODUCCIÓN → REPROCESO → PROCESO → NINGUNO → NN. Sus pills
+          Mes/Sem/Día y período exacto actualizan exclusivamente esta vista.</li>
+      <li><strong>H2O:</strong> consumo de agua (Vol Lt Utilizados): litros
+          por período (con el lavado de máquina como segmento propio),
+          intensidad Lt/kg y desglose por artículo, color y proceso.
+          Obedece los mismos filtros y el selector Sem/Mes.</li>
+      <li><strong>$Costo:</strong> analiza el costo real de las recetas de
+          reproceso por teñido de origen, defecto, máquina y recuperación;
+          cada gráfica permite abrir el detalle de las cargas.</li>
+      <li><strong>Importar:</strong> el botón circular de importación (↑) de
+          la barra superior lee el archivo Excel, lo guarda en la hoja
+          (las cargas existentes actualizan su costo sin duplicarse) y recarga
+          el dashboard desde la base de datos.</li>
+      <li><strong>Campos compuestos:</strong> Cod. Art. y Colores se separan por
+          <code>" | "</code> y Descripción Art. por doble espacio; la hoja
+          guarda tanto el valor original como los valores divididos.</li>
+      <li><strong>Costo de reproceso:</strong> se calcula para cada carga como
+          <code>Kg Carga × Costo US$ / kg</code> y luego se suman los resultados.</li>
+    </ol>
+    <button type="button" id="btnCerrarInstrucciones" class="sc8-btn">Cerrar</button>
+  </div>
+</div>
+
+<!-- ========== MODAL DE DETALLE (clic en una barra del Dashboard) ========== -->
+<div id="modalRegistros" class="sc8-modal sc8-modal-registros oculto"
+     role="dialog" aria-modal="true" aria-labelledby="modalRegistrosTitulo">
+  <div class="sc8-card">
+    <div class="sc8-modal-cab">
+      <h2 class="sc8-section-title" id="modalRegistrosTitulo">DETALLE</h2>
+      <button type="button" id="btnCerrarRegistros" class="sc8-cerrar-x"
+              aria-label="Cerrar" title="Cerrar">&times;</button>
+    </div>
+    <div id="modalRegistrosCuerpo" class="responsive-table-wrap"></div>
+    <div class="sc8-total" id="modalRegistrosTotal"></div>
+  </div>
+</div>
+
+<!-- ================= SCRIPTS ================= -->
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/datos.js"></script>
+<script src="js/filtros.js"></script>
+<script src="js/graficos.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/importar.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
