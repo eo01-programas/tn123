@@ -1251,9 +1251,17 @@
             </div>
 
             <div class="quality-info-grid">
-                <div class="quality-info-item quality-info-item-inline">
-                    <span class="quality-info-label">#Rechazos :</span>
-                    <strong class="quality-info-value quality-info-value-inline" id="calidad-info-cantidad-rechazos">0</strong>
+                <!-- Ambos van apilados en la 1ra columna del grid para que el
+                     bloque de motivos siga ocupando la 2da. -->
+                <div class="quality-info-stack">
+                    <div class="quality-info-item quality-info-item-inline">
+                        <span class="quality-info-label">#Rechazos :</span>
+                        <strong class="quality-info-value quality-info-value-inline" id="calidad-info-cantidad-rechazos">0</strong>
+                    </div>
+                    <div class="quality-info-item quality-info-item-inline">
+                        <span class="quality-info-label">Ruta tela :</span>
+                        <strong class="quality-info-value quality-info-value-inline" id="calidad-info-ruta-tela">-</strong>
+                    </div>
                 </div>
                 <div class="quality-info-item" id="calidad-info-motivos-block">
                     <span class="quality-info-label">Motivos de Rechazo</span>
