@@ -2081,18 +2081,25 @@
         refreshConfigBanner();
     }
 
-    function hydrateCachedData() {
+    async function hydrateCachedData(scope) {
         if (!window.TintoreriaAPI || typeof TintoreriaAPI.getCachedRecords !== 'function') {
             return false;
         }
 
-        const cached = TintoreriaAPI.getCachedRecords();
-        if (!cached) {
+        let cached = null;
+        try {
+            cached = await TintoreriaAPI.getCachedRecords({ scope });
+        } catch (error) {
+            console.warn('No se pudo leer la cache local.', error);
+            return false;
+        }
+
+        if (!cached || !Array.isArray(cached.records) || !cached.records.length) {
             return false;
         }
 
         applyLoadedData(cached, { preserveInteraction: false });
-        return Array.isArray(cached.records);
+        return true;
     }
 
     async function refreshData(options = {}) {
@@ -2457,7 +2464,7 @@
         }
     }
 
-    function init() {
+    async function init() {
         if (state.initialized) {
             return;
         }
@@ -2487,11 +2494,14 @@
         refreshConfigBanner();
         switchView(state.activeView);
         activatePreferredSubtab(preferredLanding.viewId, preferredLanding.filter);
-        const hydratedFromCache = hydrateCachedData();
         const initialScope = FULL_DATASET_VIEWS.includes(state.activeView) ? 'all' : 'active';
+        const hydratedFromCache = await hydrateCachedData(initialScope);
         bootstrapping = false;
         refreshData({
-            silent: true,
+            // Si se pinto desde cache, el refresco va en segundo plano pero SI
+            // avisa al terminar: el usuario debe saber cuando dejo de ver datos
+            // guardados y esta viendo los de la hoja.
+            silent: !hydratedFromCache,
             background: hydratedFromCache,
             scope: initialScope
         });
@@ -2518,19 +2528,23 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        window.addEventListener('tintoreria-authenticated', () => {
-            init();
-        });
+        const startApp = () => {
+            init().catch((error) => {
+                console.error('No se pudo iniciar la aplicacion.', error);
+            });
+        };
+
+        window.addEventListener('tintoreria-authenticated', startApp);
 
         if (!hasAuthController()) {
-            init();
+            startApp();
             return;
         }
 
         Promise.resolve(TintoreriaAuth.ready && TintoreriaAuth.ready())
             .then(() => {
                 if (TintoreriaAuth.isAuthenticated()) {
-                    init();
+                    startApp();
                 }
             })
             .catch((error) => {
