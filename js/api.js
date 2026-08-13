@@ -1,7 +1,6 @@
 (() => {
     const STORAGE_META_KEY = `${LOCAL_STORAGE_KEY}-meta`;
     const GVIZ_COLUMNS_KEY = `${LOCAL_STORAGE_KEY}-gviz-cols`;
-    let remoteCacheAvailable = true;
 
     // La hoja tiene ~6.5k filas x ~184 columnas (~10 MB por lectura completa).
     // Por eso el arranque solo pide las partidas que siguen en proceso; el
@@ -56,103 +55,213 @@
         }
     }
 
-    function saveLocalRecords(records, options = {}) {
-        const { optional = false } = options;
-
-        try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(records));
-            return true;
-        } catch (error) {
-            if (optional && isQuotaExceededError(error)) {
-                remoteCacheAvailable = false;
-                clearPersistedRecordsCache();
-                console.warn('No se pudo guardar la caché local de registros por falta de espacio.', error);
-                return false;
-            }
-
-            throw error;
-        }
+    function saveLocalRecords(records) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(records));
     }
 
-    function loadStorageMeta() {
-        try {
-            const raw = localStorage.getItem(STORAGE_META_KEY);
-            const parsed = raw ? JSON.parse(raw) : null;
-            return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-                ? parsed
-                : null;
-        } catch (error) {
-            console.error('No se pudo leer la metadata del cache', error);
-            return null;
-        }
+    function saveStorageMeta(meta = {}) {
+        localStorage.setItem(STORAGE_META_KEY, JSON.stringify(meta));
     }
 
-    function saveStorageMeta(meta = {}, options = {}) {
-        const { optional = false } = options;
-
-        try {
-            localStorage.setItem(STORAGE_META_KEY, JSON.stringify(meta));
-            return true;
-        } catch (error) {
-            if (optional && isQuotaExceededError(error)) {
-                remoteCacheAvailable = false;
-                clearPersistedRecordsCache();
-                console.warn('No se pudo guardar la metadata de la caché local por falta de espacio.', error);
-                return false;
-            }
-
-            throw error;
-        }
-    }
-
-    function saveRecordsSnapshot(records, mode, options = {}) {
-        const { optional = false, scope = 'active' } = options;
+    // Solo para el modo sin Web App configurado: ahi localStorage es el unico
+    // almacen y los volumenes son pequenos.
+    function saveRecordsSnapshot(records, mode) {
         const normalizedRecords = TintoreriaUtils.sortRecords(
             (records || []).map((record) => TintoreriaUtils.defaultRecord(record))
         );
 
-        const recordsSaved = saveLocalRecords(normalizedRecords, { optional });
-        if (!recordsSaved) {
-            return {
-                records: normalizedRecords,
-                persisted: false
-            };
-        }
-
-        const metaSaved = saveStorageMeta({
+        saveLocalRecords(normalizedRecords);
+        saveStorageMeta({
             mode,
-            scope,
             updatedAt: new Date().toISOString(),
             recordCount: normalizedRecords.length
-        }, { optional });
+        });
 
-        if (!metaSaved) {
-            return {
-                records: normalizedRecords,
-                persisted: false
-            };
-        }
-
-        return {
-            records: normalizedRecords,
-            persisted: true
-        };
+        return normalizedRecords;
     }
 
-    function loadRemoteCachedRecords() {
-        const meta = loadStorageMeta();
-        if (!meta || meta.mode !== 'remote') {
+    // ---------------------------------------------------------------------
+    // Cache remota en IndexedDB.
+    //
+    // Un snapshot son ~3.9k registros x ~184 campos. Guardarlo como JSON de
+    // objetos en localStorage pedia ~18 MB contra una cuota de ~5 MB, asi que
+    // siempre fallaba con QuotaExceededError y la app nunca tenia cache. Aqui
+    // se guarda en IndexedDB (sin ese techo) y en formato columnar: los
+    // nombres de campo se escriben una sola vez en vez de repetirse por fila.
+    // ---------------------------------------------------------------------
+    const IDB_NAME = 'tintoreria-cache';
+    const IDB_VERSION = 1;
+    const IDB_STORE = 'snapshots';
+    const IDB_SNAPSHOT_KEY = 'remote-records';
+    // Pasado este tiempo la cache se considera demasiado vieja para pintarla.
+    const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+    let cacheDbPromise = null;
+
+    function openCacheDb() {
+        if (cacheDbPromise) {
+            return cacheDbPromise;
+        }
+
+        if (typeof indexedDB === 'undefined' || !indexedDB) {
+            cacheDbPromise = Promise.resolve(null);
+            return cacheDbPromise;
+        }
+
+        cacheDbPromise = new Promise((resolve) => {
+            let request;
+
+            try {
+                request = indexedDB.open(IDB_NAME, IDB_VERSION);
+            } catch (error) {
+                console.warn('No se pudo abrir la cache local (IndexedDB).', error);
+                resolve(null);
+                return;
+            }
+
+            request.onupgradeneeded = () => {
+                const db = request.result;
+                if (!db.objectStoreNames.contains(IDB_STORE)) {
+                    db.createObjectStore(IDB_STORE);
+                }
+            };
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => {
+                console.warn('No se pudo abrir la cache local (IndexedDB).', request.error);
+                resolve(null);
+            };
+            request.onblocked = () => resolve(null);
+        });
+
+        return cacheDbPromise;
+    }
+
+    function readCacheSnapshot() {
+        return openCacheDb().then((db) => {
+            if (!db) {
+                return null;
+            }
+
+            return new Promise((resolve) => {
+                let transaction;
+
+                try {
+                    transaction = db.transaction(IDB_STORE, 'readonly');
+                } catch (error) {
+                    resolve(null);
+                    return;
+                }
+
+                const request = transaction.objectStore(IDB_STORE).get(IDB_SNAPSHOT_KEY);
+                request.onsuccess = () => resolve(request.result || null);
+                request.onerror = () => resolve(null);
+                transaction.onabort = () => resolve(null);
+            });
+        });
+    }
+
+    function writeCacheSnapshot(snapshot) {
+        return openCacheDb().then((db) => {
+            if (!db) {
+                return false;
+            }
+
+            return new Promise((resolve) => {
+                let transaction;
+
+                try {
+                    transaction = db.transaction(IDB_STORE, 'readwrite');
+                } catch (error) {
+                    resolve(false);
+                    return;
+                }
+
+                try {
+                    transaction.objectStore(IDB_STORE).put(snapshot, IDB_SNAPSHOT_KEY);
+                } catch (error) {
+                    console.warn('No se pudo guardar la cache local.', error);
+                    resolve(false);
+                    return;
+                }
+
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => {
+                    console.warn('No se pudo guardar la cache local.', transaction.error);
+                    resolve(false);
+                };
+                transaction.onabort = () => resolve(false);
+            });
+        });
+    }
+
+    function encodeRecordsColumnar(records) {
+        const headerSet = new Set();
+        (records || []).forEach((record) => {
+            Object.keys(record || {}).forEach((key) => headerSet.add(key));
+        });
+
+        const headers = Array.from(headerSet);
+        const rows = (records || []).map((record) => headers.map((header) => {
+            const value = record ? record[header] : '';
+            return value === undefined || value === null ? '' : String(value);
+        }));
+
+        return { headers, rows };
+    }
+
+    function decodeRecordsColumnar(snapshot) {
+        const headers = snapshot && Array.isArray(snapshot.headers) ? snapshot.headers : [];
+        const rows = snapshot && Array.isArray(snapshot.rows) ? snapshot.rows : [];
+
+        if (!headers.length) {
+            return [];
+        }
+
+        return rows.map((row) => {
+            const record = {};
+            headers.forEach((header, index) => {
+                const value = Array.isArray(row) ? row[index] : '';
+                record[header] = value === undefined || value === null ? '' : value;
+            });
+            return TintoreriaUtils.defaultRecord(record);
+        });
+    }
+
+    async function loadRemoteCachedRecords() {
+        let snapshot = null;
+        try {
+            snapshot = await readCacheSnapshot();
+        } catch (error) {
+            console.warn('No se pudo leer la cache local.', error);
+            return null;
+        }
+
+        if (!snapshot || snapshot.mode !== 'remote') {
+            return null;
+        }
+
+        // Sin scope guardado se asume el subconjunto activo: es la opcion
+        // segura, porque obliga a buscar en remoto lo que falte.
+        const scope = snapshot.scope === 'all' ? 'all' : 'active';
+        const records = TintoreriaUtils.sortRecords(decodeRecordsColumnar(snapshot));
+
+        // Queda disponible en memoria para que los guardados posteriores no
+        // tengan que volver a decodificar el snapshot.
+        cachedRemoteRecords = records;
+        cachedRemoteScope = scope;
+
+        const savedAt = Date.parse(snapshot.updatedAt || '');
+        if (!Number.isFinite(savedAt) || Date.now() - savedAt > CACHE_MAX_AGE_MS) {
+            // Demasiado vieja para pintarla, pero sirve como base de merge.
             return null;
         }
 
         return {
             success: true,
             source: 'cache',
-            // Sin scope guardado se asume el subconjunto activo: es la opcion
-            // segura, porque obliga a buscar en remoto lo que falte.
-            scope: meta.scope === 'all' ? 'all' : 'active',
-            cachedAt: meta.updatedAt || '',
-            records: TintoreriaUtils.sortRecords(loadLocalRecords())
+            scope,
+            cachedAt: snapshot.updatedAt || '',
+            records
         };
     }
 
@@ -172,16 +281,69 @@
         return Array.from(mergedById.values());
     }
 
+    // Copia en memoria del ultimo snapshot. Evita que cada guardado tenga que
+    // releer y decodificar los ~3.9k registros de IndexedDB solo para
+    // refrescar la cache (serian ~250 ms de CPU por campo editado).
+    let cachedRemoteRecords = null;
+    let cachedRemoteScope = 'active';
+    let pendingCacheWrite = null;
+    const CACHE_WRITE_DELAY_MS = 1500;
+
+    function getRemoteCacheInMemory() {
+        if (!cachedRemoteRecords) {
+            return null;
+        }
+
+        return {
+            records: cachedRemoteRecords,
+            scope: cachedRemoteScope
+        };
+    }
+
+    // Las ediciones llegan de a una; se agrupan para no reescribir el snapshot
+    // completo en cada tecla.
+    function scheduleCacheWrite() {
+        if (pendingCacheWrite) {
+            clearTimeout(pendingCacheWrite);
+        }
+
+        pendingCacheWrite = setTimeout(() => {
+            pendingCacheWrite = null;
+
+            const records = cachedRemoteRecords;
+            if (!records) {
+                return;
+            }
+
+            writeCacheSnapshot({
+                mode: 'remote',
+                scope: cachedRemoteScope,
+                updatedAt: new Date().toISOString(),
+                recordCount: records.length,
+                ...encodeRecordsColumnar(records)
+            }).catch((error) => {
+                console.warn('No se pudo guardar la cache local.', error);
+            });
+        }, CACHE_WRITE_DELAY_MS);
+    }
+
+    // Devuelve los registros normalizados de inmediato y persiste en segundo
+    // plano: la UI no espera a que termine la escritura en disco.
     function updateRemoteCache(records, scope = 'active') {
-        const snapshot = saveRecordsSnapshot(records, 'remote', { optional: true, scope });
-        remoteCacheAvailable = snapshot.persisted;
-        return snapshot.records;
+        const normalizedRecords = TintoreriaUtils.sortRecords(
+            (records || []).map((record) => TintoreriaUtils.defaultRecord(record))
+        );
+
+        cachedRemoteRecords = normalizedRecords;
+        cachedRemoteScope = scope === 'all' ? 'all' : 'active';
+        scheduleCacheWrite();
+
+        return normalizedRecords;
     }
 
     function updateLocalModeSnapshot(records) {
         try {
-            const snapshot = saveRecordsSnapshot(records, 'local');
-            return snapshot.records;
+            return saveRecordsSnapshot(records, 'local');
         } catch (error) {
             if (isQuotaExceededError(error)) {
                 throw new Error('El dispositivo no tiene espacio suficiente para guardar datos locales.');
@@ -537,17 +699,42 @@
         return gvizJsonToRecords(json);
     }
 
+    // La cache remota vivia en localStorage y nunca cabia; ahora esta en
+    // IndexedDB, asi que se libera el espacio que quedo ocupado. Solo se toca
+    // con Web App configurado: sin ella esas claves son el almacen real.
+    if (TintoreriaUtils.hasConfiguredWebAppUrl()) {
+        clearPersistedRecordsCache();
+    }
+
     window.TintoreriaAPI = {
-        getCachedRecords() {
+        async getCachedRecords(options = {}) {
             if (!TintoreriaUtils.hasConfiguredWebAppUrl()) {
                 return null;
             }
 
-            if (!remoteCacheAvailable) {
-                return null;
+            const requestedScope = options && options.scope === 'all' ? 'all' : 'active';
+            const cached = await loadRemoteCachedRecords();
+
+            if (!cached || cached.scope === requestedScope) {
+                return cached;
             }
 
-            return loadRemoteCachedRecords();
+            // La cache quedo con el historico completo (p.ej. la sesion previa
+            // termino en Reporte) pero se arranca en una vista de proceso: se
+            // recorta a lo activo para no pintar partidas ya embaladas.
+            if (cached.scope === 'all' && requestedScope === 'active') {
+                return {
+                    ...cached,
+                    scope: 'active',
+                    records: cached.records.filter((record) => (
+                        String(record[ACTIVE_SCOPE_COLUMN] || '').trim() !== ACTIVE_SCOPE_DONE_VALUE
+                    ))
+                };
+            }
+
+            // Solo hay cache del subconjunto activo y se necesita todo: no
+            // alcanza, conviene esperar a la lectura completa.
+            return null;
         },
 
         async listRecords(options = {}) {
@@ -653,7 +840,7 @@
                 records: prepared
             });
             const appended = (data.records || []).map((record) => TintoreriaUtils.defaultRecord(record));
-            const cached = loadRemoteCachedRecords();
+            const cached = getRemoteCacheInMemory();
             if (cached) {
                 updateRemoteCache(mergeRecordsById(cached.records, appended), cached.scope);
             }
@@ -708,7 +895,7 @@
             });
 
             const updatedRecords = (data.records || []).map((record) => TintoreriaUtils.defaultRecord(record));
-            const cached = loadRemoteCachedRecords();
+            const cached = getRemoteCacheInMemory();
             if (updatedRecords.length && cached) {
                 updateRemoteCache(mergeRecordsById(cached.records, updatedRecords), cached.scope);
             }
@@ -755,7 +942,7 @@
                 match
             });
             const updatedRecord = data.record ? TintoreriaUtils.defaultRecord(data.record) : null;
-            const cached = loadRemoteCachedRecords();
+            const cached = getRemoteCacheInMemory();
 
             if (updatedRecord && cached) {
                 const merged = mergeRecordsById(cached.records, [updatedRecord]);
