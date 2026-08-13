@@ -3,6 +3,12 @@
         activeView: 'plegado',
         records: [],
         source: 'local',
+        // 'active' = solo partidas sin embalar (carga rapida de arranque).
+        // 'all'    = historico completo, que se pide bajo demanda.
+        dataScope: 'active',
+        // Ids traidos puntualmente por una busqueda de OP-PTDA; se descartan al
+        // limpiar la busqueda para que no ensucien las vistas de proceso.
+        searchExtraIds: [],
         views: {},
         activeSearch: null,
         clientFilters: {},
@@ -1761,6 +1767,7 @@
         } = options;
 
         state.activeSearch = null;
+        dropSearchExtras();
 
         const searchInput = getSearchInput();
         if (searchInput && !keepInput) {
@@ -1824,7 +1831,7 @@
         });
     }
 
-    function runGlobalOpSearch() {
+    async function runGlobalOpSearch() {
         const searchInput = getSearchInput();
         if (!(searchInput instanceof HTMLInputElement)) {
             return;
@@ -1836,7 +1843,17 @@
             return;
         }
 
-        const result = findSearchResult(query);
+        let result = findSearchResult(query);
+
+        // Las partidas ya embaladas no vienen en la carga inicial: si no esta
+        // en memoria, se pide puntualmente a la hoja antes de darla por perdida.
+        if (!result) {
+            const added = await fetchRecordsForSearch(query);
+            if (added > 0) {
+                result = findSearchResult(query);
+            }
+        }
+
         if (!result) {
             if (state.activeSearch) {
                 clearActiveSearch({ keepInput: true });
@@ -1872,7 +1889,9 @@
         if (searchForm) {
             searchForm.addEventListener('submit', (event) => {
                 event.preventDefault();
-                runGlobalOpSearch();
+                runGlobalOpSearch().catch((error) => {
+                    console.error(error);
+                });
             });
         }
 
@@ -2035,6 +2054,10 @@
         });
 
         renderActiveView();
+
+        if (FULL_DATASET_VIEWS.includes(viewId)) {
+            ensureFullDataset();
+        }
     }
 
     function getStockReturnView() {
@@ -2050,6 +2073,8 @@
         state.records = TintoreriaUtils.sortRecords(result.records || []);
         state.records = applyCalidadPageLoadOrder(state.records);
         state.source = result.source || 'local';
+        state.dataScope = result.scope === 'all' ? 'all' : 'active';
+        state.searchExtraIds = [];
 
         refreshCounts();
         renderActiveView({ preserveInteraction });
@@ -2071,14 +2096,14 @@
     }
 
     async function refreshData(options = {}) {
-        const { silent = false, background = false } = options;
+        const { silent = false, background = false, scope = state.dataScope } = options;
 
         if (!background) {
             setLoading(true);
         }
 
         try {
-            const result = await TintoreriaAPI.listRecords();
+            const result = await TintoreriaAPI.listRecords({ scope });
             applyLoadedData(result, { preserveInteraction: state.records.length > 0 });
 
             if (!silent) {
@@ -2096,6 +2121,117 @@
             if (!background) {
                 setLoading(false);
             }
+        }
+    }
+
+    // Stock, Reporte de ramas y Maestro necesitan el historico completo
+    // (incluidas las partidas ya embaladas), asi que lo piden al entrar.
+    const FULL_DATASET_VIEWS = ['stock', 'reporte-ramas', 'maestro'];
+    let fullDatasetPromise = null;
+    let bootstrapping = true;
+
+    function ensureFullDataset() {
+        // Durante el arranque la carga inicial ya pide el scope correcto; no
+        // hay que lanzar una segunda lectura en paralelo.
+        if (state.dataScope === 'all' || bootstrapping) {
+            return Promise.resolve(state.dataScope === 'all');
+        }
+
+        if (fullDatasetPromise) {
+            return fullDatasetPromise;
+        }
+
+        setLoading(true);
+        fullDatasetPromise = (async () => {
+            try {
+                const result = await TintoreriaAPI.listRecords({ scope: 'all' });
+                applyLoadedData(result, { preserveInteraction: false });
+                return true;
+            } catch (error) {
+                console.error(error);
+                showToast(
+                    'No se pudo cargar el historico completo; se muestran solo las partidas en proceso.',
+                    'error',
+                    'Carga incompleta'
+                );
+                return false;
+            } finally {
+                setLoading(false);
+                fullDatasetPromise = null;
+            }
+        })();
+
+        return fullDatasetPromise;
+    }
+
+    // Inserta registros traidos por una busqueda puntual sin persistirlos en la
+    // cache: viven solo mientras la busqueda este activa.
+    function mergeSearchRecords(records) {
+        const incoming = (records || []).map((record) => TintoreriaUtils.defaultRecord(record));
+        if (!incoming.length) {
+            return 0;
+        }
+
+        const known = new Set(state.records.map((record) => String(record.id_registro || '')));
+        const added = incoming.filter((record) => {
+            const id = String(record.id_registro || '');
+            return id && !known.has(id);
+        });
+
+        if (!added.length) {
+            return 0;
+        }
+
+        state.searchExtraIds = state.searchExtraIds.concat(added.map((record) => String(record.id_registro)));
+        state.records = applyCalidadPageLoadOrder(TintoreriaUtils.sortRecords(state.records.concat(added)));
+        refreshCounts();
+        return added.length;
+    }
+
+    function dropSearchExtras() {
+        if (!state.searchExtraIds.length) {
+            return false;
+        }
+
+        const extras = new Set(state.searchExtraIds);
+        state.searchExtraIds = [];
+        state.records = state.records.filter((record) => !extras.has(String(record.id_registro || '')));
+        refreshCounts();
+        return true;
+    }
+
+    function parseOpPartidaQuery(query) {
+        const digits = String(query === undefined || query === null ? '' : query).match(/\d+/g) || [];
+        return {
+            opTela: digits[0] || '',
+            partida: digits[1] || ''
+        };
+    }
+
+    async function fetchRecordsForSearch(query) {
+        if (state.dataScope === 'all') {
+            return 0;
+        }
+
+        if (!window.TintoreriaAPI || typeof TintoreriaAPI.findRecordsByOpPartida !== 'function') {
+            return 0;
+        }
+
+        const { opTela, partida } = parseOpPartidaQuery(query);
+        if (!opTela && !partida) {
+            return 0;
+        }
+
+        setLoading(true);
+
+        try {
+            const found = await TintoreriaAPI.findRecordsByOpPartida(opTela, partida);
+            return mergeSearchRecords(found);
+        } catch (error) {
+            console.warn('No se pudo buscar la OP-PTDA en el historico.', error);
+            return 0;
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -2352,9 +2488,12 @@
         switchView(state.activeView);
         activatePreferredSubtab(preferredLanding.viewId, preferredLanding.filter);
         const hydratedFromCache = hydrateCachedData();
+        const initialScope = FULL_DATASET_VIEWS.includes(state.activeView) ? 'all' : 'active';
+        bootstrapping = false;
         refreshData({
             silent: true,
-            background: hydratedFromCache
+            background: hydratedFromCache,
+            scope: initialScope
         });
     }
 
@@ -2367,6 +2506,9 @@
         switchView,
         getStockReturnView,
         refreshData,
+        ensureFullDataset,
+        fetchRecordsForSearch,
+        dropSearchExtras,
         importRecords,
         saveRecordChanges,
         showToast,
