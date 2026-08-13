@@ -1667,6 +1667,24 @@
     function closeAuditoriaModal() {
         const els = getAuditoriaModalElements();
         if (els.modal) els.modal.classList.add('hidden');
+
+        // Se descartan las partidas embaladas traidas por la busqueda para que
+        // no queden colgando en las vistas de proceso.
+        if (typeof TintoreriaApp.dropSearchExtras === 'function') {
+            TintoreriaApp.dropSearchExtras();
+        }
+    }
+
+    function findAuditoriaMatches(query) {
+        const normalizedQuery = TintoreriaUtils.normalizeOpPartidaSearchValue(query);
+        if (!normalizedQuery) {
+            return [];
+        }
+
+        return TintoreriaApp.getRecords().filter(record => {
+            const opPartida = TintoreriaUtils.formatOpPartida(record.op_tela, record.partida);
+            return TintoreriaUtils.normalizeOpPartidaSearchValue(opPartida) === normalizedQuery;
+        });
     }
 
     function renderAuditoriaTable(query) {
@@ -1678,13 +1696,7 @@
             return;
         }
 
-        const records = TintoreriaApp.getRecords();
-        const normalizedQuery = TintoreriaUtils.normalizeOpPartidaSearchValue(query);
-
-        const filtered = records.filter(record => {
-            const opPartida = TintoreriaUtils.formatOpPartida(record.op_tela, record.partida);
-            return TintoreriaUtils.normalizeOpPartidaSearchValue(opPartida) === normalizedQuery;
-        });
+        const filtered = findAuditoriaMatches(query);
 
         if (filtered.length === 0) {
             els.tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--gray-500);">No se encontraron partidas</td></tr>';
@@ -1712,9 +1724,26 @@
         els.actions.classList.add('hidden');
     }
 
-    function handleAuditoriaSearch() {
+    async function handleAuditoriaSearch() {
         const els = getAuditoriaModalElements();
-        renderAuditoriaTable(els.searchInput.value);
+        const query = els.searchInput.value;
+
+        renderAuditoriaTable(query);
+
+        // Las partidas ya embaladas no estan en la carga inicial; se piden a la
+        // hoja solo cuando la busqueda no las encuentra en memoria.
+        if (!query.trim() || findAuditoriaMatches(query).length) {
+            return;
+        }
+
+        if (typeof TintoreriaApp.fetchRecordsForSearch !== 'function') {
+            return;
+        }
+
+        const added = await TintoreriaApp.fetchRecordsForSearch(query);
+        if (added > 0) {
+            renderAuditoriaTable(query);
+        }
     }
 
     function updateAuditoriaFormVisibility() {
@@ -1896,10 +1925,14 @@
             elsAud.tbody.querySelectorAll('.auditoria-row-checkbox').forEach(cb => cb.checked = false);
             updateAuditoriaFormVisibility();
         });
-        if (elsAud.searchBtn) elsAud.searchBtn.addEventListener('click', handleAuditoriaSearch);
+        const runAuditoriaSearch = () => {
+            handleAuditoriaSearch().catch((error) => console.error(error));
+        };
+
+        if (elsAud.searchBtn) elsAud.searchBtn.addEventListener('click', runAuditoriaSearch);
         if (elsAud.searchInput) {
             elsAud.searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') handleAuditoriaSearch();
+                if (e.key === 'Enter') runAuditoriaSearch();
             });
         }
         if (elsAud.saveBtn) elsAud.saveBtn.addEventListener('click', handleAuditoriaSave);
