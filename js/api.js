@@ -1,6 +1,16 @@
 (() => {
     const STORAGE_META_KEY = `${LOCAL_STORAGE_KEY}-meta`;
+    const GVIZ_COLUMNS_KEY = `${LOCAL_STORAGE_KEY}-gviz-cols`;
     let remoteCacheAvailable = true;
+
+    // La hoja tiene ~6.5k filas x ~184 columnas (~10 MB por lectura completa).
+    // Por eso el arranque solo pide las partidas que siguen en proceso; el
+    // historico completo se carga bajo demanda (Stock, Reporte, Maestro) y las
+    // partidas ya embaladas se traen puntualmente al buscar una OP-PTDA.
+    const ACTIVE_SCOPE_COLUMN = 'embalaje_estado';
+    const ACTIVE_SCOPE_DONE_VALUE = 'OK';
+    const OP_COLUMN = 'op_tela';
+    const PARTIDA_COLUMN = 'partida';
 
     function isQuotaExceededError(error) {
         if (!error) {
@@ -96,7 +106,7 @@
     }
 
     function saveRecordsSnapshot(records, mode, options = {}) {
-        const { optional = false } = options;
+        const { optional = false, scope = 'active' } = options;
         const normalizedRecords = TintoreriaUtils.sortRecords(
             (records || []).map((record) => TintoreriaUtils.defaultRecord(record))
         );
@@ -111,6 +121,7 @@
 
         const metaSaved = saveStorageMeta({
             mode,
+            scope,
             updatedAt: new Date().toISOString(),
             recordCount: normalizedRecords.length
         }, { optional });
@@ -137,6 +148,9 @@
         return {
             success: true,
             source: 'cache',
+            // Sin scope guardado se asume el subconjunto activo: es la opcion
+            // segura, porque obliga a buscar en remoto lo que falte.
+            scope: meta.scope === 'all' ? 'all' : 'active',
             cachedAt: meta.updatedAt || '',
             records: TintoreriaUtils.sortRecords(loadLocalRecords())
         };
@@ -158,8 +172,8 @@
         return Array.from(mergedById.values());
     }
 
-    function updateRemoteCache(records) {
-        const snapshot = saveRecordsSnapshot(records, 'remote', { optional: true });
+    function updateRemoteCache(records, scope = 'active') {
+        const snapshot = saveRecordsSnapshot(records, 'remote', { optional: true, scope });
         remoteCacheAvailable = snapshot.persisted;
         return snapshot.records;
     }
@@ -252,13 +266,19 @@
         return parseJsonResponse(response);
     }
 
-    const GVIZ_TIMEOUT_MS = 15000;
+    // Medido sobre la hoja real: subconjunto activo ~11 s / 5 MB, historico
+    // completo ~49 s / 10 MB, consulta puntual por OP ~3 s / 12 KB.
+    const GVIZ_TIMEOUT_MS = 45000;
+    const GVIZ_FULL_TIMEOUT_MS = 120000;
+    const GVIZ_LOOKUP_TIMEOUT_MS = 20000;
 
     function canUseGvizReader() {
         return typeof SHEET_ID === 'string' && SHEET_ID.trim() !== '' && typeof document !== 'undefined';
     }
 
-    function loadGvizJson() {
+    function loadGvizJson(options = {}) {
+        const { tq = '', timeout = GVIZ_TIMEOUT_MS } = options;
+
         return new Promise((resolve, reject) => {
             const callbackName = `tintoreriaGviz_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
             const script = document.createElement('script');
@@ -293,6 +313,10 @@
                 `_=${Date.now()}`
             ];
 
+            if (tq) {
+                queryParts.push(`tq=${encodeURIComponent(tq)}`);
+            }
+
             script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?${queryParts.join('&')}`;
             script.onerror = () => {
                 if (done) return;
@@ -305,10 +329,77 @@
                 done = true;
                 cleanup();
                 reject(new Error('Tiempo de espera agotado leyendo la hoja compartida (gviz).'));
-            }, GVIZ_TIMEOUT_MS);
+            }, timeout);
 
             document.body.appendChild(script);
         });
+    }
+
+    // gviz filtra por letra de columna (A, B, ... FQ), no por encabezado, asi
+    // que hay que traducir el nombre de campo a su posicion real en la hoja.
+    function gvizColumnLetter(index) {
+        let letter = '';
+        let remaining = Number(index);
+
+        while (remaining >= 0) {
+            letter = String.fromCharCode(65 + (remaining % 26)) + letter;
+            remaining = Math.floor(remaining / 26) - 1;
+        }
+
+        return letter;
+    }
+
+    function readGvizColumnLabels(json) {
+        const cols = json && json.table && Array.isArray(json.table.cols) ? json.table.cols : [];
+        return cols.map((col) => String((col && col.label) || '').trim());
+    }
+
+    function loadGvizColumnLabels() {
+        try {
+            const raw = localStorage.getItem(GVIZ_COLUMNS_KEY);
+            const parsed = raw ? JSON.parse(raw) : null;
+            return Array.isArray(parsed) && parsed.length ? parsed : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function saveGvizColumnLabels(labels) {
+        if (!Array.isArray(labels) || !labels.length) {
+            return;
+        }
+
+        try {
+            localStorage.setItem(GVIZ_COLUMNS_KEY, JSON.stringify(labels));
+        } catch (error) {
+            console.warn('No se pudo guardar el mapa de columnas de la hoja.', error);
+        }
+    }
+
+    function findColumnLetter(labels, header) {
+        const index = (labels || []).indexOf(header);
+        return index === -1 ? '' : gvizColumnLetter(index);
+    }
+
+    async function ensureGvizColumnLabels() {
+        const cached = loadGvizColumnLabels();
+        if (cached && cached.includes(ACTIVE_SCOPE_COLUMN) && cached.includes(OP_COLUMN)) {
+            return cached;
+        }
+
+        const json = await loadGvizJson({ tq: 'select * limit 0', timeout: GVIZ_LOOKUP_TIMEOUT_MS });
+        const labels = readGvizColumnLabels(json);
+        saveGvizColumnLabels(labels);
+        return labels;
+    }
+
+    function buildActiveScopeQuery(labels) {
+        const letter = findColumnLetter(labels, ACTIVE_SCOPE_COLUMN);
+        if (!letter) {
+            return '';
+        }
+
+        return `select * where (${letter} is null or ${letter} <> '${ACTIVE_SCOPE_DONE_VALUE}')`;
     }
 
     function gvizCellToDisplayValue(cell) {
@@ -376,8 +467,73 @@
         return records;
     }
 
-    async function listRecordsViaGviz() {
-        const json = await loadGvizJson();
+    async function listAllRecordsViaGviz() {
+        const json = await loadGvizJson({ timeout: GVIZ_FULL_TIMEOUT_MS });
+        saveGvizColumnLabels(readGvizColumnLabels(json));
+        return gvizJsonToRecords(json);
+    }
+
+    async function listActiveRecordsViaGviz() {
+        const labels = await ensureGvizColumnLabels();
+        const tq = buildActiveScopeQuery(labels);
+
+        if (!tq) {
+            console.warn(`No se encontro la columna ${ACTIVE_SCOPE_COLUMN}; se lee la hoja completa.`);
+            return { records: await listAllRecordsViaGviz(), scope: 'all' };
+        }
+
+        let json = await loadGvizJson({ tq, timeout: GVIZ_TIMEOUT_MS });
+        const freshLabels = readGvizColumnLabels(json);
+
+        // Si movieron columnas en la hoja, la letra usada en el filtro ya no
+        // apunta a embalaje_estado: se reintenta con el orden real.
+        if (freshLabels.length && freshLabels.join('|') !== labels.join('|')) {
+            saveGvizColumnLabels(freshLabels);
+            const retryTq = buildActiveScopeQuery(freshLabels);
+
+            if (!retryTq) {
+                return { records: await listAllRecordsViaGviz(), scope: 'all' };
+            }
+
+            if (retryTq !== tq) {
+                json = await loadGvizJson({ tq: retryTq, timeout: GVIZ_TIMEOUT_MS });
+            }
+        }
+
+        return { records: gvizJsonToRecords(json), scope: 'active' };
+    }
+
+    async function findRecordsByOpPartidaViaGviz(opTela, partida) {
+        const labels = await ensureGvizColumnLabels();
+        const opLetter = findColumnLetter(labels, OP_COLUMN);
+        const partidaLetter = findColumnLetter(labels, PARTIDA_COLUMN);
+
+        if (!opLetter || !partidaLetter) {
+            return null;
+        }
+
+        const op = String(opTela === undefined || opTela === null ? '' : opTela).trim();
+        const ptda = String(partida === undefined || partida === null ? '' : partida).trim();
+        const isOpNumeric = /^\d+$/.test(op);
+        const isPartidaNumeric = /^\d+$/.test(ptda);
+        let where = '';
+
+        if (isOpNumeric && isPartidaNumeric) {
+            where = `${opLetter} = ${Number(op)} and ${partidaLetter} = ${Number(ptda)}`;
+        } else if (isOpNumeric) {
+            // Un solo numero puede ser la OP o la partida; se prueban ambas.
+            where = `${opLetter} = ${Number(op)} or ${partidaLetter} = ${Number(op)}`;
+        } else if (isPartidaNumeric) {
+            where = `${opLetter} = ${Number(ptda)} or ${partidaLetter} = ${Number(ptda)}`;
+        } else {
+            return null;
+        }
+
+        const json = await loadGvizJson({
+            tq: `select * where ${where}`,
+            timeout: GVIZ_LOOKUP_TIMEOUT_MS
+        });
+
         return gvizJsonToRecords(json);
     }
 
@@ -394,36 +550,59 @@
             return loadRemoteCachedRecords();
         },
 
-        async listRecords() {
+        async listRecords(options = {}) {
+            const requestedScope = options && options.scope === 'all' ? 'all' : 'active';
+
             if (!TintoreriaUtils.hasConfiguredWebAppUrl()) {
                 return {
                     success: true,
                     source: 'local',
+                    scope: 'all',
                     records: TintoreriaUtils.sortRecords(loadLocalRecords())
                 };
             }
 
             let rawRecords = null;
+            let scope = requestedScope;
 
             if (canUseGvizReader()) {
                 try {
-                    rawRecords = await listRecordsViaGviz();
+                    if (requestedScope === 'all') {
+                        rawRecords = await listAllRecordsViaGviz();
+                    } else {
+                        const result = await listActiveRecordsViaGviz();
+                        rawRecords = result.records;
+                        scope = result.scope;
+                    }
                 } catch (error) {
                     console.warn('Lectura rapida (gviz) no disponible; usando Apps Script.', error);
+                    rawRecords = null;
                 }
             }
 
             if (rawRecords === null) {
+                // El Apps Script no filtra: siempre devuelve la hoja completa.
                 const data = await listRemoteRecords();
                 rawRecords = data.records || [];
+                scope = 'all';
             }
 
-            const records = updateRemoteCache(rawRecords);
+            const records = updateRemoteCache(rawRecords, scope);
             return {
                 success: true,
                 source: 'remote',
+                scope,
                 records
             };
+        },
+
+        async findRecordsByOpPartida(opTela, partida) {
+            if (!TintoreriaUtils.hasConfiguredWebAppUrl() || !canUseGvizReader()) {
+                return [];
+            }
+
+            const records = await findRecordsByOpPartidaViaGviz(opTela, partida);
+            return (records || []).map((record) => TintoreriaUtils.defaultRecord(record));
         },
 
         async appendRecords(records) {
@@ -476,7 +655,7 @@
             const appended = (data.records || []).map((record) => TintoreriaUtils.defaultRecord(record));
             const cached = loadRemoteCachedRecords();
             if (cached) {
-                updateRemoteCache(mergeRecordsById(cached.records, appended));
+                updateRemoteCache(mergeRecordsById(cached.records, appended), cached.scope);
             }
 
             return {
@@ -531,7 +710,7 @@
             const updatedRecords = (data.records || []).map((record) => TintoreriaUtils.defaultRecord(record));
             const cached = loadRemoteCachedRecords();
             if (updatedRecords.length && cached) {
-                updateRemoteCache(mergeRecordsById(cached.records, updatedRecords));
+                updateRemoteCache(mergeRecordsById(cached.records, updatedRecords), cached.scope);
             }
 
             return {
@@ -580,7 +759,7 @@
 
             if (updatedRecord && cached) {
                 const merged = mergeRecordsById(cached.records, [updatedRecord]);
-                updateRemoteCache(merged);
+                updateRemoteCache(merged, cached.scope);
             }
 
             return {
