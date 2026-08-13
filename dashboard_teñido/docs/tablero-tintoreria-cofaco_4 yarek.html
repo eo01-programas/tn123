@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cofaco · Tablero de Tintorería</title>
+<style>
+  :root{
+    --surface:#fcfcfb; --page:#f4f4f1; --card:#ffffff;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --hair:rgba(11,11,11,.10);
+    --blue:#2a78d6; --blue-soft:#9ec5f4; --blue-100:#cde2fb;
+    --good:#006300; --good-bg:#e6f2e6;
+    --bad:#b32424;  --bad-bg:#fbeaea;
+    --neutral-bg:#f0efec;
+    --sem-green:#dcefdc; --sem-green-ink:#1d5c1d;
+    --sem-yellow:#faf0cd; --sem-yellow-ink:#7a5a00;
+    --sem-orange:#fbe3d6; --sem-orange-ink:#8a3d14;
+    --sem-red:#f8dcdc;   --sem-red-ink:#8f1f1f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--page);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.45}
+  .wrap{max-width:1280px;margin:0 auto;padding:20px 24px 60px}
+
+  header.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+    padding:6px 2px 14px;border-bottom:1px solid var(--grid);margin-bottom:14px;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:12px}
+  .brand h1{font-size:19px;font-weight:650;margin:0;letter-spacing:-.01em}
+  .brand .sub{color:var(--muted);font-size:13px}
+  .stamp{color:var(--muted);font-size:12px}
+
+  /* ---------- Filter row ---------- */
+  .filters{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--hair);border-radius:10px;
+    padding:12px 16px;margin-bottom:14px}
+  .f-group{display:flex;flex-direction:column;gap:4px;position:relative}
+  .f-group label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .f-row{display:flex;align-items:center;gap:6px}
+  select,button.btn{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);
+    border:1px solid var(--axis);border-radius:7px;padding:6px 10px;cursor:pointer}
+  select:focus,button.btn:focus{outline:2px solid var(--blue-soft);outline-offset:1px}
+  button.btn .cal-ic{margin-right:7px;color:var(--muted)}
+  button.btn .chev{margin-left:8px;color:var(--muted);font-size:10px}
+  .cmp-note{font-size:12px;color:var(--muted);padding-bottom:7px;margin-left:auto;text-align:right}
+
+  /* ---------- Popover calendario (estilo Shopify) ---------- */
+  .popover{position:absolute;top:calc(100% + 6px);left:0;z-index:50;background:var(--card);
+    border:1px solid var(--hair);border-radius:12px;box-shadow:0 10px 34px rgba(0,0,0,.16);
+    display:none;width:706px;max-width:calc(100vw - 40px)}
+  .popover.open{display:block}
+  .pop-body{display:flex}
+  .presets{border-right:1px solid var(--grid);padding:8px;min-width:176px}
+  .presets button{display:flex;align-items:center;gap:6px;width:100%;text-align:left;font:inherit;font-size:13px;
+    background:none;border:none;border-radius:7px;padding:7px 10px;cursor:pointer;color:var(--ink-2)}
+  .presets button:hover{background:var(--neutral-bg)}
+  .presets button.on{color:var(--ink);font-weight:600;background:var(--blue-100)}
+  .presets button .ck{width:15px;display:inline-block;font-weight:700}
+  .cals{display:flex;gap:18px;padding:14px 16px 6px;flex-wrap:wrap}
+  .cal{width:224px}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .cal-head .mname{font-size:13px;font-weight:650}
+  .cal-head button{font:inherit;background:none;border:1px solid transparent;border-radius:6px;
+    cursor:pointer;color:var(--ink-2);padding:2px 8px;font-size:14px}
+  .cal-head button:hover{background:var(--neutral-bg)}
+  .cal-head button:disabled{opacity:.25;cursor:default}
+  .cal-head .sp{width:34px}
+  .dow,.days{display:grid;grid-template-columns:repeat(7,1fr)}
+  .dow span{font-size:10.5px;color:var(--muted);text-align:center;padding:3px 0;text-transform:uppercase}
+  .days button{font:inherit;font-size:12.5px;border:none;background:none;cursor:pointer;
+    height:30px;border-radius:0;color:var(--ink)}
+  .days button:disabled{color:#c9c8c1;cursor:default;background:none}
+  .days button:not(:disabled):hover{background:var(--neutral-bg);border-radius:7px}
+  .days button.inr{background:var(--blue-100)}
+  .days button.a,.days button.b{background:var(--blue);color:#fff;font-weight:650;border-radius:7px}
+  .days button.a{border-radius:7px 0 0 7px}
+  .days button.b{border-radius:0 7px 7px 0}
+  .days button.a.b{border-radius:7px}
+  .pop-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    border-top:1px solid var(--grid);padding:10px 16px}
+  .pop-foot .sel-txt{font-size:12.5px;color:var(--ink-2)}
+  .pop-foot .acts{display:flex;gap:8px}
+  .pop-foot button{font:inherit;font-size:13px;border-radius:7px;padding:6px 14px;cursor:pointer}
+  .pop-foot .cancel{background:var(--surface);border:1px solid var(--axis);color:var(--ink)}
+  .pop-foot .apply{background:#0b0b0b;border:1px solid #0b0b0b;color:#fff;font-weight:600}
+  .pop-foot .apply:disabled{opacity:.4;cursor:default}
+
+  /* ---------- Tabs ---------- */
+  nav.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--grid);margin-bottom:18px}
+  nav.tabs button{font:inherit;font-size:13.5px;background:none;border:none;cursor:pointer;
+    padding:9px 14px;color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px}
+  nav.tabs button:hover{color:var(--ink)}
+  nav.tabs button.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
+
+  /* ---------- KPI tiles ---------- */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px;margin-bottom:18px}
+  .tile{background:var(--card);border:1px solid var(--hair);border-radius:10px;padding:14px 16px 12px}
+  .tile .lbl{font-size:12.5px;color:var(--ink-2)}
+  .tile .val{font-size:28px;font-weight:650;letter-spacing:-.01em;margin:2px 0 1px}
+  .tile .val small{font-size:14px;font-weight:500;color:var(--ink-2);margin-left:2px}
+  .tile .cmpv{font-size:12px;color:var(--muted)}
+  .delta{display:inline-flex;align-items:center;gap:3px;font-size:12.5px;font-weight:600;
+    border-radius:6px;padding:1px 7px;margin-top:6px}
+  .delta.good{color:var(--good);background:var(--good-bg)}
+  .delta.bad{color:var(--bad);background:var(--bad-bg)}
+  .delta.flat{color:var(--ink-2);background:var(--neutral-bg);font-weight:500}
+
+  .card{background:var(--card);border:1px solid var(--hair);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+  .card h2{font-size:15px;font-weight:650;margin:0 0 2px}
+  .card .desc{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
+  .tbl-scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{padding:5px 9px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--grid)}
+  th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  th.l,td.l{text-align:left}
+  td{font-variant-numeric:tabular-nums}
+  tr.total td{font-weight:650;border-top:1.5px solid var(--axis)}
+  td.dim{color:var(--muted)}
+  .cell-var{font-weight:650}
+  .cell-var.good{color:var(--good)} .cell-var.bad{color:var(--bad)} .cell-var.flat{color:var(--muted);font-weight:500}
+  td.sem-g{background:var(--sem-green);color:var(--sem-green-ink)}
+  td.sem-y{background:var(--sem-yellow);color:var(--sem-yellow-ink)}
+  td.sem-o{background:var(--sem-orange);color:var(--sem-orange-ink)}
+  td.sem-r{background:var(--sem-red);color:var(--sem-red-ink);font-weight:600}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:10px}
+  .legend .k{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid var(--hair)}
+  .pill{display:inline-block;border-radius:5px;padding:0 6px;font-size:11.5px;font-weight:600}
+
+  .chart-box{position:relative}
+  svg text{font-family:inherit}
+  .tooltip{position:fixed;z-index:60;pointer-events:none;background:var(--ink);color:#fff;
+    border-radius:7px;padding:7px 10px;font-size:12px;line-height:1.5;max-width:280px;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);display:none}
+  .tooltip b{font-size:12.5px}
+  .barhit:hover rect.bar{fill:#1c5cab}
+
+  .art-select{margin-bottom:10px}
+  .note{font-size:12px;color:var(--muted)}
+  .kpi-inline{display:flex;gap:26px;flex-wrap:wrap;margin:6px 0 12px}
+  .kpi-inline .ki .lbl{font-size:11.5px;color:var(--muted)}
+  .kpi-inline .ki .v{font-size:19px;font-weight:650}
+  .kpi-inline .ki .v small{font-size:12px;color:var(--ink-2);font-weight:500}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--ink)}
+  td.mom-g{background:var(--good-bg)}
+  td.mom-r{background:var(--bad-bg)}
+  footer{margin-top:26px;font-size:11.5px;color:var(--muted);border-top:1px solid var(--grid);padding-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Cofaco · Tintorería de Telas</h1>
+      <span class="sub">Tablero de gestión — evaluación de desempeño</span>
+    </div>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <div class="filters" id="filters">
+    <div class="f-group">
+      <label>Periodo de análisis</label>
+      <div class="f-row">
+        <button class="btn" id="rangeBtn"><span class="cal-ic">▦</span><span id="rangeTxt"></span><span class="chev">▼</span></button>
+      </div>
+      <div class="popover" id="popRange"></div>
+    </div>
+    <div class="f-group">
+      <label>Comparar contra</label>
+      <div class="f-row">
+        <select id="selCmp">
+          <option value="prev">Periodo anterior</option>
+          <option value="yoy">Mismo periodo, año anterior</option>
+          <option value="avg6">Promedio últimos 6 meses</option>
+          <option value="avg12">Promedio últimos 12 meses</option>
+          <option value="custom">Fechas personalizadas…</option>
+        </select>
+      </div>
+    </div>
+    <div class="f-group">
+      <label>Tono</label>
+      <div class="f-row">
+        <select id="selTono">
+          <option value="all">Todos los tonos</option>
+          <option value="negro">Negro</option>
+          <option value="oscuros">Oscuros</option>
+          <option value="claros">Claros</option>
+          <option value="blanco">Blanco</option>
+        </select>
+      </div>
+    </div>
+    <div class="f-group" id="customCmp" style="display:none">
+      <label>Periodo de comparación</label>
+      <div class="f-row">
+        <button class="btn" id="cmpBtn"><span class="cal-ic">▦</span><span id="cmpTxt"></span><span class="chev">▼</span></button>
+      </div>
+      <div class="popover" id="popCmp"></div>
+    </div>
+    <div class="cmp-note" id="cmpNote"></div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-v="resumen" class="on">Resumen general</button>
+    <button data-v="pareto">Pareto de artículos</button>
+    <button data-v="balp">% BALP</button>
+    <button data-v="defectos">Ranking de defectos</button>
+    <button data-v="detalle">Detalle por artículo</button>
+    <button data-v="costos">Costo de receta</button>
+    <button data-v="tiempos">Tiempos de proceso</button>
+    <button data-v="lavado">% Tela lavada</button>
+  </nav>
+
+  <main id="view"></main>
+
+  <footer>
+    Cofaco S.A. — Tablero de tintorería · Datos simulados a nivel de partida (20 artículos, 1 ene 2025 – 31 jul 2026) para diseño del reporte.
+    BALP = Bien A La Primera · MALP = Mal A La Primera. Las variaciones se colorean verde cuando son favorables y rojo cuando son desfavorables, según la dirección deseada de cada indicador.
+  </footer>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<script>
+/* ---------- PRNG determinístico ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = mulberry32(20260807);
+const rnd=(a,b)=>a+(b-a)*R();
+const nrm=()=>{let s=0;for(let i=0;i<4;i++)s+=R();return (s-2)/1.16};
+
+/* ---------- Fechas (UTC, sin depender del reloj) ---------- */
+const MES=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const MESL=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const DOW=["L","M","X","J","V","S","D"];
+const D=(y,m,d)=>new Date(Date.UTC(y,m,d));
+const iso=(dt)=>dt.toISOString().slice(0,10);
+const parseD=(s)=>{const[a,b,c]=s.split("-").map(Number);return D(a,b-1,c)};
+const addDays=(dt,n)=>D(dt.getUTCFullYear(),dt.getUTCMonth(),dt.getUTCDate()+n);
+const addMonths=(dt,n)=>{const y=dt.getUTCFullYear(),m=dt.getUTCMonth()+n;
+  const last=D(y,m+1,0).getUTCDate();return D(y,m,Math.min(dt.getUTCDate(),last))};
+const daysIn=(y,m)=>D(y,m+1,0).getUTCDate();
+const dayDiff=(a,b)=>Math.round((b-a)/86400000);
+const fmtD=(s)=>{const d=parseD(s);return d.getUTCDate()+" "+MESL[d.getUTCMonth()].slice(0,3)+" "+d.getUTCFullYear()};
+
+const MONTHS=[];
+for(let y=2025;y<=2026;y++)for(let m=0;m<12;m++){
+  if(y===2026&&m>6)break;
+  MONTHS.push({y,m,key:y+"-"+String(m+1).padStart(2,"0"),lbl:MES[m]+" "+String(y).slice(2),
+    a:iso(D(y,m,1)),b:iso(D(y,m+1,0))});
+}
+const NM=MONTHS.length; // 19
+const DATA_MIN=MONTHS[0].a, DATA_MAX=MONTHS[NM-1].b;
+const monthIdx=(s)=>{const d=parseD(s);return (d.getUTCFullYear()-2025)*12+d.getUTCMonth()};
+
+/* ---------- Tonos (sub-artículos de color) ----------
+   Cada artículo se produce en 4 tonos; cada tono comparte ruta y receta. */
+const TONOS=[
+  {k:"negro",  lbl:"Negro",  cost:1.30,curva:1.15,tot:1.10,agua:1.20,balpAdj:-.030},
+  {k:"oscuros",lbl:"Oscuros",cost:1.12,curva:1.05,tot:1.04,agua:1.08,balpAdj:-.012},
+  {k:"claros", lbl:"Claros", cost:0.92,curva:0.95,tot:0.97,agua:0.95,balpAdj:+.010},
+  {k:"blanco", lbl:"Blanco", cost:0.76,curva:0.85,tot:0.92,agua:0.90,balpAdj:+.022}
+];
+const TONOBY={}; TONOS.forEach(t=>TONOBY[t.k]=t);
+
+/* ---------- Catálogo de artículos ---------- */
+const DEFS=["Tono","Igualación","Quebraduras","Barrado","Contaminación","Manchas","Solidez"];
+function defProfile(...pairs){const o={};pairs.forEach(([d,w])=>o[d]=w);return o}
+/* caos=true: artículo de comportamiento errático (volumen, calidad y costos volátiles) */
+const ARTS=[
+ {id:"A01",name:"Jersey 30/1 Co Pima 160 g",share:14, balp:.955,cost:1.45,curva:480,tot:960, agua:78, kgP:520, lav:"no",  defs:defProfile(["Tono",.45],["Igualación",.3],["Contaminación",.25])},
+ {id:"A02",name:"Jersey 24/1 Co Tangüis 180 g",share:11, balp:.94, cost:1.38,curva:460,tot:930, agua:80, kgP:540, lav:"no",  defs:defProfile(["Tono",.4],["Igualación",.35],["Manchas",.25])},
+ {id:"A03",name:"French Terry 20/10 Co 280 g",share:10, balp:.90, cost:1.62,curva:520,tot:1080,agua:88, kgP:480, lav:"parc",defs:defProfile(["Quebraduras",.45],["Tono",.3],["Igualación",.25])},
+ {id:"A04",name:"Rib 30/1 Co/Ea 220 g",       share:8,  balp:.885,cost:1.95,curva:560,tot:1140,agua:92, kgP:420, lav:"no",  defs:defProfile(["Quebraduras",.5],["Barrado",.3],["Tono",.2])},
+ {id:"A05",name:"Jersey 30/1 Co/Ea 95/5 170 g",share:8, balp:.92, cost:1.78,curva:530,tot:1060,agua:85, kgP:460, lav:"parc",defs:defProfile(["Tono",.35],["Quebraduras",.35],["Igualación",.3])},
+ {id:"A06",name:"Interlock 40/1 Co Pima 200 g",share:7, balp:.945,cost:1.55,curva:500,tot:1000,agua:82, kgP:500, lav:"no",  defs:defProfile(["Tono",.5],["Manchas",.3],["Igualación",.2])},
+ {id:"A07",name:"Piqué 24/1 Co 200 g",         share:6, balp:.93, cost:1.42,curva:470,tot:950, agua:79, kgP:520, lav:"no",  defs:defProfile(["Igualación",.4],["Tono",.35],["Barrado",.25])},
+ {id:"A08",name:"Franela 20/1 Co 240 g",       share:5, balp:.905,cost:1.5, curva:540,tot:1120,agua:90, kgP:470, lav:"si",  defs:defProfile(["Barrado",.4],["Tono",.3],["Contaminación",.3])},
+ {id:"A09",name:"Jersey 40/1 Modal/Co 150 g",  share:5, balp:.87, cost:2.15,curva:600,tot:1220,agua:95, kgP:380, lav:"parc",caos:true,defs:defProfile(["Quebraduras",.4],["Solidez",.3],["Tono",.3])},
+ {id:"A10",name:"French Terry 30/10 Co/Ea 300 g",share:4,balp:.865,cost:2.05,curva:590,tot:1230,agua:96,kgP:400, lav:"si", defs:defProfile(["Quebraduras",.45],["Tono",.3],["Barrado",.25])},
+ {id:"A11",name:"Rib 2x2 24/1 Co 260 g",       share:4, balp:.915,cost:1.58,curva:520,tot:1050,agua:84, kgP:450, lav:"no",  defs:defProfile(["Barrado",.45],["Igualación",.3],["Tono",.25])},
+ {id:"A12",name:"Jersey 30/1 Co/Pes 60/40 160 g",share:3,balp:.925,cost:1.85,curva:610,tot:1180,agua:88,kgP:490, lav:"no", defs:defProfile(["Tono",.45],["Solidez",.35],["Igualación",.2])},
+ {id:"A13",name:"Waffle 20/1 Co 230 g",        share:3, balp:.895,cost:1.66,curva:540,tot:1090,agua:87, kgP:430, lav:"parc",defs:defProfile(["Quebraduras",.4],["Igualación",.35],["Manchas",.25])},
+ {id:"A14",name:"Jersey 20/1 Co orgánico 180 g",share:3,balp:.935,cost:1.72,curva:500,tot:1010,agua:81, kgP:500, lav:"no",  defs:defProfile(["Tono",.4],["Contaminación",.35],["Igualación",.25])},
+ {id:"A15",name:"Piqué 30/1 Co/Ea 190 g",      share:2, balp:.90, cost:1.92,curva:560,tot:1130,agua:90, kgP:440, lav:"no",  defs:defProfile(["Quebraduras",.4],["Barrado",.35],["Tono",.25])},
+ {id:"A16",name:"Mini French Terry 30/14 Co 240 g",share:2,balp:.91,cost:1.7,curva:530,tot:1070,agua:86,kgP:450, lav:"si",  defs:defProfile(["Tono",.4],["Quebraduras",.3],["Manchas",.3])},
+ {id:"A17",name:"Jersey flameado 20/1 Co 175 g",share:2,balp:.88, cost:1.6, curva:520,tot:1060,agua:85, kgP:430, lav:"fase",caos:true,defs:defProfile(["Barrado",.5],["Tono",.3],["Igualación",.2])},
+ {id:"A18",name:"Interlock 30/1 Pes/Co 210 g", share:1.5,balp:.93,cost:1.98,curva:640,tot:1250,agua:92, kgP:470, lav:"no",  defs:defProfile(["Solidez",.4],["Tono",.35],["Manchas",.25])},
+ {id:"A19",name:"Rib 1x1 30/1 Co/Ea 240 g",    share:1.5,balp:.875,cost:2.0,curva:570,tot:1160,agua:93, kgP:410, lav:"no",  caos:true,defs:defProfile(["Quebraduras",.5],["Tono",.3],["Barrado",.2])},
+ {id:"A20",name:"Gamuza 20/10 Co 320 g",       share:1, balp:.895,cost:1.75,curva:550,tot:1120,agua:91, kgP:460, lav:"fase",defs:defProfile(["Manchas",.4],["Tono",.35],["Igualación",.25])}
+];
+const ARTBY={}; ARTS.forEach(a=>ARTBY[a.id]=a);
+
+/* ---------- Generación: temporadas, mezcla de tonos y partidas ---------- */
+const PLANT_KG=340000;
+const totShare=ARTS.reduce((s,a)=>s+a.share,0);
+const PARTIDAS=[]; // {id,a,t,mi,d,kg,malp,def,repro,desc,costoKg,curva,tot,agua,lavKg}
+let PID=1;
+ARTS.forEach((a,ai)=>{
+  const caos=!!a.caos;
+  const balpTrend=rnd(-.00035,.0006);
+  const costSteps=[]; let c=a.cost;
+  for(let i=0;i<NM;i++){ if(R()<(caos?.3:.13)) c=c*(1+rnd(caos?-.15:-.07,caos?.18:.09)); costSteps.push(c); }
+  const curvaTrend=rnd(-.002,.004), totTrend=rnd(-.002,.004), aguaTrend=rnd(-.004,.001);
+  const phase=Math.floor(R()*12);                    // fase estacional del artículo
+  const seasonal=a.share<6;                          // artículos medianos/chicos van por temporadas
+  // mezcla base de tonos del artículo (rota con la temporada)
+  const mixBase=TONOS.map(()=>.1+R());
+  const mixPhase=Math.floor(R()*12);
+  for(let mi=0;mi<NM;mi++){
+    const m=MONTHS[mi].m;
+    const cycle=Math.sin(2*Math.PI*(m-phase)/12);
+    if(seasonal && cycle < (a.share<3?-.1:-.45)) continue;     // fuera de temporada: no se produce
+    if(a.id==="A09"&&mi<3) continue;                            // artículo nuevo desde abr-25
+    const seas=1+.22*cycle+.09*nrm()+(caos?.3*nrm():0);
+    let kg=PLANT_KG*(a.share/totShare)*Math.max(.15,seas)*(1+.12*nrm());
+    if(caos && R()<.15) kg*=rnd(.2,.5);                         // colapsos de volumen
+    if(caos && R()<.1)  kg*=rnd(1.6,2.3);                       // picos de volumen
+    kg=Math.max(0,Math.round(kg/10)*10);
+    if(kg<a.kgP*.6)continue;
+    let balp=a.balp + balpTrend*mi + .03*nrm();
+    if(R()<(caos?.28:.07)) balp-=rnd(.05,caos?.22:.16);
+    balp=Math.min(.995,Math.max(.55,balp));
+    const insalvBase=Math.min(.35,Math.max(.03,rnd(.05,.2)+(balp<.8?.08:0)));
+    const costoMes=costSteps[mi];
+    const curvaMes=a.curva*(1+curvaTrend*mi);
+    const totMes=a.tot*(1+totTrend*mi);
+    const aguaMes=a.agua*(1+aguaTrend*mi);
+    let lavMes=null;
+    if(a.lav==="no") lavMes=0;
+    else if(a.lav==="si") lavMes=100;
+    else if(a.lav==="parc") lavMes=Math.max(0,Math.min(100,28+9*nrm()));
+    else if(a.lav==="fase") lavMes= mi<8 ? 100 : Math.max(0,20+6*nrm());
+    // mezcla de tonos del mes (rota estacionalmente; algunos tonos desaparecen por meses)
+    let mix=TONOS.map((t,ti)=>{
+      let w=mixBase[ti]*(1+.5*Math.sin(2*Math.PI*(m-mixPhase+ti*3)/12))+.25*nrm();
+      return Math.max(0,w);
+    });
+    const mixSum=mix.reduce((s,w)=>s+w,0)||1;
+    mix=mix.map(w=>w/mixSum);
+    const dim=daysIn(MONTHS[mi].y,MONTHS[mi].m);
+    TONOS.forEach((tono,ti)=>{
+      const kgT=kg*mix[ti];
+      if(kgT<a.kgP*.35)return;                                  // tono no producido este mes
+      const nP=Math.max(1,Math.round(kgT/a.kgP));
+      let balpT=Math.min(.995,Math.max(.5,balp+tono.balpAdj+.012*nrm()));
+      if(caos&&tono.k==="negro"&&R()<.25)balpT-=rnd(.05,.15);   // el negro se descontrola en los caóticos
+      const nMALP=Math.min(nP,Math.round(nP*(1-balpT)));
+      // pesos de defectos (el blanco sesga a contaminación/manchas; el negro a tono/solidez)
+      let ws=Object.entries(a.defs).map(([d,w])=>{
+        let f=1+.55*nrm();
+        if(tono.k==="blanco"&&(d==="Contaminación"||d==="Manchas"))f*=1.9;
+        if(tono.k==="negro"&&(d==="Tono"||d==="Solidez"))f*=1.6;
+        return [d,Math.max(.02,w*f)];
+      });
+      const tw=ws.reduce((s,x)=>s+x[1],0);
+      const flags=Array(nP).fill(false); let placed=0;
+      while(placed<nMALP){const k=Math.floor(R()*nP); if(!flags[k]){flags[k]=true;placed++}}
+      for(let p=0;p<nP;p++){
+        const pk=Math.max(60,Math.round((kgT/nP)*(1+.12*nrm())/5)*5);
+        const day=1+Math.floor(R()*dim);
+        const malp=flags[p];
+        let def=null,repro=0,desc=0;
+        if(malp){
+          let r=R()*tw,acc=0;
+          for(const[dn,w]of ws){acc+=w;if(r<=acc){def=dn;break}}
+          if(!def)def=ws[0][0];
+          repro=Math.max(1,rnd(1.2,2.6)+(balpT<.85?.5:0)+(caos?.6*R():0)+.3*nrm());
+          desc=Math.round(pk*Math.min(.6,Math.max(0,insalvBase*(1+.5*nrm()))));
+        }
+        PARTIDAS.push({id:"P"+String(PID++).padStart(5,"0"),a:a.id,t:tono.k,mi,
+          d:iso(D(MONTHS[mi].y,MONTHS[mi].m,day)),
+          kg:pk,malp,def,repro,desc,
+          costoKg:costoMes*tono.cost*(1+(caos?.05:.02)*nrm()),
+          curva:curvaMes*tono.curva*(1+(caos?.09:.04)*nrm()),
+          tot:totMes*tono.tot*(1+(caos?.11:.05)*nrm()),
+          agua:aguaMes*tono.agua*(1+.04*nrm()),
+          lavKg: lavMes===null?0:Math.round(pk*Math.min(100,Math.max(0,lavMes*(1+.15*nrm())))/100)});
+      }
+    });
+  }
+});
+const MIDX=Array.from({length:NM},()=>[]);
+PARTIDAS.forEach(p=>MIDX[p.mi].push(p));
+
+/* ---------- Agregación sobre un rango de fechas ----------
+   sel={a,b} inclusive; artFilter opcional; tono opcional
+   (si se omite, usa el filtro global state.tono).            */
+function partidasIn(sel,artFilter,tono){
+  const tf= tono!==undefined ? tono : (typeof state!=="undefined"?state.tono:"all");
+  const m1=Math.max(0,monthIdx(sel.a)), m2=Math.min(NM-1,monthIdx(sel.b));
+  if(m1>NM-1||m2<0)return [];
+  const out=[];
+  for(let mi=m1;mi<=m2;mi++){
+    for(const p of MIDX[mi]){
+      if(artFilter&&p.a!==artFilter)continue;
+      if(tf&&tf!=="all"&&p.t!==tf)continue;
+      if(p.d<sel.a||p.d>sel.b)continue;
+      out.push(p);
+    }
+  }
+  return out;
+}
+function agg(sel,artFilter,tono){
+  const ps=partidasIn(sel,artFilter,tono);
+  const days=dayDiff(parseD(sel.a),parseD(sel.b))+1;
+  if(!ps.length)return {kg:0,days,ps};
+  let kg=0,balpKg=0,malpKg=0,descKg=0,partidas=0,partMALP=0,kgProceso=0,gasto=0,sobre=0,
+      minT=0,minTot=0,aguaTot=0,lavKg=0,reproSum=0,curvaSum=0,totSum=0,costoB=0;
+  for(const p of ps){
+    kg+=p.kg; partidas++;
+    if(p.malp){malpKg+=p.kg;partMALP++;reproSum+=p.repro;descKg+=p.desc}else balpKg+=p.kg;
+    const rep=p.malp?p.repro:0;
+    kgProceso+=p.kg+p.kg*rep;
+    gasto+=p.costoKg*(p.kg+p.kg*rep*.6);
+    sobre+=p.costoKg*p.kg*rep*.6;
+    minT+=(1+rep)*p.curva; minTot+=(1+rep)*p.tot;
+    aguaTot+=p.agua*(p.kg+p.kg*rep);
+    lavKg+=p.lavKg; curvaSum+=p.curva; totSum+=p.tot; costoB+=p.costoKg*p.kg;
+  }
+  const kgPrimera=kg-descKg;
+  return {kg,kgPrimera,balpKg,malpKg,descKg,partidas,partMALP,days,ps,
+    balpPct:100*balpKg/kg,
+    mermaPct:100*descKg/kg,
+    indice:kgProceso/kgPrimera,
+    reproProm:partMALP?reproSum/partMALP:0,
+    costoKg:gasto/kgPrimera,
+    costoBase:costoB/kg,
+    sobrecosto:sobre,
+    aguaKg:aguaTot/kgPrimera,
+    tTeñidoKg:minT/kgPrimera,
+    tTotKg:minTot/kgPrimera,
+    curvaProm:curvaSum/partidas,
+    totProm:totSum/partidas,
+    lavPct:100*lavKg/kg,
+    kgDia:kg/days,kgPrimeraDia:kgPrimera/days};
+}
+/* agregado de mes calendario completo, con caché por (mes, artículo, tono global) */
+const _mCache={};
+function aggMonth(mi,artFilter){
+  const k=mi+"|"+(artFilter||"")+"|"+(typeof state!=="undefined"?state.tono:"all");
+  if(!(k in _mCache))_mCache[k]=agg({a:MONTHS[mi].a,b:MONTHS[mi].b},artFilter);
+  return _mCache[k];
+}
+
+/* ---------- Rangos de comparación ---------- */
+function cmpSel(sel,mode,custom){
+  const a=parseD(sel.a),b=parseD(sel.b);
+  const len=dayDiff(a,b)+1;
+  let r=null;
+  if(mode==="prev") r={a:addDays(a,-len),b:addDays(a,-1)};
+  else if(mode==="yoy") r={a:D(a.getUTCFullYear()-1,a.getUTCMonth(),a.getUTCDate()),b:D(b.getUTCFullYear()-1,b.getUTCMonth(),b.getUTCDate())};
+  else if(mode==="avg6") r={a:addMonths(a,-6),b:addDays(a,-1)};
+  else if(mode==="avg12") r={a:addMonths(a,-12),b:addDays(a,-1)};
+  else if(mode==="custom") return custom;
+  if(!r)return null;
+  const o={a:iso(r.a),b:iso(r.b)};
+  if(o.a<DATA_MIN)return null;
+  return o;
+}
+function monthsInSel(sel){
+  const out=[];
+  const m1=Math.max(0,monthIdx(sel.a)),m2=Math.min(NM-1,monthIdx(sel.b));
+  for(let mi=m1;mi<=m2;mi++){
+    const a=sel.a>MONTHS[mi].a?sel.a:MONTHS[mi].a;
+    const b=sel.b<MONTHS[mi].b?sel.b:MONTHS[mi].b;
+    out.push({mi,a,b,lbl:MONTHS[mi].lbl,partial:a!==MONTHS[mi].a||b!==MONTHS[mi].b});
+  }
+  return out;
+}
+
+/* ---------- formato ---------- */
+const fmt={
+  kg:(v)=>Math.round(v).toLocaleString("es-PE"),
+  pct:(v,d=1)=>v===null||v===undefined||isNaN(v)?"N/A":v.toLocaleString("es-PE",{minimumFractionDigits:d,maximumFractionDigits:d})+"%",
+  n:(v,d=2)=>v.toLocaleString("es-PE",{minimumFractionDigits:d,maximumFractionDigits:d}),
+  usd:(v)=>"$"+Math.round(v).toLocaleString("es-PE"),
+  min:(v)=>Math.round(v).toLocaleString("es-PE")+" min"
+};
+
+/* ================================================================
+   ESTADO + CONTROLES
+================================================================ */
+const state={view:"resumen",
+  sel:{a:"2026-02-01",b:"2026-07-31"},
+  cmp:"prev",
+  cmpCustom:{a:"2025-08-01",b:"2026-01-31"},
+  tono:"all",
+  detTono:"all",
+  art:null};
+const $=(id)=>document.getElementById(id);
+const el=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e};
+const esc=(s)=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const selLbl=(sel)=>sel?fmtD(sel.a)+" – "+fmtD(sel.b):"—";
+
+/* ================================================================
+   SELECTOR DE RANGO DE FECHAS (popover con calendario doble)
+================================================================ */
+function makePresets(){
+  const maxD=parseD(DATA_MAX);
+  return [
+    {k:"30d", lbl:"Últimos 30 días", a:iso(addDays(maxD,-29)), b:DATA_MAX},
+    {k:"90d", lbl:"Últimos 90 días", a:iso(addDays(maxD,-89)), b:DATA_MAX},
+    {k:"6m",  lbl:"Últimos 6 meses", a:iso(addDays(addMonths(maxD,-6),1)), b:DATA_MAX},
+    {k:"12m", lbl:"Últimos 12 meses",a:iso(addDays(addMonths(maxD,-12),1)),b:DATA_MAX},
+    {k:"tm",  lbl:"Este mes",        a:"2026-07-01", b:DATA_MAX},
+    {k:"pm",  lbl:"Mes anterior",    a:"2026-06-01", b:"2026-06-30"},
+    {k:"ty",  lbl:"Este año",        a:"2026-01-01", b:DATA_MAX},
+    {k:"py",  lbl:"Año pasado",      a:"2025-01-01", b:"2025-12-31"}
+  ];
+}
+function datePicker(pop,btn,txt,getSel,onApply){
+  let tmpA=null,tmpB=null,viewMi=0,open=false;
+  const presets=makePresets();
+  function clampView(v){return Math.max(0,Math.min(NM-2,v))}
+  function renderCal(mi){
+    const mo=MONTHS[mi];
+    const first=D(mo.y,mo.m,1);
+    const off=(first.getUTCDay()+6)%7;
+    const dim=daysIn(mo.y,mo.m);
+    let h='<div class="cal"><div class="cal-head">';
+    h+= '<button data-nav="-1" '+(clampView(viewMi-1)===viewMi?"disabled":"")+' aria-label="Mes anterior">‹</button>';
+    h+='<span class="mname">'+MESL[mo.m][0].toUpperCase()+MESL[mo.m].slice(1)+' '+mo.y+'</span>';
+    h+= '<button data-nav="1" '+(clampView(viewMi+1)===viewMi?"disabled":"")+' aria-label="Mes siguiente">›</button>';
+    h+='</div><div class="dow">'+DOW.map(d=>"<span>"+d+"</span>").join("")+'</div><div class="days">';
+    for(let i=0;i<off;i++)h+='<button disabled></button>';
+    for(let d=1;d<=dim;d++){
+      const ds=iso(D(mo.y,mo.m,d));
+      const dis= ds<DATA_MIN||ds>DATA_MAX;
+      let cls="";
+      if(tmpA&&ds===tmpA)cls+=" a";
+      if(tmpB&&ds===tmpB)cls+=" b";
+      if(tmpA&&tmpB&&ds>tmpA&&ds<tmpB)cls+=" inr";
+      h+='<button data-d="'+ds+'"'+(dis?" disabled":"")+(cls?' class="'+cls.trim()+'"':"")+'>'+d+'</button>';
+    }
+    h+='</div></div>';
+    return h;
+  }
+  function render(){
+    let h='<div class="pop-body"><div class="presets">';
+    presets.forEach(p=>{
+      const on=tmpA===p.a&&tmpB===p.b;
+      h+='<button data-p="'+p.k+'" class="'+(on?"on":"")+'"><span class="ck">'+(on?"✓":"")+'</span>'+p.lbl+'</button>';
+    });
+    h+='</div><div class="cals">'+renderCal(viewMi)+renderCal(viewMi+1)+'</div></div>';
+    h+='<div class="pop-foot"><span class="sel-txt">'+
+      (tmpA?(tmpB?fmtD(tmpA)+" – "+fmtD(tmpB):fmtD(tmpA)+" – <i>elige fin</i>"):"Elige la fecha de inicio")+
+      '</span><span class="acts"><button class="cancel">Cancelar</button>'+
+      '<button class="apply"'+(tmpA&&tmpB?"":" disabled")+'>Aplicar</button></span></div>';
+    pop.innerHTML=h;
+    pop.querySelectorAll("[data-p]").forEach(b=>b.addEventListener("click",()=>{
+      const p=presets.find(x=>x.k===b.dataset.p);
+      tmpA=p.a;tmpB=p.b;viewMi=clampView(monthIdx(p.b)-1);render();
+    }));
+    pop.querySelectorAll("[data-nav]").forEach(b=>b.addEventListener("click",()=>{
+      viewMi=clampView(viewMi+ +b.dataset.nav);render();
+    }));
+    pop.querySelectorAll("[data-d]").forEach(b=>b.addEventListener("click",()=>{
+      const ds=b.dataset.d;
+      if(!tmpA||(tmpA&&tmpB)){tmpA=ds;tmpB=null}
+      else if(ds<tmpA){tmpA=ds}
+      else if(ds===tmpA){tmpB=ds}
+      else tmpB=ds;
+      render();
+    }));
+    pop.querySelector(".cancel").addEventListener("click",close);
+    pop.querySelector(".apply").addEventListener("click",()=>{
+      if(tmpA&&tmpB){onApply({a:tmpA,b:tmpB});close()}
+    });
+  }
+  function openPop(){
+    const cur=getSel();
+    tmpA=cur.a;tmpB=cur.b;
+    viewMi=clampView(monthIdx(cur.b)-1);
+    pop.classList.add("open");open=true;render();
+  }
+  function close(){pop.classList.remove("open");open=false}
+  btn.addEventListener("click",e=>{e.stopPropagation();open?close():openPop()});
+  pop.addEventListener("click",e=>e.stopPropagation());
+  document.addEventListener("click",()=>{if(open)close()});
+  return {close};
+}
+
+function initFilters(){
+  const syncTxt=()=>{
+    $("rangeTxt").textContent=selLbl(state.sel);
+    $("cmpTxt").textContent=selLbl(state.cmpCustom);
+  };
+  datePicker($("popRange"),$("rangeBtn"),$("rangeTxt"),()=>state.sel,(s)=>{state.sel=s;syncTxt();render()});
+  datePicker($("popCmp"),$("cmpBtn"),$("cmpTxt"),()=>state.cmpCustom,(s)=>{state.cmpCustom=s;syncTxt();render()});
+  $("selCmp").addEventListener("change",()=>{
+    state.cmp=$("selCmp").value;
+    $("customCmp").style.display=state.cmp==="custom"?"":"none";
+    render();
+  });
+  $("selTono").addEventListener("change",()=>{state.tono=$("selTono").value;render()});
+  document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{
+    state.view=b.dataset.v;
+    document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
+    render();
+  }));
+  $("stamp").textContent="Actualizado: 07 ago 2026 · Moneda: USD";
+  syncTxt();
+}
+const CMPLBL={prev:"periodo anterior",yoy:"mismo periodo del año anterior",avg6:"promedio de los últimos 6 meses",avg12:"promedio de los últimos 12 meses",custom:"periodo personalizado"};
+
+/* ================================================================
+   COMPONENTES
+================================================================ */
+function deltaChip(cur,base,dir){
+  if(base===null||base===undefined||isNaN(base)||base===0||cur===null||cur===undefined||isNaN(cur))
+    return '<span class="delta flat">sin base</span>';
+  const d=(cur-base)/Math.abs(base);
+  if(Math.abs(d)<.0005) return '<span class="delta flat">0,0%</span>';
+  const good= dir===0 ? null : (d>0?dir>0:dir<0);
+  const cls= dir===0 ? "flat" : (good?"good":"bad");
+  const arrow=d>0?"▲":"▼";
+  return '<span class="delta '+cls+'">'+arrow+" "+fmt.n(Math.abs(d)*100,1)+"%</span>";
+}
+function tile(lbl,valHtml,cur,base,dir,baseTxt){
+  return '<div class="tile"><div class="lbl">'+lbl+'</div><div class="val">'+valHtml+'</div>'+
+    deltaChip(cur,base,dir)+
+    '<div class="cmpv" style="margin-top:5px">'+(baseTxt||"")+'</div></div>';
+}
+/* ---------- Ordenamiento genérico de tablas ----------
+   Toda tabla (salvo .nosort) se ordena haciendo clic en el
+   encabezado de cualquier columna; segundo clic invierte.   */
+function cellSortVal(td){
+  if(!td)return null;
+  const t=td.textContent.trim();
+  if(!t||t==="N/A"||t==="—")return null;
+  const s=t.replace(/−/g,"-").replace(/,/g,"");
+  const m=s.match(/-?\d+(\.\d+)?/);
+  if(m&&/^[\s\-+$#]*\d|^-?\./.test(s))return parseFloat(m[0]);
+  if(m&&!/[a-záéíóúñ]/i.test(s))return parseFloat(m[0]);
+  return t.toLowerCase();
+}
+function makeSortable(root){
+  root.querySelectorAll("table:not(.nosort)").forEach(tb=>{
+    const ths=tb.querySelectorAll("thead th");
+    ths.forEach(th=>{
+      th.classList.add("sortable");
+      th.setAttribute("title","Clic para ordenar");
+      th.addEventListener("click",()=>{
+        const idx=th.cellIndex;
+        const body=tb.tBodies[0]; if(!body)return;
+        const all=[...body.rows];
+        const rows=all.filter(r=>!r.classList.contains("total"));
+        const fixed=all.filter(r=>r.classList.contains("total"));
+        const dir= tb.dataset.sc===String(idx) ? -(+tb.dataset.sd) : -1;
+        tb.dataset.sc=idx; tb.dataset.sd=dir;
+        rows.sort((r1,r2)=>{
+          const v1=cellSortVal(r1.cells[idx]),v2=cellSortVal(r2.cells[idx]);
+          if(v1===null&&v2===null)return 0;
+          if(v1===null)return 1; if(v2===null)return -1;
+          if(typeof v1==="string"||typeof v2==="string")
+            return dir*String(v1).localeCompare(String(v2),"es");
+          return dir*(v1-v2);
+        });
+        rows.forEach(r=>body.appendChild(r));
+        fixed.forEach(r=>body.appendChild(r));
+        ths.forEach(t2=>{const s=t2.querySelector(".sort-ind");if(s)s.remove()});
+        const ind=document.createElement("span");
+        ind.className="sort-ind";ind.textContent=dir>0?" ▲":" ▼";
+        th.appendChild(ind);
+      });
+    });
+  });
+}
+
+const tip=$("tooltip");
+function bindTips(root){
+  root.querySelectorAll("[data-tip]").forEach(n=>{
+    n.addEventListener("pointermove",e=>{tip.style.display="block";tip.innerHTML=n.dataset.tip;
+      const w=tip.offsetWidth;let x=e.clientX+14;if(x+w>window.innerWidth-8)x=e.clientX-w-14;
+      tip.style.left=x+"px";tip.style.top=(e.clientY+12)+"px"});
+    n.addEventListener("pointerleave",()=>tip.style.display="none");
+  });
+}
+
+/* gráficos (serie mensual completa; rango resaltado) */
+function chartBars(series,opts){
+  const W=560,H=210,pl=48,pr=10,pt=14,pb=30,cw=W-pl-pr,ch=H-pt-pb;
+  const max=Math.max(...series.map(s=>s.v))*1.12||1;
+  const n=series.length, bw=Math.min(20,cw/n*.66), step=cw/n;
+  let g='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+esc(opts.title)+'">';
+  const ticks=4;
+  for(let i=0;i<=ticks;i++){const y=pt+ch-ch*i/ticks;const v=max*i/ticks;
+    g+='<line x1="'+pl+'" y1="'+y+'" x2="'+(W-pr)+'" y2="'+y+'" stroke="#e1e0d9" stroke-width="1"/>';
+    g+='<text x="'+(pl-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#898781">'+opts.fmtAxis(v)+'</text>';}
+  series.forEach((s,i)=>{
+    const x=pl+step*i+(step-bw)/2, h=ch*s.v/max, y=pt+ch-h;
+    const fill=s.inRange?"#2a78d6":"#cfd8e3";
+    g+='<g class="barhit" data-tip="'+esc(s.tip)+'"><rect x="'+(pl+step*i)+'" y="'+pt+'" width="'+step+'" height="'+ch+'" fill="transparent"/>'+
+       '<rect class="bar" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="3" fill="'+fill+'"/></g>';
+    if(i%Math.ceil(n/10)===0||i===n-1)
+      g+='<text x="'+(pl+step*i+step/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#898781">'+series[i].lbl+'</text>';
+  });
+  g+='<line x1="'+pl+'" y1="'+(pt+ch)+'" x2="'+(W-pr)+'" y2="'+(pt+ch)+'" stroke="#c3c2b7" stroke-width="1"/></svg>';
+  return g;
+}
+function chartLine(series,opts){
+  const W=560,H=210,pl=44,pr=14,pt=14,pb=30,cw=W-pl-pr,ch=H-pt-pb;
+  const vals=series.filter(s=>s.v!==null).map(s=>s.v);
+  const lo=Math.min(...vals,opts.ref!==undefined?opts.ref:Infinity), hi=Math.max(...vals,opts.ref!==undefined?opts.ref:-Infinity);
+  const min=Math.max(0,lo-(hi-lo)*.25-1), max=hi+(hi-lo)*.15+1;
+  const n=series.length, step=cw/(n-1||1);
+  const X=i=>pl+step*i, Y=v=>pt+ch-ch*(v-min)/(max-min);
+  let g='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+esc(opts.title)+'">';
+  const ticks=4;
+  for(let i=0;i<=ticks;i++){const v=min+(max-min)*i/ticks,y=Y(v);
+    g+='<line x1="'+pl+'" y1="'+y+'" x2="'+(W-pr)+'" y2="'+y+'" stroke="#e1e0d9"/>';
+    g+='<text x="'+(pl-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#898781">'+opts.fmtAxis(v)+'</text>';}
+  if(opts.ref!==undefined){const y=Y(opts.ref);
+    g+='<line x1="'+pl+'" y1="'+y+'" x2="'+(W-pr)+'" y2="'+y+'" stroke="#898781" stroke-width="1"/>';
+    g+='<text x="'+(W-pr)+'" y="'+(y-5)+'" text-anchor="end" font-size="10" fill="#898781">'+opts.refLbl+'</text>';}
+  let path="";
+  series.forEach((s,i)=>{if(s.v===null)return;path+=(path?" L":"M")+X(i).toFixed(1)+" "+Y(s.v).toFixed(1)});
+  g+='<path d="'+path+'" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  series.forEach((s,i)=>{
+    if(s.v===null)return;
+    const r=s.inRange?4.5:3, fill=s.inRange?"#2a78d6":"#cfd8e3";
+    g+='<g data-tip="'+esc(s.tip)+'"><rect x="'+(X(i)-step/2)+'" y="'+pt+'" width="'+step+'" height="'+ch+'" fill="transparent"/>'+
+      '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(s.v).toFixed(1)+'" r="'+r+'" fill="'+fill+'" stroke="#fcfcfb" stroke-width="2"/></g>';
+    if(i%Math.ceil(n/10)===0||i===n-1)
+      g+='<text x="'+X(i)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#898781">'+s.lbl+'</text>';
+  });
+  g+='<line x1="'+pl+'" y1="'+(pt+ch)+'" x2="'+(W-pr)+'" y2="'+(pt+ch)+'" stroke="#c3c2b7"/></svg>';
+  return g;
+}
+
+/* Variación: último mes calendario del rango con datos vs prom. 6 meses previos con datos */
+function var6(artId,months,prop){
+  let last=null;
+  for(let i=months.length-1;i>=0;i--){
+    const m=aggMonth(months[i].mi,artId);
+    if(m.kg>0&&m[prop]!==null&&!isNaN(m[prop])){last={mi:months[i].mi,v:m[prop]};break}
+  }
+  if(!last)return null;
+  const prev=[];
+  for(let mi=last.mi-1;mi>=0&&prev.length<6;mi--){
+    const m=aggMonth(mi,artId);
+    if(m.kg>0&&m[prop]!==null&&!isNaN(m[prop]))prev.push(m[prop]);
+  }
+  if(prev.length<2)return null;
+  const avg=prev.reduce((s,v)=>s+v,0)/prev.length;
+  if(avg===0)return null;
+  return {d:(last.v-avg)/avg,actual:last.v,avg};
+}
+function varCell(v,dir,fmtFn){
+  if(v===null)return '<td class="dim">—</td>';
+  const good= dir===0?null:(v.d>0?dir>0:dir<0);
+  const cls= Math.abs(v.d)<.005 ? "flat" : (dir===0?"flat":(good?"good":"bad"));
+  const s=(v.d>0?"+":"−")+fmt.n(Math.abs(v.d)*100,1)+"%";
+  return '<td><span class="cell-var '+cls+'" data-tip="Último mes: <b>'+esc(fmtFn(v.actual))+'</b><br>Prom. 6 meses previos: '+esc(fmtFn(v.avg))+'">'+s+'</span></td>';
+}
+
+/* ================================================================
+   VISTAS
+================================================================ */
+const hash=(s)=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h};
+const artsByProd=(sel)=>ARTS.map(a=>({a,s:agg(sel,a.id)})).filter(x=>x.s.kg>0).sort((x,y)=>y.s.kg-x.s.kg);
+function semBalp(v){return v>=95?"sem-g":v>=90?"sem-y":v>=85?"sem-o":"sem-r"}
+const selOverlapsMonth=(sel,mi)=>!(sel.b<MONTHS[mi].a||sel.a>MONTHS[mi].b);
+const partialNote=(months)=>months.some(m=>m.partial)?'<p class="note" style="margin-top:8px">* mes parcial: solo incluye los días del mes dentro del periodo seleccionado.</p>':"";
+const mLbl=(m)=>m.lbl+(m.partial?"*":"");
+const tonoLbl=()=>state.tono==="all"?"":' · Tono: '+TONOBY[state.tono].lbl;
+
+function viewResumen(cur,base,sel){
+  const H=el("div");
+  if(!cur.kg){H.innerHTML='<div class="card"><p class="note">Sin producción en el periodo/tono seleccionado.</p></div>';return H}
+  const mBase=base&&base.kg?base:null;
+  const bTxt=(v)=>mBase?("vs "+v):"—";
+  let t='<div class="tiles">';
+  t+=tile("Producción de primera",fmt.n(cur.kgPrimera/1000,1)+'<small>t</small>',cur.kgPrimeraDia,mBase?mBase.kgPrimeraDia:null,1,mBase?bTxt(fmt.n(mBase.kgPrimeraDia*cur.days/1000,1)+" t (a ritmo diario)"):"—");
+  t+=tile("% BALP <span class='note'>(bien a la primera)</span>",fmt.n(cur.balpPct,1)+'<small>%</small>',cur.balpPct,mBase?mBase.balpPct:null,1,mBase?bTxt(fmt.pct(mBase.balpPct)):"—");
+  t+=tile("Índice de reprocesos <span class='note'>(kg procesados / kg producidos · obj. 1,00)</span>",fmt.n(cur.indice,2)+'<small>×</small>',cur.indice,mBase?mBase.indice:null,-1,mBase?bTxt(fmt.n(mBase.indice,2)+"×"):"—");
+  t+=tile("Sobrecosto por reprocesos",fmt.usd(cur.sobrecosto),cur.sobrecosto/cur.days,mBase?mBase.sobrecosto/mBase.days:null,-1,mBase?bTxt(fmt.usd(mBase.sobrecosto/mBase.days*cur.days)+" (a ritmo diario)"):"—");
+  t+=tile("Costo de receta",fmt.n(cur.costoKg,2)+'<small>$/kg</small>',cur.costoKg,mBase?mBase.costoKg:null,-1,mBase?bTxt("$"+fmt.n(mBase.costoKg,2)+"/kg"):"—");
+  t+=tile("Consumo de agua",fmt.n(cur.aguaKg,0)+'<small>L/kg</small>',cur.aguaKg,mBase?mBase.aguaKg:null,-1,mBase?bTxt(fmt.n(mBase.aguaKg,0)+" L/kg"):"—");
+  t+=tile("Tiempo de teñido",fmt.n(cur.tTeñidoKg,2)+'<small>min/kg</small>',cur.tTeñidoKg,mBase?mBase.tTeñidoKg:null,-1,mBase?bTxt(fmt.n(mBase.tTeñidoKg,2)+" min/kg"):"—");
+  t+=tile("Tiempo total en tintorería",fmt.n(cur.tTotKg,2)+'<small>min/kg</small>',cur.tTotKg,mBase?mBase.tTotKg:null,-1,mBase?bTxt(fmt.n(mBase.tTotKg,2)+" min/kg"):"—");
+  t+=tile("Reprocesos hasta resolver <span class='note'>(prom. por partida MALP)</span>",fmt.n(cur.reproProm,1)+'<small>reproc.</small>',cur.reproProm,mBase?mBase.reproProm:null,-1,mBase?bTxt(fmt.n(mBase.reproProm,1)+" reprocesos"):"—");
+  t+=tile("Tela defectuosa sin solución <span class='note'>(merma)</span>",fmt.n(cur.descKg/1000,1)+'<small>t</small>',cur.mermaPct,mBase?mBase.mermaPct:null,-1,
+    fmt.n(cur.mermaPct,1)+"% de lo procesado · "+fmt.n(100*cur.descKg/(cur.malpKg||1),0)+"% del MALP"+(mBase?" · vs "+fmt.n(mBase.mermaPct,1)+"%":""));
+  t+=tile("Tela lavada",fmt.n(cur.lavPct,1)+'<small>%</small>',cur.lavPct,mBase?mBase.lavPct:null,0,mBase?bTxt(fmt.pct(mBase.lavPct)):"—");
+  t+=tile("Partidas procesadas <span class='note'>("+fmt.n(100*cur.partMALP/cur.partidas,1)+"% MALP)</span>",fmt.kg(cur.partidas),cur.partidas/cur.days,mBase?mBase.partidas/mBase.days:null,0,mBase?bTxt(fmt.n(mBase.partidas/mBase.days,1)+" partidas/día"):"—");
+  t+='</div>';
+  H.innerHTML=t;
+
+  const g=el("div","grid2");
+  const bars=MONTHS.map((mo,i)=>{
+    const a=aggMonth(i);
+    return {v:a.kg?a.kgPrimera/1000:0,lbl:mo.lbl,inRange:selOverlapsMonth(sel,i),
+      tip:"<b>"+mo.lbl+tonoLbl()+"</b><br>Primera: <b>"+fmt.n((a.kgPrimera||0)/1000,1)+" t</b><br>Procesado: "+fmt.n((a.kg||0)/1000,1)+" t<br>Descartes: "+fmt.kg(a.descKg||0)+" kg"};
+  });
+  const c1=el("div","card");
+  c1.innerHTML='<h2>Producción de tela de primera por mes'+tonoLbl()+'</h2><p class="desc">Toneladas · los meses del periodo seleccionado se muestran en azul</p>'+
+    chartBars(bars,{title:"Producción mensual",fmtAxis:v=>fmt.n(v,0)});
+  const line=MONTHS.map((mo,i)=>{
+    const a=aggMonth(i);
+    return {v:a.kg?a.balpPct:null,lbl:mo.lbl,inRange:selOverlapsMonth(sel,i),
+      tip:"<b>"+mo.lbl+tonoLbl()+"</b><br>% BALP: <b>"+fmt.pct(a.kg?a.balpPct:null)+"</b><br>MALP: "+fmt.kg(a.malpKg||0)+" kg"};
+  });
+  const c2=el("div","card");
+  c2.innerHTML='<h2>% BALP mensual (planta)'+tonoLbl()+'</h2><p class="desc">Promedio ponderado por kg procesados · objetivo ≥ 95%</p>'+
+    chartLine(line,{title:"BALP mensual",fmtAxis:v=>fmt.n(v,0)+"%",ref:95,refLbl:"obj. 95%"});
+  g.appendChild(c1);g.appendChild(c2);
+  H.appendChild(g);
+
+  const c3=el("div","card");
+  let tb='<h2>Los 8 artículos de mayor volumen del periodo</h2><p class="desc">Resumen ejecutivo · el detalle completo está en las pestañas siguientes</p><div class="tbl-scroll"><table><thead><tr>'+
+    '<th class="l">Artículo</th><th>Kg procesados</th><th>Partidas</th><th>% BALP</th><th>Índice reproc.</th><th>Costo receta $/kg</th><th>Sobrecosto</th></tr></thead><tbody>';
+  artsByProd(sel).slice(0,8).forEach(({a,s})=>{
+    tb+='<tr><td class="l">'+esc(a.name)+'</td><td>'+fmt.kg(s.kg)+'</td><td>'+s.partidas+'</td>'+
+      '<td class="'+semBalp(s.balpPct)+'">'+fmt.pct(s.balpPct)+'</td>'+
+      '<td>'+fmt.n(s.indice,2)+'×</td><td>'+fmt.n(s.costoKg,2)+'</td><td>'+fmt.usd(s.sobrecosto)+'</td></tr>';
+  });
+  tb+='</tbody></table></div>';
+  c3.innerHTML=tb;
+  H.appendChild(c3);
+  return H;
+}
+
+/* ---------- Pareto ---------- */
+function viewPareto(sel,months){
+  const H=el("div","card");
+  const list=artsByProd(sel);
+  if(!list.length){H.innerHTML='<p class="note">Sin producción en el periodo/tono seleccionado.</p>';return H}
+  const tot=list.reduce((s,x)=>s+x.s.kg,0);
+  const showMonths=months.length<=13;
+  let cum=0, cut=false;
+  let h='<h2>Pareto de artículos — '+selLbl(sel)+tonoLbl()+'</h2>'+
+    '<p class="desc">Ordenados por participación en los kg procesados del periodo. La línea marca el grupo que acumula ~80% de la producción (foco de gestión).</p>'+
+    '<div class="tbl-scroll"><table><thead><tr><th class="l">#</th><th class="l">Artículo</th>';
+  if(showMonths)months.forEach(m=>h+='<th>'+mLbl(m)+'</th>');
+  h+='<th>Total kg</th><th>%</th><th>% acum.</th><th class="l" style="min-width:130px">Participación</th></tr></thead><tbody>';
+  list.forEach((x,i)=>{
+    const pct=100*x.s.kg/tot; cum+=pct;
+    const sep=(!cut&&cum>=80)?' style="border-bottom:2px solid #52514e"':'';
+    let r='<tr'+sep+'><td class="l dim">'+(i+1)+'</td><td class="l">'+esc(x.a.name)+'</td>';
+    if(showMonths)months.forEach(m=>{
+      const s=agg({a:m.a,b:m.b},x.a.id);
+      r+= s.kg? '<td>'+fmt.kg(s.kg)+'</td>' : '<td class="dim">—</td>';
+    });
+    r+='<td><b>'+fmt.kg(x.s.kg)+'</b></td><td>'+fmt.n(pct,1)+'%</td><td class="dim">'+fmt.n(cum,1)+'%</td>';
+    r+='<td class="l"><div style="background:var(--blue-100);border-radius:3px;height:12px;width:'+(100*pct/(100*list[0].s.kg/tot)).toFixed(1)+'%;min-width:2px"><div style="background:var(--blue);height:12px;border-radius:3px;width:100%"></div></div></td></tr>';
+    if(!cut&&cum>=80)cut=true;
+    h+=r;
+  });
+  h+='<tr class="total"><td class="l"></td><td class="l">Total planta</td>';
+  if(showMonths)months.forEach(m=>{const s=agg({a:m.a,b:m.b});h+='<td>'+fmt.kg(s.kg||0)+'</td>'});
+  h+='<td>'+fmt.kg(tot)+'</td><td>100%</td><td></td><td></td></tr>';
+  h+='</tbody></table></div>'+partialNote(months);
+  H.innerHTML=h;
+  return H;
+}
+
+/* ---------- BALP ---------- */
+function viewBalp(sel,months){
+  const H=el("div","card");
+  let list=artsByProd(sel).map(({a,s})=>{
+    const mv=months.map(m=>{const r=agg({a:m.a,b:m.b},a.id);return r.kg?{v:r.balpPct,r}:null});
+    return {a,s,mv};
+  });
+  if(!list.length){H.innerHTML='<p class="note">Sin producción en el periodo/tono seleccionado.</p>';return H}
+  let h='<h2>% Bien a la primera (BALP) por artículo y mes'+tonoLbl()+'</h2>'+
+    '<p class="desc">Promedio ponderado por kg procesados. Semáforo: ≥95% verde · 90–95% amarillo · 85–90% naranja · &lt;85% rojo. '+
+    'Clic en cualquier encabezado ordena la tabla; segundo clic invierte el orden.</p>'+
+    '<div class="tbl-scroll"><table><thead><tr><th class="l">Artículo</th>';
+  months.forEach((m,i)=>h+='<th>'+mLbl(m)+'</th>');
+  h+='<th>Prom. pond.</th></tr></thead><tbody>';
+  list.forEach(({a,s,mv})=>{
+    h+='<tr><td class="l">'+esc(a.name)+'</td>';
+    mv.forEach((c,i)=>{
+      if(!c){h+='<td class="dim">N/A</td>';return}
+      h+='<td class="'+semBalp(c.v)+'" data-tip="<b>'+esc(a.name)+'</b> · '+mLbl(months[i])+tonoLbl()+'<br>BALP: <b>'+fmt.pct(c.v)+'</b><br>Procesado: '+fmt.kg(c.r.kg)+' kg · MALP: '+fmt.kg(c.r.malpKg)+' kg<br>Partidas: '+c.r.partidas+'">'+fmt.n(c.v,1)+'</td>';
+    });
+    h+='<td class="'+semBalp(s.balpPct)+'"><b>'+fmt.n(s.balpPct,1)+'</b></td></tr>';
+  });
+  h+='<tr class="total"><td class="l">Total planta (pond.)</td>';
+  months.forEach(m=>{const a=agg({a:m.a,b:m.b});
+    h+= a.kg? '<td class="'+semBalp(a.balpPct)+'">'+fmt.n(a.balpPct,1)+'</td>':'<td class="dim">N/A</td>'});
+  const sT=agg(sel);
+  h+='<td class="'+semBalp(sT.balpPct)+'">'+fmt.n(sT.balpPct,1)+'</td></tr></tbody></table></div>';
+  h+='<div class="legend"><span class="k"><span class="sw" style="background:var(--sem-green)"></span>≥ 95%</span>'+
+     '<span class="k"><span class="sw" style="background:var(--sem-yellow)"></span>90 – 95%</span>'+
+     '<span class="k"><span class="sw" style="background:var(--sem-orange)"></span>85 – 90%</span>'+
+     '<span class="k"><span class="sw" style="background:var(--sem-red)"></span>&lt; 85%</span>'+
+     '<span class="k dim">N/A = sin producción</span></div>'+partialNote(months);
+  H.innerHTML=h;
+  return H;
+}
+
+/* ---------- Ranking de defectos + ranking de artículos ---------- */
+function viewDefectos(sel){
+  const H=el("div");
+  const cur=agg(sel);
+  if(!cur.kg){H.innerHTML='<div class="card"><p class="note">Sin producción en el periodo/tono seleccionado.</p></div>';return H}
+  const totKg=cur.kg;
+  const per={}, kgArt={}, artMalp={}, defType={};
+  cur.ps.forEach(p=>{
+    kgArt[p.a]=(kgArt[p.a]||0)+p.kg;
+    if(p.malp&&p.def){
+      if(!per[p.a+"|"+p.def])per[p.a+"|"+p.def]={kg:0,desc:0,reproSum:0,n:0};
+      const pp=per[p.a+"|"+p.def];
+      pp.kg+=p.kg;pp.desc+=p.desc;pp.reproSum+=p.repro;pp.n++;
+      if(!artMalp[p.a])artMalp[p.a]={kg:0,part:0,desc:0,reproSum:0,defs:{}};
+      artMalp[p.a].kg+=p.kg;artMalp[p.a].part++;artMalp[p.a].desc+=p.desc;artMalp[p.a].reproSum+=p.repro;
+      artMalp[p.a].defs[p.def]=(artMalp[p.a].defs[p.def]||0)+p.kg;
+      if(!defType[p.def])defType[p.def]={kg:0,part:0,desc:0,byArt:{}};
+      defType[p.def].kg+=p.kg;defType[p.def].part++;defType[p.def].desc+=p.desc;
+      defType[p.def].byArt[p.a]=(defType[p.def].byArt[p.a]||0)+p.kg;
+    }
+  });
+  /* 0) resumen: volumen de kg defectuosos por tipo de defecto */
+  const totMalp=cur.malpKg||1;
+  const types=Object.entries(defType).map(([d,v])=>{
+    const topA=Object.entries(v.byArt).sort((x,y)=>y[1]-x[1])[0];
+    return {d,kg:v.kg,part:v.part,desc:v.desc,topArt:ARTBY[topA[0]],topArtKg:topA[1],
+      pctMalp:100*v.kg/totMalp,pctProc:100*v.kg/totKg};
+  }).sort((x,y)=>y.kg-x.kg);
+  const c0=el("div","card");
+  let h0='<h2>Resumen: tela defectuosa por tipo de defecto — '+selLbl(sel)+tonoLbl()+'</h2>'+
+    '<p class="desc">Todos los kg MALP del periodo agrupados por tipo de defecto, de mayor a menor. Es el punto de partida: primero qué defecto pesa más; abajo, en qué artículo específico vive cada uno.</p>'+
+    '<div class="tbl-scroll"><table><thead><tr><th class="l">#</th><th class="l">Tipo de defecto</th>'+
+    '<th>Kg MALP</th><th>% del MALP total</th><th>% de kg procesados planta</th><th>Partidas MALP</th><th>Kg sin solución</th><th class="l">Artículo más afectado</th><th class="l" style="min-width:120px">Peso</th></tr></thead><tbody>';
+  types.forEach((t,i)=>{
+    h0+='<tr><td class="l dim">'+(i+1)+'</td><td class="l"><b>'+esc(t.d)+'</b></td>'+
+      '<td><b>'+fmt.kg(t.kg)+'</b></td><td>'+fmt.n(t.pctMalp,1)+'%</td><td>'+fmt.n(t.pctProc,2)+'%</td>'+
+      '<td>'+t.part+'</td><td>'+fmt.kg(t.desc)+'</td>'+
+      '<td class="l">'+esc(t.topArt.name)+' <span class="note">('+fmt.n(100*t.topArtKg/t.kg,0)+'%)</span></td>'+
+      '<td class="l"><div style="background:var(--blue-100);border-radius:3px;height:12px;width:'+(100*t.kg/types[0].kg).toFixed(1)+'%;min-width:2px"><div style="background:var(--blue);height:12px;border-radius:3px;width:100%"></div></div></td></tr>';
+  });
+  h0+='</tbody></table></div>';
+  c0.innerHTML=h0;
+  H.appendChild(c0);
+  /* 1) ranking artículo·defecto */
+  const items=Object.entries(per).map(([k,v])=>{
+    const [aid,d]=k.split("|");
+    return {a:ARTBY[aid],d,kg:v.kg,repro:v.n?v.reproSum/v.n:0,perd:v.kg?100*v.desc/v.kg:0,
+      pctProc:100*v.kg/totKg,pctArt:100*v.kg/kgArt[aid]};
+  }).sort((x,y)=>y.pctProc-x.pctProc);
+  const c1=el("div","card");
+  let h='<h2>Ranking de defectos principales — '+selLbl(sel)+tonoLbl()+'</h2>'+
+    '<p class="desc">Ordenado por impacto sobre la producción total (% MALP / kg procesados de la planta). '+
+    'La columna “% del artículo” muestra el control técnico: <b>≥ 5%</b> del artículo saliendo defectuoso se considera problema abierto. '+
+    '“# reproc.” = reprocesos promedio hasta resolver; “% tela perdida” = kg sin solución / kg MALP de esa fila.</p>'+
+    '<div class="tbl-scroll"><table><thead><tr><th class="l">#</th><th class="l">Artículo · Defecto</th>'+
+    '<th>Kg MALP</th><th>% MALP / kg procesados planta</th><th>% MALP / kg del artículo</th><th># reproc. hasta resolver</th><th>% tela perdida</th><th class="l">Estado</th></tr></thead><tbody>';
+  items.slice(0,15).forEach((it,i)=>{
+    const warn=it.pctArt>=5;
+    h+='<tr><td class="l dim">'+(i+1)+'</td><td class="l"><b>'+esc(it.a.name)+'</b> · '+esc(it.d)+'</td>'+
+      '<td>'+fmt.kg(it.kg)+'</td><td><b>'+fmt.n(it.pctProc,2)+'%</b></td>'+
+      '<td class="'+(warn?"sem-r":"sem-g")+'">'+fmt.n(it.pctArt,1)+'%</td>'+
+      '<td>'+fmt.n(it.repro,1)+'</td><td>'+fmt.n(it.perd,0)+'%</td>'+
+      '<td class="l">'+(warn?'<span class="pill" style="background:var(--sem-red);color:var(--sem-red-ink)">Fuera de control</span>':'<span class="pill" style="background:var(--sem-green);color:var(--sem-green-ink)">Bajo control</span>')+'</td></tr>';
+  });
+  h+='</tbody></table></div><p class="note" style="margin-top:10px">Se muestran los 15 principales. El detalle mensual de cada defecto está en la pestaña “Detalle por artículo”.</p>';
+  c1.innerHTML=h;
+  H.appendChild(c1);
+  /* 2) ranking de artículos por cantidad de defectos */
+  const arts=Object.entries(artMalp).map(([aid,v])=>{
+    const topDef=Object.entries(v.defs).sort((x,y)=>y[1]-x[1])[0];
+    return {a:ARTBY[aid],kg:v.kg,part:v.part,desc:v.desc,nDefs:Object.keys(v.defs).length,
+      repro:v.part?v.reproSum/v.part:0,perd:v.kg?100*v.desc/v.kg:0,
+      topDef:topDef[0],topDefKg:topDef[1],
+      pctProc:100*v.kg/totKg,pctArt:100*v.kg/kgArt[aid]};
+  }).sort((x,y)=>y.kg-x.kg);
+  const c2=el("div","card");
+  let h2='<h2>Ranking de artículos más defectuosos</h2>'+
+    '<p class="desc">Todos los defectos de cada artículo sumados en el periodo. Complementa al ranking anterior (allá cada fila es un defecto específico; aquí el artículo completo): úsala para decidir en qué artículo intervenir, y la anterior para decidir qué causa atacar primero. '+
+    '“# reproc.” = reprocesos promedio hasta resolver; “% tela perdida” = kg sin solución / kg MALP del artículo.</p>'+
+    '<div class="tbl-scroll"><table><thead><tr><th class="l">#</th><th class="l">Artículo</th>'+
+    '<th>Kg MALP</th><th>Partidas MALP</th><th>% MALP / planta</th><th>% MALP / kg del artículo</th>'+
+    '<th># reproc. hasta resolver</th><th>% tela perdida</th><th>Kg sin solución</th><th class="l">Defecto principal</th></tr></thead><tbody>';
+  arts.forEach((it,i)=>{
+    h2+='<tr><td class="l dim">'+(i+1)+'</td><td class="l"><b>'+esc(it.a.name)+'</b></td>'+
+      '<td><b>'+fmt.kg(it.kg)+'</b></td><td>'+it.part+'</td><td>'+fmt.n(it.pctProc,2)+'%</td>'+
+      '<td class="'+(it.pctArt>=5?"sem-r":it.pctArt>=3?"sem-y":"sem-g")+'">'+fmt.n(it.pctArt,1)+'%</td>'+
+      '<td>'+fmt.n(it.repro,1)+'</td><td>'+fmt.n(it.perd,0)+'%</td>'+
+      '<td>'+fmt.kg(it.desc)+'</td>'+
+      '<td class="l">'+esc(it.topDef)+' <span class="note">('+fmt.n(100*it.topDefKg/it.kg,0)+'% del MALP · '+it.nDefs+' tipos)</span></td></tr>';
+  });
+  h2+='</tbody></table></div>';
+  c2.innerHTML=h2;
+  H.appendChild(c2);
+  return H;
+}
+
+/* ---------- Detalle por artículo ---------- */
+function viewDetalle(sel,months){
+  const H=el("div");
+  const list=artsByProd(sel);
+  if(!list.length){H.innerHTML='<div class="card"><p class="note">Sin producción en el periodo/tono seleccionado.</p></div>';return H}
+  if(!state.art||!list.find(x=>x.a.id===state.art))state.art=list[0].a.id;
+  const a=ARTBY[state.art];
+  const card=el("div","card");
+  let selHtml='<div class="art-select f-row"><label style="font-size:12px;color:var(--muted);margin-right:6px">Artículo</label><select id="selArt">';
+  list.forEach(x=>selHtml+='<option value="'+x.a.id+'"'+(x.a.id===state.art?" selected":"")+'>'+esc(x.a.name)+' — '+fmt.kg(x.s.kg)+' kg</option>');
+  selHtml+='</select></div>';
+  const s=agg(sel,a.id);
+  let h='<h2>Detalle de defectos — '+esc(a.name)+tonoLbl()+'</h2>'+
+    '<p class="desc">Evolución del comportamiento del artículo en el periodo. Cada defecto muestra su incidencia, los reprocesos que exige y la tela que no se logró recuperar.</p>'+selHtml;
+  h+='<div class="kpi-inline">'+
+    '<div class="ki"><div class="lbl">Kg procesados · partidas</div><div class="v">'+fmt.kg(s.kg)+' <small>· '+s.partidas+' part.</small></div></div>'+
+    '<div class="ki"><div class="lbl">% BALP</div><div class="v">'+fmt.n(s.balpPct,1)+'<small>%</small></div></div>'+
+    '<div class="ki"><div class="lbl">Índice de reprocesos <span class="note">(obj. 1,00)</span></div><div class="v">'+fmt.n(s.indice,2)+'<small>×</small></div></div>'+
+    '<div class="ki"><div class="lbl">Kg descartados sin solución</div><div class="v">'+fmt.kg(s.descKg)+'</div></div>'+
+    '<div class="ki"><div class="lbl">Sobrecosto de receta por reprocesos</div><div class="v">'+fmt.usd(s.sobrecosto)+'</div></div></div>';
+
+  /* desempeño por tono del artículo */
+  h+='<h2 style="font-size:13.5px;margin-top:8px">Desempeño por tono</h2>'+
+     '<p class="desc">Cada tono comparte ruta y receta de teñido; los problemas suelen concentrarse en un tono.</p>'+
+     '<div class="tbl-scroll" style="margin-bottom:14px"><table><thead><tr><th class="l">Tono</th><th>Kg procesados</th><th>Partidas</th><th>% BALP</th><th>Índice reproc.</th><th>Costo receta $/kg</th><th>Sobrecosto</th></tr></thead><tbody>';
+  TONOS.forEach(t=>{
+    const st=agg(sel,a.id,t.k);
+    if(!st.kg){h+='<tr><td class="l">'+t.lbl+'</td><td class="dim" colspan="6">Sin producción en el periodo</td></tr>';return}
+    h+='<tr><td class="l">'+t.lbl+'</td><td>'+fmt.kg(st.kg)+'</td><td>'+st.partidas+'</td>'+
+      '<td class="'+semBalp(st.balpPct)+'">'+fmt.n(st.balpPct,1)+'%</td>'+
+      '<td>'+fmt.n(st.indice,2)+'×</td><td>'+fmt.n(st.costoBase,2)+'</td><td>'+fmt.usd(st.sobrecosto)+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+
+  /* matriz de defectos, filtrable por tono */
+  const detT = state.detTono==="all" ? undefined : state.detTono;
+  const s2 = state.detTono==="all" ? s : agg(sel,a.id,state.detTono);
+  h+='<div class="f-row" style="margin:14px 0 8px">'+
+     '<h2 style="font-size:13.5px;margin:0 10px 0 0">Evolución de defectos'+(detT?' — Tono: '+TONOBY[detT].lbl:'')+'</h2>'+
+     '<label style="font-size:12px;color:var(--muted)">Filtrar por tono</label>'+
+     '<select id="selDetTono"><option value="all"'+(state.detTono==="all"?" selected":"")+'>Todos los tonos</option>'+
+     TONOS.map(t=>'<option value="'+t.k+'"'+(state.detTono===t.k?" selected":"")+'>'+t.lbl+'</option>').join("")+
+     '</select></div>';
+  const defTot={};
+  s2.ps.forEach(p=>{if(p.malp&&p.def)defTot[p.def]=(defTot[p.def]||0)+p.kg});
+  const defs=Object.entries(defTot).sort((x,y)=>y[1]-x[1]).map(x=>x[0]);
+  const mData=months.map(m=>{
+    const r=agg({a:m.a,b:m.b},a.id,detT);
+    const byDef={};
+    r.ps.forEach(p=>{if(p.malp&&p.def){
+      if(!byDef[p.def])byDef[p.def]={kg:0,desc:0,reproSum:0,n:0};
+      byDef[p.def].kg+=p.kg;byDef[p.def].desc+=p.desc;byDef[p.def].reproSum+=p.repro;byDef[p.def].n++}});
+    return {m,r,byDef};
+  });
+  if(!s2.kg)h+='<p class="note">El artículo no produjo este tono en el periodo.</p>';
+  else if(!defs.length)h+='<p class="note">Sin partidas MALP de este tono en el periodo — 100% salió bien a la primera.</p>';
+  h+='<div class="tbl-scroll"><table class="nosort"><thead><tr><th class="l">Defecto / métrica</th>';
+  months.forEach(m=>h+='<th>'+mLbl(m)+'</th>');
+  h+='<th>Periodo</th></tr></thead><tbody>';
+  defs.forEach(d=>{
+    h+='<tr><td class="l" colspan="'+(months.length+2)+'" style="background:var(--neutral-bg);font-weight:650">'+esc(d).toUpperCase()+' <span class="note" style="font-weight:400">· '+fmt.kg(defTot[d])+' kg MALP en el periodo</span></td></tr>';
+    h+='<tr><td class="l dim">% kg MALP / kg procesados</td>';
+    let sKg=0,sDef=0;
+    mData.forEach(({r,byDef})=>{
+      if(!r.kg){h+='<td class="dim">N/A</td>';return}
+      const v=100*(byDef[d]?byDef[d].kg:0)/r.kg; sKg+=r.kg;sDef+=(byDef[d]?byDef[d].kg:0);
+      h+='<td'+(v>=5?' class="sem-r"':'')+'>'+fmt.n(v,1)+'%</td>';
+    });
+    h+='<td><b>'+fmt.n(100*sDef/(sKg||1),1)+'%</b></td></tr>';
+    h+='<tr><td class="l dim"># reprocesos prom. hasta resolver</td>';
+    let rs=0,rn=0;
+    mData.forEach(({byDef})=>{
+      const b=byDef[d];
+      if(!b||!b.n){h+='<td class="dim">—</td>';return}
+      rs+=b.reproSum;rn+=b.n;
+      h+='<td>'+fmt.n(b.reproSum/b.n,1)+'</td>';
+    });
+    h+='<td><b>'+(rn?fmt.n(rs/rn,1):"—")+'</b></td></tr>';
+    h+='<tr><td class="l dim">% kg sin solución / kg MALP</td>';
+    let ds=0,dk=0;
+    mData.forEach(({byDef})=>{
+      const b=byDef[d];
+      if(!b||!b.kg){h+='<td class="dim">—</td>';return}
+      ds+=b.desc;dk+=b.kg;
+      h+='<td>'+fmt.n(100*b.desc/b.kg,0)+'%</td>';
+    });
+    h+='<td><b>'+(dk?fmt.n(100*ds/dk,0)+"%":"—")+'</b></td></tr>';
+  });
+  h+='<tr><td class="l" colspan="'+(months.length+2)+'" style="background:var(--neutral-bg);font-weight:650">ÍNDICE DE PROCESOS POR KILO <span class="note" style="font-weight:400">· kg procesados / kg finalmente usables — objetivo 1,00</span></td></tr>';
+  h+='<tr><td class="l dim">Procesos por kilo</td>';
+  mData.forEach(({r})=>{
+    if(!r.kg){h+='<td class="dim">N/A</td>';return}
+    const v=r.indice;
+    h+='<td'+(v>=1.15?' class="sem-r"':v>=1.05?' class="sem-y"':' class="sem-g"')+'>'+fmt.n(v,2)+'</td>';
+  });
+  h+='<td><b>'+(s2.kg?fmt.n(s2.indice,2):"—")+'</b></td></tr>';
+  h+='</tbody></table></div>'+partialNote(months);
+  card.innerHTML=h;
+  H.appendChild(card);
+  setTimeout(()=>{
+    const sa=$("selArt");if(sa)sa.addEventListener("change",()=>{state.art=sa.value;render()});
+    const st=$("selDetTono");if(st)st.addEventListener("change",()=>{state.detTono=st.value;render()});
+  },0);
+  return H;
+}
+
+/* ---------- Matrices genéricas (costo / tiempos / lavado) ----------
+   Cada celda se colorea verde/rojo cuando varía vs el mes anterior
+   (según la dirección favorable del indicador).                     */
+function momCell(artId,mi,v,opts){
+  let prev=null;
+  for(let pm=mi-1;pm>=0;pm--){
+    const m=aggMonth(pm,artId);
+    if(m.kg>0&&m[opts.prop]!==null&&!isNaN(m[opts.prop])){prev=m[opts.prop];break}
+  }
+  if(prev===null||prev===0||v===null)return '<td>'+opts.fmtCell(v)+'</td>';
+  const d=(v-prev)/Math.abs(prev);
+  if(Math.abs(d)<.01)return '<td>'+opts.fmtCell(v)+'</td>';
+  const good= opts.dir===0?null:(d>0?opts.dir>0:opts.dir<0);
+  const cls= opts.dir===0?"":(good?"mom-g":"mom-r");
+  const tip="Mes anterior: "+esc(opts.fmtCell(prev))+" → "+esc(opts.fmtCell(v))+" ("+(d>0?"+":"−")+fmt.n(Math.abs(d)*100,1)+"%)";
+  return '<td class="'+cls+'" data-tip="'+tip+'">'+opts.fmtCell(v)+'</td>';
+}
+function matrixView(opts,sel,months){
+  const H=el("div","card");
+  const list=artsByProd(sel);
+  if(!list.length){H.innerHTML='<p class="note">Sin producción en el periodo/tono seleccionado.</p>';return H}
+  let h='<h2>'+opts.title+tonoLbl()+'</h2><p class="desc">'+opts.desc+'</p><div class="tbl-scroll"><table><thead><tr><th class="l">Artículo</th>';
+  months.forEach(m=>h+='<th>'+mLbl(m)+'</th>');
+  h+='<th>Var. vs prom. 6m</th></tr></thead><tbody>';
+  list.forEach(({a})=>{
+    h+='<tr><td class="l">'+esc(a.name)+'</td>';
+    months.forEach(m=>{
+      const r=agg({a:m.a,b:m.b},a.id);
+      h+= !r.kg?'<td class="dim">N/A</td>':momCell(a.id,m.mi,r[opts.prop],opts);
+    });
+    h+=varCell(var6(a.id,months,opts.prop),opts.dir,opts.fmtCell);
+    h+='</tr>';
+  });
+  h+='<tr class="total"><td class="l">'+opts.totalLbl+'</td>';
+  months.forEach(m=>{
+    const r=agg({a:m.a,b:m.b});
+    h+= !r.kg?'<td class="dim">N/A</td>':'<td>'+opts.fmtCell(r[opts.prop])+'</td>';
+  });
+  h+='<td></td></tr></tbody></table></div>';
+  h+='<div class="legend"><span class="k"><span class="sw" style="background:var(--good-bg)"></span>Varió a favor vs mes anterior</span>'+
+     '<span class="k"><span class="sw" style="background:var(--bad-bg)"></span>Varió en contra vs mes anterior</span>'+
+     '<span class="k dim">Sin color = variación &lt; 1%</span></div>'+partialNote(months);
+  if(opts.foot)h+='<p class="note" style="margin-top:10px">'+opts.foot+'</p>';
+  H.innerHTML=h;
+  return H;
+}
+
+/* ================================================================
+   RENDER PRINCIPAL
+================================================================ */
+function render(){
+  const sel=state.sel;
+  const months=monthsInSel(sel);
+  const cSel=cmpSel(sel,state.cmp,state.cmpCustom);
+  const cur=agg(sel);
+  const base=cSel?agg(cSel):null;
+  const tonoTxt= state.tono==="all" ? "" : " · Tono: <b>"+TONOBY[state.tono].lbl+"</b>";
+  $("cmpNote").innerHTML= cSel
+    ? "Analizando <b>"+selLbl(sel)+"</b>"+tonoTxt+"<br>vs "+CMPLBL[state.cmp]+" (<b>"+selLbl(cSel)+"</b>)"
+    : "Analizando <b>"+selLbl(sel)+"</b>"+tonoTxt+"<br>Sin historia suficiente para “"+CMPLBL[state.cmp]+"”";
+  const v=$("view"); v.innerHTML="";
+  let node;
+  if(state.view==="resumen")node=viewResumen(cur,base,sel);
+  else if(state.view==="pareto")node=viewPareto(sel,months);
+  else if(state.view==="balp")node=viewBalp(sel,months);
+  else if(state.view==="defectos")node=viewDefectos(sel);
+  else if(state.view==="detalle")node=viewDetalle(sel,months);
+  else if(state.view==="costos")node=matrixView({
+    title:"Costo de receta de teñido por kilo ($/kg) — por artículo",
+    desc:"Costo de receta promedio ponderado del mes por kg procesado (aproximación teórica por receta estándar, sin recargo por reprocesos). La variación compara el último mes contra el promedio de los 6 meses previos: verde = abarató, rojo = encareció.",
+    prop:"costoBase", fmtCell:v=>fmt.n(v,2), dir:-1,
+    totalLbl:"Promedio planta (pond. por kg)",
+    foot:"Nota: el costo real por variación de inventarios se incorporará cuando el tablero se conecte al ERP; esta vista usa el costo teórico de receta."
+  },sel,months);
+  else if(state.view==="tiempos"){
+    node=el("div");
+    node.appendChild(matrixView({
+      title:"Tiempo de curva de teñido (min por partida, promedio)",
+      desc:"Duración promedio de la curva de teñido por partida (primer intento). Variación del último mes vs promedio de 6 meses previos: verde = más rápido, rojo = más lento.",
+      prop:"curvaProm", fmtCell:v=>fmt.n(v,0), dir:-1,
+      totalLbl:"Promedio planta"
+    },sel,months));
+    node.appendChild(matrixView({
+      title:"Tiempo total del proceso en tintorería (min por partida, promedio)",
+      desc:"Desde el ingreso de la partida hasta su salida de tintorería (incluye esperas, teñido, acabados; primer intento). Verde = más rápido, rojo = más lento.",
+      prop:"totProm", fmtCell:v=>fmt.n(v,0), dir:-1,
+      totalLbl:"Promedio planta"
+    },sel,months));
+  }
+  else if(state.view==="lavado")node=matrixView({
+    title:"% de tela lavada (sobre kg procesados) — por artículo",
+    desc:"Proporción de la producción del artículo que pasó por lavado. N/A = sin producción en el mes. Si el último mes es N/A, la variación usa el último mes con producción y sus 6 meses previos.",
+    prop:"lavPct", fmtCell:v=>fmt.n(v,0)+"%", dir:1,
+    totalLbl:"Total planta (pond. por kg)",
+    foot:"La dirección del semáforo de esta variación es convencional (verde = sube); ajústese según el objetivo comercial de cada artículo."
+  },sel,months);
+  v.appendChild(node);
+  bindTips(v);
+  makeSortable(v);
+}
+
+initFilters();
+render();
+
+</script>
+</body>
+</html>

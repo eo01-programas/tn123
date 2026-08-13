@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F-GT-ACT-24 Auditoria de 4 puntos</title>
+    <link rel="stylesheet" href="./css/auditoria-4-puntos.css">
+    <script defer src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script defer src="./js/utils.js"></script>
+    <script defer src="./js/auditoria-4-puntos.js"></script>
+</head>
+<body>
+    <div class="audit-actions">
+        <div class="audit-zoom-controls" aria-label="Controles de zoom">
+            <button id="btn-zoom-out" type="button" title="Alejar" aria-label="Alejar">
+                <i class="ph ph-minus" aria-hidden="true"></i>
+            </button>
+            <span id="zoom-value" aria-live="polite">100%</span>
+            <button id="btn-zoom-in" type="button" title="Acercar" aria-label="Acercar">
+                <i class="ph ph-plus" aria-hidden="true"></i>
+            </button>
+        </div>
+        <button id="btn-back" type="button" title="Volver">
+            <i class="ph ph-arrow-left" aria-hidden="true"></i>
+            <span>Volver</span>
+        </button>
+        <button id="btn-export" type="button" title="Exportar XLSX">
+            <i class="ph ph-file-xls" aria-hidden="true"></i>
+            <span>Exportar</span>
+        </button>
+    </div>
+
+    <main class="audit-page">
+        <section class="audit-sheet" id="audit-sheet" aria-label="Auditoria de 4 puntos">
+            <div id="audit-excel-grid" class="audit-excel-grid"></div>
+        </section>
+    </main>
+</body>
+</html>
