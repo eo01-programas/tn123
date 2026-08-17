@@ -258,6 +258,36 @@ const UI = (() => {
     return lista.map(x => Utils.escapeHtml(x)).join('<br>');
   }
 
+  function tipoOpPartida(valor) {
+    const primero = Utils.texto(valor).split(/[|,]/)[0].trim();
+    const op = primero.split('-')[0].trim();
+    const tipo = op.match(/^\d{3}/);
+    return tipo ? tipo[0] : '—';
+  }
+
+  function normalizarOpPartidaDetalle(valor) {
+    const normalizarSegmento = segmento => {
+      const texto = Utils.texto(segmento);
+      if (!texto) return '';
+      const idx = texto.lastIndexOf('-');
+      if (idx < 0) return texto.replace(/^0+(?=\d)/, '');
+      let op = texto.slice(0, idx).trim();
+      let partida = texto.slice(idx + 1).trim();
+      if (op.length > 5) op = op.slice(-5);
+      op = op.replace(/^0+(?=\d)/, '');
+      partida = partida.replace(/^0+(?=\d)/, '');
+      return `${op}-${partida}`;
+    };
+
+    const normalizada = Utils.texto(valor)
+      .split(/([|,])/)
+      .map(parte => parte === '|' ? ' | '
+        : parte === ',' ? ', '
+        : normalizarSegmento(parte))
+      .join('');
+    return normalizada || '—';
+  }
+
   function modalRegistros(titulo, registros, opciones) {
     // opciones.litros: el drill-down de la vista H2O añade la columna
     // "Vol Lt" y suma los litros en el pie del modal.
@@ -268,6 +298,9 @@ const UI = (() => {
     const conProgramacion = !!(opciones && opciones.programacion);
     // opciones.costo: explica el impacto económico carga por carga.
     const conCosto = !!(opciones && opciones.costo);
+    // opciones.detalleColor: auditoría de las cargas de un color en
+    // la pestaña "Detalle por artículo".
+    const conDetalleColor = !!(opciones && opciones.detalleColor);
     const clasificacionProgramacion = r => r.esLavadoMaquina
       ? { texto: 'LAVADO', clase: 'lavado' }
       : r.tipoRecetaClase === 'REPROCESO'
@@ -279,14 +312,27 @@ const UI = (() => {
         ? fecha.getTime() : 0;
     };
     const regs = (registros || []).slice().sort((a, b) =>
-      conProgramacion
+      conDetalleColor
+        ? Utils.texto(a.cliente).localeCompare(Utils.texto(b.cliente), 'es', {
+            sensitivity: 'base'
+          }) || normalizarOpPartidaDetalle(a.opPartida).localeCompare(
+            normalizarOpPartidaDetalle(b.opPartida), 'es', { numeric: true })
+        : conProgramacion
         ? instanteProgramacion(a) - instanteProgramacion(b) ||
           Utils.numero(a.nCarga) - Utils.numero(b.nCarga)
         : conCosto
           ? (b.costoReproceso || b.kgCarga * b.costoPorKg) -
             (a.costoReproceso || a.kgCarga * a.costoPorKg)
         : b.kgCarga - a.kgCarga);
-    const filas = regs.map(r => conProgramacion ? (() => {
+    const filas = regs.map(r => conDetalleColor ? `
+        <tr>
+          <td>${Utils.escapeHtml(r.cliente || '—')}</td>
+          <td>${Utils.escapeHtml(tipoOpPartida(r.opPartida))}</td>
+          <td title="${Utils.escapeHtml(r.opPartida)}">${Utils.escapeHtml(
+            normalizarOpPartidaDetalle(r.opPartida))}</td>
+          <td class="sc8-col-num">${Utils.fmtDecimal(r.kgCarga, 1)}</td>
+          <td>${Utils.escapeHtml(r.tipoProcesos || '—')}</td>
+        </tr>` : conProgramacion ? (() => {
       const clasificacion = clasificacionProgramacion(r);
       return `
         <tr class="sc8-fila-programacion ${clasificacion.clase}">
@@ -341,7 +387,14 @@ const UI = (() => {
           ${conLitros ? `<td class="sc8-col-num">${Utils.fmtEntero(r.volLt)}</td>` : ''}
         </tr>`).join('');
 
-    const encabezado = conProgramacion ? `
+    const encabezado = conDetalleColor ? `
+          <tr>
+            <th>Cliente</th>
+            <th>Tipo</th>
+            <th>OP - Partida</th>
+            <th class="sc8-col-num">Kg Carga</th>
+            <th>Tipo Procesos</th>
+          </tr>` : conProgramacion ? `
           <tr>
             <th>Fecha</th>
             <th>N° Carga</th>
@@ -382,7 +435,8 @@ const UI = (() => {
             <th class="sc8-col-num">Kg Carga</th>
             ${conLitros ? '<th class="sc8-col-num">Vol Lt</th>' : ''}
           </tr>`;
-    const columnas = conProgramacion ? 10
+    const columnas = conDetalleColor ? 5
+      : conProgramacion ? 10
       : conPxMaq || conCosto ? 8
       : (conLitros ? 6 : 5);
 
