@@ -10,8 +10,16 @@ const Datos = (() => {
   const Estado = {
     registros: [],          // filas normalizadas del Excel
     articulosUnicos: [],    // catálogo de la hoja "valores unicos"
+    telaLavada: [],         // fuente externa: artículo, peso, ruta y embalaje
+    telaLavadaError: '',
     modelo: null            // resultado de calcularModelo() con filtros
   };
+
+  function cargarTelaLavada(filas, error) {
+    Estado.telaLavada = Array.isArray(filas) ? filas : [];
+    Estado.telaLavadaError = Utils.texto(error);
+    return Estado.telaLavada.length;
+  }
 
   function cargarArticulosUnicos(filas) {
     const vistos = new Set();
@@ -195,12 +203,6 @@ const Datos = (() => {
     };
 
     reg.tono = clasificarTono(reg.color1);
-    /* Tela lavada: "Procesos" incluye LAVADO (solo o combinado con
-       BLANQUEO/TEÑIDO). Se excluye LAVADO MÁQUINA, que es limpieza de
-       la máquina y no pasa tela. */
-    reg.esTelaLavada = !reg.esLavadoMaquina &&
-      Utils.clave(reg.procesos).includes('LAVADO');
-
     /* Clave única para deduplicación (frontend y Google Sheets).
        Incluye Fecha + N° Carga para no descartar cargas distintas
        de una misma partida (blanqueo, teñido, reproceso...). */
@@ -1090,7 +1092,8 @@ const Datos = (() => {
       .sort((a, b) => (a.horaInicio || 0) - (b.horaInicio || 0));
   }
 
-  return { Estado, cargarRegistros, cargarArticulosUnicos, aplicarFiltros, calcularModelo,
+  return { Estado, cargarRegistros, cargarArticulosUnicos, cargarTelaLavada,
+           aplicarFiltros, calcularModelo,
            historialPartida, clasificarDefecto, extraerArticulo,
            clasificarTipoReceta, clasificarTono, normalizarFila };
 })();
