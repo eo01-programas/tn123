@@ -2133,7 +2133,11 @@
 
     // Stock, Reporte de ramas y Maestro necesitan el historico completo
     // (incluidas las partidas ya embaladas), asi que lo piden al entrar.
-    const FULL_DATASET_VIEWS = ['stock', 'reporte-ramas', 'maestro'];
+    // Calidad tambien: el subtab AUDITADAS es un reporte historico y una partida
+    // auditada se embala a los pocos dias, asi que con el scope activo sus kg
+    // desaparecian del dia en que se auditaron. Sigue acotado por la ventana de
+    // 14 dias de la propia vista; lo que cambia es que ahora hay historia que ver.
+    const FULL_DATASET_VIEWS = ['stock', 'reporte-ramas', 'maestro', 'calidad'];
     let fullDatasetPromise = null;
     let bootstrapping = true;
 
