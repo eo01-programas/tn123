@@ -1103,10 +1103,14 @@ const Tablero = (() => {
       '<th>#</th><th class="txt">Artículo · Defecto</th><th>Kg reproc.</th><th>% sobre planta</th>' +
       '<th>% del artículo</th><th>Cargas / partida</th><th>Costo</th><th class="txt">Estado</th>' +
       '</tr></thead><tbody>';
-    items.slice(0, 15).forEach((it, i) => {
+    const principales = items.slice(0, 15);
+    principales.forEach((it, i) => {
       const alerta = it.pctArt >= 5;
-      h1 += `<tr><td class="sc8-tab-nd">${i + 1}</td>` +
-        `<td class="txt">${rotuloArticulo(it.articulo, 44)} <b>· ${esc(it.defecto)}</b></td>` +
+      h1 += '<tr class="sc8-tab-fila-enlace">' +
+        `<td class="sc8-tab-nd">${i + 1}</td>` +
+        `<td class="txt"><button type="button" class="sc8-tab-art sc8-tab-art-enlace" ` +
+        `title="${esc(it.articulo)}" aria-label="Ver detalle por artículo de ${esc(it.articulo)}">` +
+        `${esc(Utils.truncar(it.articulo, 44))}</button> <b>· ${esc(it.defecto)}</b></td>` +
         `<td>${fmt.kg(it.kg)}</td><td><b>${fmt.n(it.pctProc, 2)}%</b></td>` +
         `<td class="${alerta ? 'sem-r' : 'sem-g'}">${fmt.n(it.pctArt, 1)}%</td>` +
         `<td>${fmt.n(it.cargasPorPartida, 1)}</td><td>${fmt.usd(it.costo)}</td>` +
@@ -1118,6 +1122,9 @@ const Tablero = (() => {
       '<p class="sc8-tab-nota-pie">Se muestran los 15 principales. El detalle periodo a periodo de cada ' +
       'defecto está en la pestaña “Detalle por artículo”.</p>';
     c1.innerHTML = h1;
+    c1.querySelectorAll('.sc8-tab-fila-enlace').forEach((fila, i) => {
+      fila.addEventListener('click', () => abrirDetalleArticulo(principales[i].articulo));
+    });
     H.appendChild(c1);
 
     /* --- Tabla 2: ranking de artículos --- */
@@ -1194,23 +1201,31 @@ const Tablero = (() => {
       `<div><span>Sobrecosto por reprocesos</span><strong>${fmt.usd(m.sobrecosto)}</strong></div>` +
       '</div>';
 
-    /* --- Desempeño por tono --- */
-    h += '<h4>Desempeño por tono</h4>' +
-      '<p class="sc8-tab-desc">Cada tono comparte ruta y receta de teñido; los problemas suelen ' +
-      'concentrarse en un tono.</p>' +
-      '<div class="responsive-table-wrap"><table class="sc8-table sc8-tab-tabla sin-orden"><thead><tr>' +
-      '<th>Tono</th><th>Kg procesados</th><th>Cargas</th><th>Partidas</th><th>% BAP</th>' +
+    /* --- Desempeño por color --- */
+    const regsPorColor = new Map();
+    m.regs.forEach(r => {
+      const color = r.color1 || '(Sin color)';
+      let regs = regsPorColor.get(color);
+      if (!regs) regsPorColor.set(color, regs = []);
+      regs.push(r);
+    });
+    const colores = [...regsPorColor.entries()]
+      .map(([nombre, regs]) => ({ nombre, m: metricas(regs, sel) }))
+      .sort((a, b) => b.m.kg - a.m.kg || a.nombre.localeCompare(b.nombre, 'es'));
+
+    h += '<h4>Desempeño por color</h4>' +
+      '<p class="sc8-tab-desc">Colores registrados para el artículo dentro del periodo y tono seleccionados.</p>' +
+      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla sin-orden"><thead><tr>' +
+      '<th>Color</th><th>Kg procesados</th><th>Cargas</th><th>Partidas</th><th>% BAP</th>' +
       '<th>Índice reproc.</th><th>Costo receta $/kg</th><th>Sobrecosto</th></tr></thead><tbody>';
-    CONFIG.ORDEN_TONOS.forEach(t => {
-      const mt = agg(sel, art, t);
-      if (!mt.kg) {
-        h += `<tr><td>${esc(t)}</td><td class="sc8-tab-nd izq" colspan="7">Sin producción en el periodo</td></tr>`;
-        return;
-      }
-      h += `<tr><td>${esc(t)}</td><td>${fmt.kg(mt.kg)}</td><td>${mt.cargas}</td>` +
-        `<td>${mt.partidas}</td><td class="${semBap(mt.balpPct)}">${fmt.pct(mt.balpPct)}</td>` +
-        `<td class="${semIndice(mt.indice)}">${fmt.indice(mt.indice)}</td>` +
-        `<td>${fmt.n(mt.costoKg, 2)}</td><td>${fmt.usd(mt.sobrecosto)}</td></tr>`;
+    colores.forEach(({ nombre, m: mc }) => {
+      h += '<tr class="sc8-tab-fila-enlace sc8-tab-fila-color">' +
+        `<td><button type="button" class="sc8-tab-color-enlace" title="${esc(nombre)}" ` +
+        `aria-label="Ver cargas del color ${esc(nombre)}">${esc(nombre)}</button></td>` +
+        `<td>${fmt.kg(mc.kg)}</td><td>${mc.cargas}</td>` +
+        `<td>${mc.partidas}</td><td class="${semBap(mc.balpPct)}">${fmt.pct(mc.balpPct)}</td>` +
+        `<td class="${semIndice(mc.indice)}">${fmt.indice(mc.indice)}</td>` +
+        `<td>${fmt.n(mc.costoKg, 2)}</td><td>${fmt.usd(mc.sobrecosto)}</td></tr>`;
     });
     h += '</tbody></table></div>';
 
@@ -1324,6 +1339,14 @@ const Tablero = (() => {
     h += '</tbody></table></div>' + notaParcial(periodos);
 
     tarjeta.innerHTML = h;
+    tarjeta.querySelectorAll('.sc8-tab-fila-color').forEach((fila, i) => {
+      fila.addEventListener('click', () => {
+        const color = colores[i];
+        UI.modalRegistros(`Detalle por color — ${color.nombre}`, color.m.regs, {
+          detalleColor: true
+        });
+      });
+    });
     H.appendChild(tarjeta);
     return H;
   }
@@ -1583,6 +1606,20 @@ const Tablero = (() => {
     $('tabCmpCustom').classList.toggle('oculto', estado.cmp !== 'custom');
   }
 
+  function seleccionarVista(vista) {
+    estado.vista = vista;
+    document.querySelectorAll('#tabTabs button')
+      .forEach(x => x.classList.toggle('activo', x.dataset.tab === vista));
+    render();
+  }
+
+  function abrirDetalleArticulo(articulo) {
+    estado.articulo = articulo;
+    estado.detTono = TODOS;
+    seleccionarVista('detalle');
+    $('tabVista').scrollIntoView({ block: 'start' });
+  }
+
   function render() {
     if (!DATOS || !DATOS.regs.length) return;
     const sel = estado.sel;
@@ -1696,10 +1733,7 @@ const Tablero = (() => {
     });
     document.querySelectorAll('#tabTabs button').forEach(b => {
       b.addEventListener('click', () => {
-        estado.vista = b.dataset.tab;
-        document.querySelectorAll('#tabTabs button')
-          .forEach(x => x.classList.toggle('activo', x === b));
-        render();
+        seleccionarVista(b.dataset.tab);
       });
     });
   }
