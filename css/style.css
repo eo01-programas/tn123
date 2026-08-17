@@ -3813,6 +3813,105 @@ table.lab-tinto-table tbody tr:not(.empty-state):hover td {
     color: var(--gray-500);
 }
 
+/* Selector de tipo_tela: modal chico que se monta encima de "Solicita Receta". */
+.lab-tinto-tela-backdrop {
+    z-index: 460;
+}
+
+.lab-tinto-tela-card {
+    width: min(100%, 460px);
+}
+
+.lab-tinto-tela-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 14px 0 4px;
+    max-height: min(52dvh, 420px);
+    overflow: auto;
+}
+
+.lab-tinto-tela-group {
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 10px;
+    background: var(--gray-50);
+}
+
+.lab-tinto-tela-group-head {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 8px;
+}
+
+.lab-tinto-tela-option {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    background: var(--white);
+    cursor: pointer;
+}
+
+.lab-tinto-tela-option + .lab-tinto-tela-option {
+    margin-top: 6px;
+}
+
+.lab-tinto-tela-option:hover {
+    border-color: var(--gray-300);
+}
+
+.lab-tinto-tela-input {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+.lab-tinto-tela-tipo {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.lab-tinto-tela-meta {
+    font-size: 11.5px;
+    color: var(--gray-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Tipo elegido dentro del preview: clic para reabrir el selector de esa partida. */
+.lab-tinto-tela-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border: 1px dashed var(--gray-300);
+    border-radius: 999px;
+    background: var(--white);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--gray-800);
+    cursor: pointer;
+}
+
+.lab-tinto-tela-change:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.lab-tinto-tela-change i {
+    font-size: 12px;
+}
+
 @media (max-width: 900px) {
     .lab-tinto-solicita-body {
         flex-direction: column;
