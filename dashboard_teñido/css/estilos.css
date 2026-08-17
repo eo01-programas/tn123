@@ -1939,6 +1939,10 @@ select.sc8-pxmaq-select {
 .sc8-tab-tabla tbody tr { cursor: default; }
 .sc8-tab-tabla tbody tr:hover td { background: #fff; }
 .sc8-tab-tabla tbody tr:nth-child(even):hover td { background: #f9fbf5; }
+.sc8-tab-tabla tbody tr.sc8-tab-fila-enlace { cursor: pointer; }
+.sc8-tab-tabla tbody tr.sc8-tab-fila-enlace:hover td {
+  background: var(--sc8-surface-soft);
+}
 .sc8-tab-tabla tbody tr.total td,
 .sc8-tab-tabla tbody tr.total:hover td {
   font-weight: 700;
@@ -1956,6 +1960,24 @@ select.sc8-pxmaq-select {
    "Descripcion Art. 2"): se recorta en la celda y el texto completo va
    en el title. */
 .sc8-tab-art { cursor: help; border-bottom: 1px dotted var(--sc8-border-strong); }
+.sc8-tab-art-enlace,
+.sc8-tab-color-enlace {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dotted var(--sc8-border-strong);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sc8-tab-art-enlace:hover,
+.sc8-tab-color-enlace:hover { color: var(--sc8-primary-dark); }
+.sc8-tab-art-enlace:focus-visible,
+.sc8-tab-color-enlace:focus-visible {
+  outline: 2px solid var(--sc8-primary);
+  outline-offset: 2px;
+}
 .sc8-tab-art-full {
   margin: 0 0 10px;
   font-size: 11.5px;
