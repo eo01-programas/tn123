@@ -513,6 +513,11 @@
 
     // ── Modal "Solicita Receta" ────────────────────────────────────────
     let previewRows = [];
+    // Lineas pegadas ya resueltas contra el maestro (fase 1 de buildPreview).
+    let previewEntries = [];
+    // tipo_tela elegido por OP-PTDA mientras el modal sigue abierto: "op|ptda" -> Set(tipo_tela)
+    const telaChoices = new Map();
+    let telaResolver = null;
 
     function getSolicitaElements() {
         return {
@@ -558,47 +563,133 @@
         };
     }
 
-    function buildPreview() {
+    function normalizeTipoTela(value) {
+        return String(value === undefined || value === null ? '' : value).trim().toUpperCase();
+    }
+
+    // Fase 1: cada linea pegada se resuelve contra el maestro por op|partida y sus
+    // coincidencias se agrupan por tipo_tela. Un solo tipo distinto = sin ambiguedad.
+    function buildPreviewEntries(lines, records) {
+        return lines.map((line) => {
+            const { opTela, partida, lote, observaciones } = parsePastedLine(line);
+            if (!opTela && !partida) {
+                return null;
+            }
+
+            const key = buildKey(opTela, partida);
+            const matches = records.filter((record) => buildKey(record.op_tela, record.partida) === key);
+
+            const tipos = new Map();
+            matches.forEach((record) => {
+                const tipo = normalizeTipoTela(record.tipo_tela);
+                if (!tipos.has(tipo)) {
+                    tipos.set(tipo, []);
+                }
+                tipos.get(tipo).push(record);
+            });
+
+            return {
+                opTela,
+                partida,
+                lote,
+                observaciones,
+                key,
+                matches,
+                tipos,
+                label: TintoreriaUtils.formatOpPartida(opTela, partida)
+            };
+        }).filter(Boolean);
+    }
+
+    function isAmbiguousEntry(entry) {
+        return entry.tipos.size > 1;
+    }
+
+    // Eleccion guardada, descartando tipos que ya no existan tras reeditar el pegado.
+    function getStoredTipos(entry) {
+        const stored = telaChoices.get(entry.key);
+        if (!stored) {
+            return null;
+        }
+        const valid = [...stored].filter((tipo) => entry.tipos.has(tipo));
+        return valid.length ? new Set(valid) : null;
+    }
+
+    function needsTelaChoice(entry) {
+        return isAmbiguousEntry(entry) && !getStoredTipos(entry);
+    }
+
+    function getSelectedMatches(entry) {
+        if (!isAmbiguousEntry(entry)) {
+            return entry.matches;
+        }
+        const stored = getStoredTipos(entry);
+        if (!stored) {
+            return [];
+        }
+        return entry.matches.filter((record) => stored.has(normalizeTipoTela(record.tipo_tela)));
+    }
+
+    async function buildPreview() {
         const els = getSolicitaElements();
-        if (!els.previewTbody) {
+        if (!els.previewTbody || !els.paste) {
             return;
         }
 
-        previewRows = [];
         const records = TintoreriaApp.getRecords();
         const lines = String(els.paste.value || '')
             .split(/\r?\n/)
             .map((line) => line.replace(/\s+$/, ''))
             .filter((line) => line.trim());
 
+        previewEntries = buildPreviewEntries(lines, records);
+
+        // Pregunta una sola vez por cada OP-PTDA con mas de un tipo_tela.
+        const pendingKeys = new Set();
+        const pending = previewEntries.filter((entry) => {
+            if (!needsTelaChoice(entry) || pendingKeys.has(entry.key)) {
+                return false;
+            }
+            pendingKeys.add(entry.key);
+            return true;
+        });
+
+        if (pending.length && !(await openTelaModal(pending))) {
+            return;
+        }
+
+        renderPreview();
+    }
+
+    // Fase 2: pinta el cuadro de la derecha con las coincidencias ya filtradas por tipo_tela.
+    function renderPreview() {
+        const els = getSolicitaElements();
+        if (!els.previewTbody) {
+            return;
+        }
+
+        previewRows = [];
         const rowsHtml = [];
         const cell = (value) => `<td><span class="cell-text">${TintoreriaUtils.escapeHtml(value || '')}</span></td>`;
 
-        lines.forEach((line) => {
-            const { opTela, partida, lote, observaciones } = parsePastedLine(line);
-            if (!opTela && !partida) {
-                return;
-            }
-
-            const key = buildKey(opTela, partida);
-            const matches = records.filter((record) => buildKey(record.op_tela, record.partida) === key);
-
-            if (!matches.length) {
+        previewEntries.forEach((entry) => {
+            if (!entry.matches.length) {
                 rowsHtml.push(`
                     <tr class="lab-tinto-preview-missing">
                         <td colspan="7"><span class="cell-text">No encontrado en maestro</span></td>
-                        <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(opTela)}</span></td>
-                        <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(partida)}</span></td>
+                        <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(entry.opTela)}</span></td>
+                        <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(entry.partida)}</span></td>
                         <td>—</td>
-                        <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(lote)}</span></td>
-                        ${cell(observaciones)}
+                        <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(entry.lote)}</span></td>
+                        ${cell(entry.observaciones)}
                     </tr>
                 `);
                 return;
             }
 
-            matches.forEach((record) => {
-                previewRows.push({ recordId: record.id_registro, lote, observaciones });
+            const ambiguous = isAmbiguousEntry(entry);
+            getSelectedMatches(entry).forEach((record) => {
+                previewRows.push({ recordId: record.id_registro, lote: entry.lote, observaciones: entry.observaciones });
                 rowsHtml.push(`
                     <tr>
                         ${cell(record.cliente)}
@@ -607,12 +698,12 @@
                         ${cell(TintoreriaUtils.formatColorLabel(record.color))}
                         ${cell(record.cod_art)}
                         ${cell(record.articulo)}
-                        ${cell(record.tipo_tela)}
+                        ${tipoTelaCell(record, entry, ambiguous)}
                         ${cell(record.op_tela)}
                         ${cell(record.partida)}
                         ${cell(record.peso_kg_crudo)}
-                        <td><strong class="cell-text code-text">${TintoreriaUtils.escapeHtml(lote)}</strong></td>
-                        ${cell(observaciones)}
+                        <td><strong class="cell-text code-text">${TintoreriaUtils.escapeHtml(entry.lote)}</strong></td>
+                        ${cell(entry.observaciones)}
                     </tr>
                 `);
             });
@@ -626,6 +717,168 @@
         els.previewTbody.innerHTML = rowsHtml.join('');
     }
 
+    // En las partidas que hubo que desambiguar el tipo queda como boton para reabrir el selector.
+    function tipoTelaCell(record, entry, ambiguous) {
+        const tipo = TintoreriaUtils.escapeHtml(record.tipo_tela || '');
+        if (!ambiguous) {
+            return `<td><span class="cell-text">${tipo}</span></td>`;
+        }
+        return `
+            <td>
+                <button class="lab-tinto-tela-change" type="button" data-key="${TintoreriaUtils.escapeHtml(entry.key)}" title="Cambiar el tipo de tela elegido">
+                    <span>${tipo}</span><i class="ph ph-pencil-simple"></i>
+                </button>
+            </td>
+        `;
+    }
+
+    // ── Modal secundario: elige tipo_tela cuando la OP-PTDA tiene varios ─
+    function getTelaElements() {
+        return {
+            modal: document.getElementById('lab-tinto-tela-modal'),
+            groups: document.getElementById('lab-tinto-tela-groups'),
+            closeBtn: document.getElementById('lab-tinto-tela-close'),
+            cancelBtn: document.getElementById('lab-tinto-tela-cancel'),
+            okBtn: document.getElementById('lab-tinto-tela-ok')
+        };
+    }
+
+    function isTelaModalOpen() {
+        const modal = document.getElementById('lab-tinto-tela-modal');
+        return Boolean(modal) && !modal.classList.contains('hidden');
+    }
+
+    function uniqueValues(rows, field) {
+        const values = rows
+            .map((row) => String(row[field] === undefined || row[field] === null ? '' : row[field]).trim())
+            .filter(Boolean);
+        return [...new Set(values)];
+    }
+
+    // Referencia para reconocer la tela: cuantas filas trae y de que articulo/color son.
+    function telaOptionMeta(rows) {
+        const colors = [...new Set(rows.map((row) => TintoreriaUtils.formatColorLabel(row.color)).filter(Boolean))];
+        return [
+            `${rows.length} fila${rows.length === 1 ? '' : 's'}`,
+            uniqueValues(rows, 'cod_art').join(' / '),
+            uniqueValues(rows, 'articulo').join(' / '),
+            colors.join(' / ')
+        ].filter(Boolean).join(' · ');
+    }
+
+    function renderTelaGroup(entry, preselected) {
+        const options = [...entry.tipos.entries()]
+            .sort((left, right) => left[0].localeCompare(right[0]))
+            .map(([tipo, rows]) => `
+                <label class="lab-tinto-tela-option">
+                    <input class="lab-tinto-tela-input" type="checkbox" data-tipo="${TintoreriaUtils.escapeHtml(tipo)}" ${preselected && preselected.has(tipo) ? 'checked' : ''}>
+                    <span class="lab-tinto-tela-tipo">${TintoreriaUtils.escapeHtml(tipo || 'Sin tipo')}</span>
+                    <span class="lab-tinto-tela-meta">${TintoreriaUtils.escapeHtml(telaOptionMeta(rows))}</span>
+                </label>
+            `).join('');
+
+        return `
+            <div class="lab-tinto-tela-group" data-key="${TintoreriaUtils.escapeHtml(entry.key)}" data-label="${TintoreriaUtils.escapeHtml(entry.label)}">
+                <div class="lab-tinto-tela-group-head">OP-PTDA ${TintoreriaUtils.escapeHtml(entry.label)}</div>
+                ${options}
+            </div>
+        `;
+    }
+
+    // Resuelve true si el usuario confirmo; false si cancelo o cerro.
+    function openTelaModal(entries, { preselect = false } = {}) {
+        const els = getTelaElements();
+        if (!els.modal || !els.groups) {
+            return Promise.resolve(false);
+        }
+
+        if (telaResolver) {
+            const stale = telaResolver;
+            telaResolver = null;
+            stale(false);
+        }
+
+        els.groups.innerHTML = entries
+            .map((entry) => renderTelaGroup(entry, preselect ? getStoredTipos(entry) : null))
+            .join('');
+        els.modal.classList.remove('hidden');
+        window.requestAnimationFrame(() => {
+            const firstInput = els.groups.querySelector('.lab-tinto-tela-input');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        });
+
+        return new Promise((resolve) => {
+            telaResolver = resolve;
+        });
+    }
+
+    function closeTelaModal(result) {
+        const els = getTelaElements();
+        if (els.modal) {
+            els.modal.classList.add('hidden');
+        }
+        if (els.groups) {
+            els.groups.innerHTML = '';
+        }
+
+        const resolve = telaResolver;
+        telaResolver = null;
+        if (resolve) {
+            resolve(result);
+        }
+    }
+
+    // Exige al menos un tipo marcado por partida antes de cerrar.
+    function confirmTelaModal() {
+        const els = getTelaElements();
+        if (!els.groups) {
+            return;
+        }
+
+        const groups = [...els.groups.querySelectorAll('.lab-tinto-tela-group')];
+        const selections = new Map();
+
+        for (const group of groups) {
+            const checked = [...group.querySelectorAll('.lab-tinto-tela-input:checked')]
+                .map((input) => input.dataset.tipo || '');
+            if (!checked.length) {
+                TintoreriaApp.showToast(`Marca al menos un tipo de tela para ${group.dataset.label}.`, 'error', 'Falta seleccionar');
+                return;
+            }
+            selections.set(group.dataset.key, new Set(checked));
+        }
+
+        selections.forEach((tipos, key) => telaChoices.set(key, tipos));
+        closeTelaModal(true);
+    }
+
+    async function handlePreviewClick(event) {
+        const button = event.target instanceof Element ? event.target.closest('.lab-tinto-tela-change') : null;
+        if (!button) {
+            return;
+        }
+
+        const entry = previewEntries.find((item) => item.key === button.dataset.key);
+        if (!entry) {
+            return;
+        }
+
+        if (await openTelaModal([entry], { preselect: true })) {
+            renderPreview();
+        }
+    }
+
+    function resetSolicitaState() {
+        previewRows = [];
+        previewEntries = [];
+        telaChoices.clear();
+        if (isTelaModalOpen()) {
+            closeTelaModal(false);
+        }
+    }
+
     function openSolicitaModal() {
         if (!canSolicitaLabTinto()) {
             return;
@@ -636,7 +889,7 @@
             return;
         }
 
-        previewRows = [];
+        resetSolicitaState();
         if (els.paste) {
             els.paste.value = '';
         }
@@ -657,7 +910,7 @@
         if (els.modal) {
             els.modal.classList.add('hidden');
         }
-        previewRows = [];
+        resetSolicitaState();
     }
 
     async function handleSolicitaSave() {
@@ -766,7 +1019,7 @@
         }
         if (els.clearBtn) {
             els.clearBtn.addEventListener('click', () => {
-                previewRows = [];
+                resetSolicitaState();
                 if (els.paste) {
                     els.paste.value = '';
                 }
@@ -781,16 +1034,46 @@
         if (els.saveBtn) {
             els.saveBtn.addEventListener('click', handleSolicitaSave);
         }
+        if (els.previewTbody) {
+            els.previewTbody.addEventListener('click', handlePreviewClick);
+        }
         if (els.modal) {
             els.modal.addEventListener('click', (event) => {
-                if (event.target === els.modal) {
+                // Con el selector de tela encima el backdrop del modal grande no cierra nada.
+                if (event.target === els.modal && !isTelaModalOpen()) {
                     closeSolicitaModal();
                 }
             });
         }
 
+        const telaEls = getTelaElements();
+        if (telaEls.okBtn) {
+            telaEls.okBtn.addEventListener('click', confirmTelaModal);
+        }
+        if (telaEls.cancelBtn) {
+            telaEls.cancelBtn.addEventListener('click', () => closeTelaModal(false));
+        }
+        if (telaEls.closeBtn) {
+            telaEls.closeBtn.addEventListener('click', () => closeTelaModal(false));
+        }
+        if (telaEls.modal) {
+            telaEls.modal.addEventListener('click', (event) => {
+                if (event.target === telaEls.modal) {
+                    closeTelaModal(false);
+                }
+            });
+        }
+
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && els.modal && !els.modal.classList.contains('hidden')) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+            // Escape cierra primero el selector de tela para no perder lo ya pegado.
+            if (isTelaModalOpen()) {
+                closeTelaModal(false);
+                return;
+            }
+            if (els.modal && !els.modal.classList.contains('hidden')) {
                 closeSolicitaModal();
             }
         });
