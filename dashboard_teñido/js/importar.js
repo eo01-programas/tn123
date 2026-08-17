@@ -29,13 +29,15 @@ const Importar = (() => {
     }
   }
 
-  function guardarCache(registros, version, articulosUnicos) {
+  function guardarCache(registros, version, articulosUnicos, telaLavada, telaLavadaError) {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         version: version || '',
         guardadoEn: Date.now(),
         registros: registros || [],
-        articulosUnicos: articulosUnicos || []
+        articulosUnicos: articulosUnicos || [],
+        telaLavada: telaLavada || [],
+        telaLavadaError: telaLavadaError || ''
       }));
     } catch (e) {
       // Si localStorage falla, se conserva la carga normal desde Apps Script.
@@ -46,6 +48,7 @@ const Importar = (() => {
     const cache = leerCache();
     if (!cache || !cache.registros.length) return 0;
     Datos.cargarArticulosUnicos(cache.articulosUnicos || []);
+    Datos.cargarTelaLavada(cache.telaLavada || [], cache.telaLavadaError || '');
     return Datos.cargarRegistros(cache.registros);
   }
 
@@ -63,7 +66,9 @@ const Importar = (() => {
     verificarUrl();
     const cache = leerCache();
 
-    if (opciones.soloSiCambio && cache && cache.version) {
+    const cacheTelaVigente = cache && Array.isArray(cache.telaLavada) &&
+      cache.guardadoEn && Date.now() - cache.guardadoEn < 2 * 60 * 1000;
+    if (opciones.soloSiCambio && cache && cache.version && cacheTelaVigente) {
       const versionRemota = await obtenerVersionRemota();
       if (versionRemota && versionRemota === cache.version)
         return Datos.Estado.registros.length || cargarCacheLocal();
@@ -79,8 +84,10 @@ const Importar = (() => {
 
     const registros = datos.registros || [];
     Datos.cargarArticulosUnicos(datos.articulosUnicos || []);
+    Datos.cargarTelaLavada(datos.telaLavada || [], datos.telaLavadaError || '');
     const total = Datos.cargarRegistros(registros);
-    guardarCache(registros, datos.version, datos.articulosUnicos);
+    guardarCache(registros, datos.version, datos.articulosUnicos,
+      datos.telaLavada, datos.telaLavadaError);
     return total;
   }
 
