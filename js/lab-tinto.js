@@ -52,8 +52,15 @@
         return FILTER_MUESTRA;
     }
 
+    // El subtab "Receta OK" no tiene ventana de fechas, asi que se apoya en el
+    // scope activo para no acumular historico. Al entrar a Calidad se carga la
+    // hoja completa y ese scope se pierde, asi que la vista excluye aqui las
+    // partidas ya embaladas y mantiene el mismo alcance de siempre.
     function getEligibleRecords(records) {
-        return records.filter((record) => String(record.f_solicitud_receta_lab_tinto || '').trim() !== '');
+        return records.filter((record) => (
+            String(record.f_solicitud_receta_lab_tinto || '').trim() !== '' &&
+            String(record.embalaje_estado || '').trim() !== 'OK'
+        ));
     }
 
     function solicitudTime(record) {
