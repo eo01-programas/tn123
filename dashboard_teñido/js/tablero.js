@@ -23,8 +23,8 @@
      tiempo total      -> ciclo de la partida (de su primera Hora
                           Inicio a su última Hora Fin: incluye esperas)
      reproc. hasta res.-> cargas de reproceso por partida afectada
-     % tela lavada     -> kg con "Procesos" = LAVADO (sin contar
-                          LAVADO MÁQUINA, que es limpieza de máquina)
+     % tela lavada     -> peso crudo con ruta final LAVADA / peso
+                          crudo total (fuente externa de producción)
 
    La merma ("tela defectuosa sin solución") del tablero original NO
    existe en la hoja: no hay columna de kg descartados. Donde el
@@ -90,6 +90,7 @@ const Tablero = (() => {
   let DATOS = null;
   let conectado = false;
   const cacheAgg = new Map();
+  const cacheAggLavado = new Map();
 
   /* ---------- Identidad del artículo ----------
      El artículo NO se toma de la columna "Articulo" de la hoja (AH),
@@ -175,12 +176,33 @@ const Tablero = (() => {
       if (!lista) porArticulo.set(r.articuloDesc, lista = []);
       lista.push(r);
     }
+
+    const telaLavada = (Datos.Estado.telaLavada || []).map(r => ({
+      articulo: Utils.texto(r.articulo),
+      articuloClave: Utils.clave(r.articulo),
+      pesoKg: Utils.numero(r.pesoKg),
+      ruta: Utils.clave(r.ruta),
+      fecha: Utils.texto(r.fecha)
+    })).filter(r => r.articulo && r.pesoKg > 0 && /^\d{4}-\d{2}-\d{2}$/.test(r.fecha))
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const lavadoPorArticulo = new Map();
+    for (const r of telaLavada) {
+      let grupo = lavadoPorArticulo.get(r.articuloClave);
+      if (!grupo) {
+        grupo = { nombre: r.articulo, regs: [] };
+        lavadoPorArticulo.set(r.articuloClave, grupo);
+      }
+      grupo.regs.push(r);
+    }
     DATOS = {
-      regs, porArticulo,
+      regs, porArticulo, telaLavada, lavadoPorArticulo,
       min: regs.length ? regs[0].isoFecha : null,
-      max: regs.length ? regs[regs.length - 1].isoFecha : null
+      max: regs.length ? regs[regs.length - 1].isoFecha : null,
+      lavadoMin: telaLavada.length ? telaLavada[0].fecha : null,
+      lavadoMax: telaLavada.length ? telaLavada[telaLavada.length - 1].fecha : null
     };
     cacheAgg.clear();
+    cacheAggLavado.clear();
     return DATOS;
   }
 
@@ -212,7 +234,7 @@ const Tablero = (() => {
     const dias = sel ? difDias(sel.a, sel.b) + 1 : 1;
     const partidas = new Set(), partidasRep = new Set();
     let kg = 0, kgRep = 0, cargas = 0, cargasRep = 0;
-    let costo = 0, sobrecosto = 0, litros = 0, kgLavado = 0;
+    let costo = 0, sobrecosto = 0, litros = 0;
     let minutos = 0, cargasConTiempo = 0, kgConTiempo = 0;
     const ciclo = new Map();   // partida -> { ini, fin, kg }
 
@@ -221,7 +243,6 @@ const Tablero = (() => {
       kg += r.kgCarga;
       costo += r.kgCarga * r.costoPorKg;
       litros += r.volLt || 0;
-      if (r.esTelaLavada) kgLavado += r.kgCarga;
       r.partidas.forEach(p => partidas.add(p));
       if (r.esReproceso) {
         cargasRep++;
@@ -274,7 +295,6 @@ const Tablero = (() => {
       // Ciclo completo de la partida en tintorería (incluye esperas).
       tTotKg:  cicloKg ? cicloMin / cicloKg : null,
       totProm: cicloN ? cicloMin / cicloN : null,
-      lavPct:  kg ? 100 * kgLavado / kg : null,
       kgDia: kg / dias,
       kgBapDia: kgBap / dias
     };
@@ -791,13 +811,15 @@ const Tablero = (() => {
      PESTAÑA 1 · RESUMEN GENERAL
      ============================================================ */
 
-  function vistaResumen(actual, base, sel) {
+  function vistaResumen(actual, base, sel, cmpRango) {
     const H = el('div');
     if (!actual.kg) {
       H.innerHTML = '<div class="sc8-card"><p class="sc8-vacio">Sin producción en el periodo o tono seleccionado.</p></div>';
       return H;
     }
     const b = base && base.kg ? base : null;
+    const lavado = aggTelaLavada(sel);
+    const lavadoBase = cmpRango ? aggTelaLavada(cmpRango) : null;
     const vs = txt => b ? 'vs ' + txt : '—';
 
     let t = '<div class="sc8-tab-fichas">';
@@ -843,9 +865,10 @@ const Tablero = (() => {
       actual.repPct, b ? b.repPct : null, -1,
       `${fmt.pct(actual.repPct)} de lo procesado` + (b ? ` · vs ${fmt.pct(b.repPct)}` : ''));
     t += ficha('Tela lavada',
-      `${fmt.n(actual.lavPct, 1)}<small>%</small>`,
-      actual.lavPct, b ? b.lavPct : null, 0,
-      b ? vs(fmt.pct(b.lavPct)) : '—');
+      `${lavado.kg ? fmt.n(lavado.pct, 1) : 'N/A'}<small>%</small>`,
+      lavado.kg ? lavado.pct : null,
+      lavadoBase && lavadoBase.kg ? lavadoBase.pct : null, 0,
+      lavadoBase && lavadoBase.kg ? `vs ${fmt.pct(lavadoBase.pct)}` : '—');
     t += ficha(`Ptdas. procesadas <span class="nota">(${fmt.n(100 * actual.partidasRep / (actual.partidas || 1), 1)}% con reproceso)</span>`,
       fmt.kg(actual.partidas),
       actual.partidas / actual.dias, b ? b.partidas / b.dias : null, 0,
@@ -1359,6 +1382,171 @@ const Tablero = (() => {
      columna compara el último periodo del rango contra el promedio
      de los 6 previos. */
 
+  function semanaIsoLavado(fechaIso) {
+    const fecha = desdeIso(fechaIso);
+    const utc = new Date(Date.UTC(
+      fecha.getFullYear(), fecha.getMonth(), fecha.getDate()));
+    const diaSemana = utc.getUTCDay() || 7;
+    utc.setUTCDate(utc.getUTCDate() + 4 - diaSemana);
+    const anio = utc.getUTCFullYear();
+    const inicioAnio = new Date(Date.UTC(anio, 0, 1));
+    const numero = Math.ceil((((utc - inicioAnio) / 86400000) + 1) / 7);
+    const diaLocal = fecha.getDay() || 7;
+    const lunes = sumarDias(fecha, 1 - diaLocal);
+    return {
+      clave: `${anio}-W${String(numero).padStart(2, '0')}`,
+      etiqueta: `Sem ${numero}`,
+      a: iso(lunes),
+      b: iso(sumarDias(lunes, 6))
+    };
+  }
+
+  function periodoTelaLavada(fechaIso) {
+    if (estado.granularidad === 'semana') return semanaIsoLavado(fechaIso);
+    const fecha = desdeIso(fechaIso);
+    const clave = fechaIso.slice(0, 7);
+    return {
+      clave,
+      etiqueta: Utils.mesCorto(clave),
+      a: iso(dia(fecha.getFullYear(), fecha.getMonth(), 1)),
+      b: iso(dia(fecha.getFullYear(), fecha.getMonth() + 1, 0))
+    };
+  }
+
+  function periodosTelaLavada(sel) {
+    const vistos = new Map();
+    for (const r of DATOS.telaLavada) {
+      if (r.fecha < sel.a || r.fecha > sel.b) continue;
+      const periodo = periodoTelaLavada(r.fecha);
+      if (!vistos.has(periodo.clave)) vistos.set(periodo.clave, periodo);
+    }
+    return [...vistos.values()]
+      .sort((a, b) => a.a.localeCompare(b.a))
+      .map(p => ({
+        ...p,
+        parcial: sel.a > p.a || sel.b < p.b,
+        a: sel.a > p.a ? sel.a : p.a,
+        b: sel.b < p.b ? sel.b : p.b
+      }));
+  }
+
+  function aggTelaLavada(sel, articuloClave) {
+    const clave = [sel.a, sel.b, articuloClave || ''].join('|');
+    if (cacheAggLavado.has(clave)) return cacheAggLavado.get(clave);
+    const grupo = articuloClave
+      ? DATOS.lavadoPorArticulo.get(articuloClave)
+      : null;
+    const fuente = articuloClave ? (grupo ? grupo.regs : []) : DATOS.telaLavada;
+    let kg = 0, kgLavada = 0;
+    for (const r of fuente) {
+      if (r.fecha < sel.a || r.fecha > sel.b) continue;
+      kg += r.pesoKg;
+      if (r.ruta === 'LAVADA') kgLavada += r.pesoKg;
+    }
+    const metrica = { kg, kgLavada, pct: kg ? 100 * kgLavada / kg : null };
+    cacheAggLavado.set(clave, metrica);
+    return metrica;
+  }
+
+  function articulosTelaLavada(sel) {
+    return [...DATOS.lavadoPorArticulo.entries()]
+      .map(([clave, grupo]) => ({
+        clave,
+        nombre: grupo.nombre,
+        m: aggTelaLavada(sel, clave)
+      }))
+      .filter(x => x.m.kg > 0)
+      .sort((a, b) => b.m.kg - a.m.kg || a.nombre.localeCompare(b.nombre, 'es'));
+  }
+
+  function serieHistoricaTelaLavada(articuloClave) {
+    if (!DATOS.lavadoMin || !DATOS.lavadoMax) return [];
+    return periodosTelaLavada({ a: DATOS.lavadoMin, b: DATOS.lavadoMax })
+      .map(p => ({ clave: p.clave, v: aggTelaLavada(p, articuloClave).pct }));
+  }
+
+  function varPreviosTelaLavada(articuloClave, periodos) {
+    const serie = serieHistoricaTelaLavada(articuloClave);
+    const indice = new Map(serie.map((s, i) => [s.clave, i]));
+    let ultimo = null;
+    for (let i = periodos.length - 1; i >= 0; i--) {
+      const j = indice.get(periodos[i].clave);
+      if (j !== undefined && serie[j].v !== null) {
+        ultimo = { j, v: serie[j].v };
+        break;
+      }
+    }
+    if (!ultimo) return null;
+    const previos = [];
+    for (let j = ultimo.j - 1; j >= 0 && previos.length < 6; j--)
+      if (serie[j].v !== null && isFinite(serie[j].v)) previos.push(serie[j].v);
+    if (previos.length < 2) return null;
+    const prom = previos.reduce((s, v) => s + v, 0) / previos.length;
+    if (!prom) return null;
+    return { d: (ultimo.v - prom) / prom, actual: ultimo.v, prom };
+  }
+
+  function celdaTelaLavada(articuloClave, periodos, indice, metrica) {
+    if (!metrica.kg) return '<td class="sc8-tab-nd">N/A</td>';
+    const serie = serieHistoricaTelaLavada(articuloClave);
+    const pos = serie.findIndex(s => s.clave === periodos[indice].clave);
+    let previo = null;
+    for (let j = pos - 1; j >= 0; j--)
+      if (serie[j].v !== null && isFinite(serie[j].v)) { previo = serie[j].v; break; }
+    const valor = fmt.n(metrica.pct, 0) + '%';
+    if (previo === null)
+      return `<td data-tip="Peso total: ${esc(fmt.kg(metrica.kg))} kg` +
+        `<br>Ruta LAVADA: ${esc(fmt.kg(metrica.kgLavada))} kg">${valor}</td>`;
+    return `<td data-tip="Periodo anterior: ${esc(fmt.n(previo, 0))}%` +
+      `<br>Peso total: ${esc(fmt.kg(metrica.kg))} kg` +
+      `<br>Ruta LAVADA: ${esc(fmt.kg(metrica.kgLavada))} kg">${valor}</td>`;
+  }
+
+  function vistaTelaLavada(sel) {
+    const H = el('div', 'sc8-card');
+    if (!DATOS.telaLavada.length) {
+      const error = Datos.Estado.telaLavadaError;
+      H.innerHTML = `<p class="sc8-vacio">${error
+        ? 'No se pudo leer la fuente de tela lavada: ' + esc(error)
+        : 'Sin datos de tela lavada para mostrar.'}</p>`;
+      return H;
+    }
+    const periodos = periodosTelaLavada(sel);
+    const lista = articulosTelaLavada(sel);
+    if (!lista.length || !periodos.length) {
+      H.innerHTML = '<p class="sc8-vacio">Sin embalajes en el periodo seleccionado.</p>';
+      return H;
+    }
+
+    let h = '<h3>% de tela lavada (sobre peso crudo) — por artículo</h3>' +
+      '<p class="sc8-tab-desc">Peso kg crudo con ruta final LAVADA dividido entre el peso kg crudo total. ' +
+      'La semana se obtiene de la fecha de embalaje. Esta fuente no contiene tono, por lo que ese filtro no aplica.</p>' +
+      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla"><thead><tr><th>Artículo</th>';
+    periodos.forEach(p => { h += `<th>${esc(rotuloPeriodo(p))}</th>`; });
+    h += '<th>Var. vs prom. 6 previos</th></tr></thead><tbody>';
+    lista.forEach(x => {
+      h += `<tr><td>${rotuloArticulo(x.nombre)}</td>`;
+      periodos.forEach((p, i) => {
+        h += celdaTelaLavada(x.clave, periodos, i, aggTelaLavada(p, x.clave));
+      });
+      h += celdaVar(varPreviosTelaLavada(x.clave, periodos), 0,
+        v => fmt.n(v, 0) + '%');
+      h += '</tr>';
+    });
+    h += '<tr class="total"><td>Total (pond. por kg crudo)</td>';
+    periodos.forEach(p => {
+      const m = aggTelaLavada(p);
+      h += m.kg ? `<td>${fmt.n(m.pct, 0)}%</td>` : '<td class="sc8-tab-nd">N/A</td>';
+    });
+    h += '<td></td></tr></tbody></table></div>' +
+      '<div class="sc8-det-leyenda"><span class="sc8-muted">N/A = sin peso embalado en el periodo</span></div>' +
+      notaParcial(periodos) +
+      '<p class="sc8-tab-nota-pie">Fuente: hoja externa de producción · columnas articulo, ' +
+      'peso_kg_crudo, ruta_tela_final y embalaje_fecha.</p>';
+    H.innerHTML = h;
+    return H;
+  }
+
   function celdaMoM(articulo, periodos, indice, valor, opciones) {
     if (valor === null || valor === undefined || !isFinite(valor))
       return `<td>${opciones.fmtCelda(valor)}</td>`;
@@ -1486,14 +1674,15 @@ const Tablero = (() => {
       ['Tiempo de teñido', 'Duración media de una carga en máquina: <code>Hora Fin − Hora Inicio</code>.', 'Hora Inicio · Hora Fin'],
       ['Tiempo total en tintorería', 'Ciclo completo de la partida: de su primera <code>Hora Inicio</code> a su última <code>Hora Fin</code>, así que incluye las esperas entre procesos.', 'Hora Inicio · Hora Fin · OP - Partida'],
       ['Reprocesos hasta resolver', 'Cargas de reproceso dividido entre las partidas afectadas. Puede ser menor que 1 si una misma carga recupera varias partidas a la vez.', 'OP - Partida · Tipo Recetas'],
-      ['% Tela lavada', 'Kg de cargas cuyo <code>Procesos</code> incluye LAVADO (solo o combinado con blanqueo/teñido), sobre los kg procesados. No cuenta LAVADO MÁQUINA, que es limpieza de la máquina y no pasa tela.', 'Procesos'],
+      ['% Tela lavada', 'Suma de <code>peso_kg_crudo</code> cuya <code>ruta_tela_final</code> es LAVADA, dividida entre el peso crudo total del artículo. La semana se obtiene de <code>embalaje_fecha</code>.', 'articulo · peso_kg_crudo · ruta_tela_final · embalaje_fecha (hoja externa)'],
       ['Partidas', 'OP-Partidas distintas que aparecen en las cargas del periodo.', 'OP - Partida'],
       ['Defecto', `Se deduce del texto de <code>Tipo Procesos</code> de cada carga de reproceso con <code>CONFIG.MAPA_DEFECTOS</code> (${CONFIG.MAPA_DEFECTOS.length} reglas, gana la primera que coincida).`, 'Tipo Procesos']
     ];
     const c3 = el('div', 'sc8-card');
     c3.innerHTML = '<h3>De dónde sale cada indicador</h3>' +
-      '<p class="sc8-tab-desc">Todo se calcula sobre las cargas de la hoja que caen dentro ' +
-      'del periodo de análisis (y del tono, si hay uno elegido).</p>' +
+      '<p class="sc8-tab-desc">Los indicadores se calculan sobre las cargas de la hoja que caen dentro ' +
+      'del periodo de análisis (y del tono, si hay uno elegido). % Tela lavada usa su fuente externa ' +
+      'y no aplica el filtro de tono porque esa hoja no contiene color.</p>' +
       '<div class="responsive-table-wrap"><table class="sc8-table sc8-tab-tabla sc8-tab-defs sin-orden">' +
       '<thead><tr><th>Indicador</th><th class="txt">Cómo se calcula</th>' +
       '<th class="txt">Columnas de la hoja</th></tr></thead><tbody>' +
@@ -1633,7 +1822,7 @@ const Tablero = (() => {
     const contenedor = $('tabVista');
     contenedor.innerHTML = '';
     let nodo;
-    if (estado.vista === 'resumen')       nodo = vistaResumen(actual, base, sel);
+    if (estado.vista === 'resumen')       nodo = vistaResumen(actual, base, sel, cmpRango);
     else if (estado.vista === 'pareto')   nodo = vistaPareto(sel, periodos);
     else if (estado.vista === 'balp')     nodo = vistaBalp(sel, periodos);
     else if (estado.vista === 'defectos') nodo = vistaDefectos(sel);
@@ -1666,15 +1855,7 @@ const Tablero = (() => {
           '(93% de los registros actuales).'
       }, sel, periodos));
     }
-    else if (estado.vista === 'lavado')   nodo = vistaMatriz({
-      titulo: '% de tela lavada (sobre kg procesados) — por artículo',
-      desc: 'Proporción de los kg del artículo que pasaron por un proceso de LAVADO (solo o combinado ' +
-        'con blanqueo/teñido). No cuenta LAVADO MÁQUINA, que es limpieza de la máquina y no pasa tela.',
-      prop: 'lavPct', fmtCelda: v => fmt.n(v, 0) + '%', dir: 0,
-      totalRotulo: 'Total planta (pond. por kg)',
-      pie: 'El semáforo de esta variación queda neutro: subir o bajar el lavado no es bueno ni malo ' +
-        'por sí mismo, depende del objetivo de cada artículo.'
-    }, sel, periodos);
+    else if (estado.vista === 'lavado')   nodo = vistaTelaLavada(sel);
     else if (estado.vista === 'info')     nodo = vistaInformacion();
 
     contenedor.appendChild(nodo);
