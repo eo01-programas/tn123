@@ -4,6 +4,7 @@
     let embalajeCalidadFinFilter = null;
     let embalajeLastRecords = null;
     let embalajeLastState = null;
+    const TELA_SEGUNDA_ESTADO = 'TELA 2DA';
 
     // ── Anchos de columnas ────────────────────────────────────────────
     // NO edites los px aqui. Cada columna usa la variable CSS --embalaje-col-*
@@ -48,8 +49,23 @@
     function getEligibleRecords(records) {
         return records.filter((record) => (
             String(record.calidad_estado || '').trim() === 'OK' &&
-            normalizeEmbalajeState(record) !== 'OK'
+            !['OK', TELA_SEGUNDA_ESTADO].includes(normalizeEmbalajeState(record).toUpperCase())
         ));
+    }
+
+    function canUseTelaSegundaAction() {
+        if (!window.TintoreriaAuth || typeof TintoreriaAuth.canEditView !== 'function') {
+            return true;
+        }
+
+        return TintoreriaAuth.canEditView('embalaje');
+    }
+
+    function syncTelaSegundaButtonVisibility() {
+        const button = document.getElementById('btn-embalaje-tela-segunda');
+        if (button) {
+            button.classList.toggle('hidden', !canUseTelaSegundaAction());
+        }
     }
 
     function renderSubtabCounts(records) {
@@ -297,6 +313,7 @@
 
     function handleEmbalajeKeydown(event) {
         if (event.key === 'Escape') {
+            closeTelaSegundaModal();
             hideEmbalajeContextMenu();
             hideCalidadFinFilterMenu();
         }
@@ -618,7 +635,253 @@
         }
     }
 
+    // ── Registro final de Tela 2da ─────────────────────────────────────
+
+    function getTelaSegundaModalElements() {
+        return {
+            modal: document.getElementById('embalaje-tela-segunda-modal'),
+            closeButton: document.getElementById('embalaje-tela-segunda-close'),
+            cancelButton: document.getElementById('embalaje-tela-segunda-cancel'),
+            searchInput: document.getElementById('embalaje-tela-segunda-search'),
+            searchButton: document.getElementById('embalaje-tela-segunda-search-btn'),
+            tbody: document.getElementById('embalaje-tela-segunda-tbody'),
+            selectAll: document.getElementById('embalaje-tela-segunda-select-all'),
+            saveButton: document.getElementById('embalaje-tela-segunda-save')
+        };
+    }
+
+    function isTelaSegundaRecord(record) {
+        return String(record && record.embalaje_estado || '').trim().toUpperCase() === TELA_SEGUNDA_ESTADO
+            || String(record && record.calidad_estado || '').trim().toUpperCase() === TELA_SEGUNDA_ESTADO;
+    }
+
+    function setTelaSegundaEmptyMessage(message) {
+        const { tbody, selectAll, saveButton } = getTelaSegundaModalElements();
+        if (tbody) {
+            tbody.innerHTML = `<tr class="empty-state"><td colspan="9">${TintoreriaUtils.escapeHtml(message)}</td></tr>`;
+        }
+        if (selectAll) {
+            selectAll.checked = false;
+            selectAll.disabled = true;
+        }
+        if (saveButton) {
+            saveButton.disabled = true;
+        }
+    }
+
+    function openTelaSegundaModal() {
+        if (!canUseTelaSegundaAction()) {
+            return;
+        }
+
+        const { modal, searchInput } = getTelaSegundaModalElements();
+        if (!modal || !searchInput) {
+            return;
+        }
+
+        searchInput.value = '';
+        setTelaSegundaEmptyMessage('Realiza una busqueda para ver resultados.');
+        modal.classList.remove('hidden');
+        searchInput.focus();
+    }
+
+    function closeTelaSegundaModal() {
+        const { modal } = getTelaSegundaModalElements();
+        if (!modal || modal.classList.contains('hidden')) {
+            return;
+        }
+
+        modal.classList.add('hidden');
+        if (typeof TintoreriaApp.dropSearchExtras === 'function') {
+            TintoreriaApp.dropSearchExtras();
+        }
+    }
+
+    function findTelaSegundaMatches(query) {
+        const normalizedQuery = TintoreriaUtils.normalizeOpPartidaSearchValue(query);
+        if (!normalizedQuery) {
+            return [];
+        }
+
+        return TintoreriaApp.getRecords().filter((record) => {
+            const opPartida = TintoreriaUtils.formatOpPartida(record.op_tela, record.partida);
+            return TintoreriaUtils.normalizeOpPartidaSearchValue(opPartida) === normalizedQuery;
+        });
+    }
+
+    function updateTelaSegundaSelectionState() {
+        const { tbody, selectAll, saveButton } = getTelaSegundaModalElements();
+        if (!tbody) {
+            return;
+        }
+
+        const checkboxes = Array.from(tbody.querySelectorAll('.tela-segunda-row-checkbox:not(:disabled)'));
+        const selectedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+
+        if (selectAll) {
+            selectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+            selectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+        }
+        if (saveButton) {
+            saveButton.disabled = selectedCount === 0;
+        }
+    }
+
+    function renderTelaSegundaMatches(query) {
+        const { tbody, selectAll } = getTelaSegundaModalElements();
+        if (!tbody) {
+            return;
+        }
+
+        if (!String(query || '').trim()) {
+            setTelaSegundaEmptyMessage('Realiza una busqueda para ver resultados.');
+            return;
+        }
+
+        const matches = findTelaSegundaMatches(query);
+        if (!matches.length) {
+            setTelaSegundaEmptyMessage('No se encontraron partidas para esa OP-PTDA en la base de datos.');
+            return;
+        }
+
+        tbody.innerHTML = matches.map((record) => {
+            const alreadyRegistered = isTelaSegundaRecord(record);
+            const opPartida = TintoreriaUtils.formatOpPartida(record.op_tela, record.partida);
+            const selectionMarkup = alreadyRegistered
+                ? '<input type="checkbox" checked disabled title="Ya registrada como Tela 2da" aria-label="Ya registrada como Tela 2da">'
+                : `<input type="checkbox" class="tela-segunda-row-checkbox" value="${TintoreriaUtils.escapeHtml(record.id_registro)}" aria-label="Seleccionar ${TintoreriaUtils.escapeHtml(opPartida)}">`;
+
+            return `
+            <tr${alreadyRegistered ? ' class="tela-segunda-registered-row"' : ''}>
+                <td>${selectionMarkup}</td>
+                <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.cliente || '')}">${TintoreriaUtils.escapeHtml(record.cliente || '')}</span></td>
+                <td><div class="quality-op-cell">
+                    <button class="ghost-button icon-only-button quality-info-button" type="button" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-action="show-quality-info" title="Ver informacion de calidad" aria-label="Ver informacion de calidad">
+                        <i class="ph ph-eye" aria-hidden="true"></i>
+                    </button>
+                    <strong class="cell-text code-text">${TintoreriaUtils.escapeHtml(opPartida)}</strong>
+                </div></td>
+                <td style="text-align:center"><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(String(record.cantidad_rechazos || '0').trim() || '0')}</span></td>
+                <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.tipo_tela || '')}</span></td>
+                <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatColorLabel(record.color))}">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatColorLabel(record.color))}</span></td>
+                <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.articulo || '')}">${TintoreriaUtils.escapeHtml(record.articulo || '')}</span></td>
+                <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.peso_kg_crudo || '0')}</span></td>
+                <td><span class="cell-text code-text">${TintoreriaUtils.escapeHtml(record.cantidad_crudo || '0')}</span></td>
+            </tr>
+        `;
+        }).join('');
+
+        if (selectAll) {
+            selectAll.disabled = false;
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        }
+        updateTelaSegundaSelectionState();
+    }
+
+    async function searchTelaSegunda() {
+        const { searchInput, searchButton } = getTelaSegundaModalElements();
+        if (!searchInput) {
+            return;
+        }
+
+        const query = searchInput.value;
+        if (!query.trim()) {
+            renderTelaSegundaMatches(query);
+            return;
+        }
+
+        if (typeof TintoreriaApp.fetchRecordsForSearch !== 'function') {
+            renderTelaSegundaMatches(query);
+            return;
+        }
+
+        if (searchButton) {
+            searchButton.disabled = true;
+        }
+        setTelaSegundaEmptyMessage('Buscando en toda la base de datos...');
+        try {
+            await TintoreriaApp.fetchRecordsForSearch(query);
+            renderTelaSegundaMatches(query);
+        } catch (error) {
+            console.error(error);
+            TintoreriaApp.showToast(error.message || 'No se pudo buscar la OP-PTDA.', 'error', 'Busqueda fallida');
+        } finally {
+            if (searchButton) {
+                searchButton.disabled = false;
+            }
+        }
+    }
+
+    function buildTelaSegundaUpdates() {
+        return {
+            plegado_estado: 'OK',
+            rama_crudo_estado: 'OK',
+            preparado_estado: 'OK',
+            tenido_estado: 'OK',
+            abridora_estado: 'OK',
+            secado_estado: 'OK',
+            rama_tenido_estado: 'OK',
+            acabado_especial_estado: 'OK',
+            acab_espec_estado: 'OK',
+            calidad_estado: TELA_SEGUNDA_ESTADO,
+            embalaje_fecha: TintoreriaUtils.formatDateForUi(new Date()),
+            embalaje_estado: TELA_SEGUNDA_ESTADO
+        };
+    }
+
+    async function saveTelaSegunda() {
+        const { tbody, saveButton, searchInput } = getTelaSegundaModalElements();
+        if (!tbody || !saveButton) {
+            return;
+        }
+
+        const selectedIds = Array.from(tbody.querySelectorAll('.tela-segunda-row-checkbox:checked'))
+            .map((checkbox) => String(checkbox.value || '').trim())
+            .filter(Boolean);
+        if (!selectedIds.length) {
+            return;
+        }
+
+        const confirmed = await TintoreriaApp.confirmAction({
+            title: 'Confirmar Tela 2da',
+            message: `Se marcaran ${selectedIds.length} partida(s) como tela perdida. Esta accion las cerrara en todos los procesos. Deseas continuar?`
+        });
+        if (!confirmed) {
+            return;
+        }
+
+        const originalLabel = saveButton.textContent;
+        saveButton.disabled = true;
+        saveButton.textContent = 'Guardando...';
+
+        try {
+            const updates = buildTelaSegundaUpdates();
+            await Promise.all(selectedIds.map((recordId) => TintoreriaApp.saveRecordChanges(
+                recordId,
+                updates,
+                { silent: true, permissionViewId: 'embalaje' }
+            )));
+
+            closeTelaSegundaModal();
+            TintoreriaApp.showToast(
+                `${selectedIds.length} partida(s) fueron registradas como TELA 2DA.`,
+                'success',
+                'Registro completado'
+            );
+        } catch (error) {
+            console.error(error);
+            TintoreriaApp.showToast(error.message || 'No se pudo registrar Tela 2da.', 'error', 'Operacion fallida');
+            renderTelaSegundaMatches(searchInput ? searchInput.value : '');
+        } finally {
+            saveButton.textContent = originalLabel;
+            updateTelaSegundaSelectionState();
+        }
+    }
+
     function init() {
+        syncTelaSegundaButtonVisibility();
+
         const tbody = document.getElementById('tbody-embalaje');
         if (tbody) {
             tbody.addEventListener('change', handleEditableChange);
@@ -628,6 +891,75 @@
         const exportButton = document.getElementById('btn-export-embalaje-excel');
         if (exportButton) {
             exportButton.addEventListener('click', exportEmbalajeWorkbook);
+        }
+
+        const telaSegundaButton = document.getElementById('btn-embalaje-tela-segunda');
+        if (telaSegundaButton) {
+            telaSegundaButton.addEventListener('click', openTelaSegundaModal);
+        }
+
+        const telaSegundaElements = getTelaSegundaModalElements();
+        if (telaSegundaElements.closeButton) {
+            telaSegundaElements.closeButton.addEventListener('click', closeTelaSegundaModal);
+        }
+        if (telaSegundaElements.cancelButton) {
+            telaSegundaElements.cancelButton.addEventListener('click', closeTelaSegundaModal);
+        }
+        if (telaSegundaElements.searchButton) {
+            telaSegundaElements.searchButton.addEventListener('click', () => {
+                searchTelaSegunda().catch((error) => console.error(error));
+            });
+        }
+        if (telaSegundaElements.searchInput) {
+            telaSegundaElements.searchInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    searchTelaSegunda().catch((error) => console.error(error));
+                }
+            });
+        }
+        if (telaSegundaElements.selectAll) {
+            telaSegundaElements.selectAll.addEventListener('change', () => {
+                const shouldSelect = telaSegundaElements.selectAll.checked;
+                telaSegundaElements.tbody.querySelectorAll('.tela-segunda-row-checkbox').forEach((checkbox) => {
+                    checkbox.checked = shouldSelect;
+                });
+                updateTelaSegundaSelectionState();
+            });
+        }
+        if (telaSegundaElements.tbody) {
+            telaSegundaElements.tbody.addEventListener('change', (event) => {
+                if (event.target instanceof HTMLInputElement && event.target.classList.contains('tela-segunda-row-checkbox')) {
+                    updateTelaSegundaSelectionState();
+                }
+            });
+            telaSegundaElements.tbody.addEventListener('click', (event) => {
+                const trigger = event.target instanceof Element
+                    ? event.target.closest('[data-action="show-quality-info"]')
+                    : null;
+                if (!(trigger instanceof HTMLButtonElement)) {
+                    return;
+                }
+
+                const calidadView = TintoreriaApp.state
+                    && TintoreriaApp.state.views
+                    && TintoreriaApp.state.views.calidad;
+                if (calidadView && typeof calidadView.openInfo === 'function') {
+                    calidadView.openInfo(trigger.dataset.recordId || '');
+                }
+            });
+        }
+        if (telaSegundaElements.saveButton) {
+            telaSegundaElements.saveButton.addEventListener('click', () => {
+                saveTelaSegunda().catch((error) => console.error(error));
+            });
+        }
+        if (telaSegundaElements.modal) {
+            telaSegundaElements.modal.addEventListener('click', (event) => {
+                if (event.target === telaSegundaElements.modal) {
+                    closeTelaSegundaModal();
+                }
+            });
         }
 
         document.addEventListener('click', handleEmbalajeDocumentClick);
@@ -641,6 +973,7 @@
     TintoreriaApp.registerView('embalaje', {
         init,
         render(records, state) {
+            syncTelaSegundaButtonVisibility();
             renderTable(records, state);
         },
         count(records) {
