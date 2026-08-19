@@ -811,16 +811,23 @@
                                         <col style="width: 50px;">
                                         <col style="width: 50px;">
                                         <col style="width: 50px;">
+                                        <col style="width: 50px;">
+                                        <col style="width: 50px;">
                                     </colgroup>
                                     <thead>
-                                        <tr>
-                                            <th class="rr-th-fecha">Fecha</th>
-                                            <th>Plegado</th>
-                                            <th>Preparado</th>
-                                            <th>Abridora</th>
-                                            <th>Secado</th>
-                                            <th>Acab. Especial</th>
-                                            <th class="rr-th-total">Embalaje</th>
+                                        <tr class="rr-process-head-main">
+                                            <th class="rr-th-fecha" rowspan="2">Fecha</th>
+                                            <th rowspan="2">Plegado</th>
+                                            <th rowspan="2">Preparado</th>
+                                            <th class="rr-th-tenido" colspan="2">Teñido</th>
+                                            <th rowspan="2">Abridora</th>
+                                            <th rowspan="2">Secado</th>
+                                            <th rowspan="2">Acab.<br>Especial</th>
+                                            <th class="rr-th-total" rowspan="2">Embalaje</th>
+                                        </tr>
+                                        <tr class="rr-process-head-sub">
+                                            <th class="rr-th-tenido-sub">Prod</th>
+                                            <th class="rr-th-tenido-sub">Reproc</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tbody-procesos"></tbody>
