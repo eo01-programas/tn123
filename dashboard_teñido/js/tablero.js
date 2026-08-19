@@ -746,10 +746,10 @@ const Tablero = (() => {
   const rotuloTono = () => estado.tono === TODOS ? '' : ' · Tono: ' + estado.tono;
 
   /* Las descripciones reales son largas (hasta ~110 caracteres cuando la
-     carga lleva dos telas), así que en las tablas se recortan y el texto
-     completo queda en el title de la celda. */
-  const rotuloArticulo = (nombre, max = 46) =>
-    `<span class="sc8-tab-art" title="${esc(nombre)}">${esc(Utils.truncar(nombre, max))}</span>`;
+     carga lleva dos telas). Se entrega el texto completo y CSS lo recorta
+     contra el borde real de la columna; el title conserva el valor íntegro. */
+  const rotuloArticulo = nombre =>
+    `<span class="sc8-tab-art" title="${esc(nombre)}">${esc(nombre)}</span>`;
 
   /* Artículos con producción en el rango, de mayor a menor volumen. */
   function articulosPorVolumen(sel) {
@@ -921,10 +921,10 @@ const Tablero = (() => {
     let tb = '<h3>Los 8 artículos de mayor volumen del periodo</h3>' +
       '<p class="sc8-tab-desc">Resumen ejecutivo · el detalle completo está en las pestañas siguientes</p>' +
       '<div class="responsive-table-wrap"><table class="sc8-table sc8-tab-tabla"><thead><tr>' +
-      '<th>Artículo</th><th>Kg procesados</th><th>Partidas</th><th>% BAP</th>' +
+      '<th class="sc8-tab-col-articulo">Artículo</th><th>Kg procesados</th><th>Partidas</th><th>% BAP</th>' +
       '<th>Índice reproc.</th><th>Costo receta $/kg</th><th>Sobrecosto</th></tr></thead><tbody>';
     articulosPorVolumen(sel).slice(0, 8).forEach(({ nombre, m }) => {
-      tb += `<tr><td>${rotuloArticulo(nombre, 52)}</td><td>${fmt.kg(m.kg)}</td><td>${m.partidas}</td>` +
+      tb += `<tr><td class="sc8-tab-col-articulo">${rotuloArticulo(nombre)}</td><td>${fmt.kg(m.kg)}</td><td>${m.partidas}</td>` +
         `<td class="${semBap(m.balpPct)}">${fmt.pct(m.balpPct)}</td>` +
         `<td class="${semIndice(m.indice)}">${fmt.indice(m.indice)}</td>` +
         `<td>${fmt.n(m.costoKg, 2)}</td><td>${fmt.usd(m.sobrecosto)}</td></tr>`;
@@ -952,16 +952,16 @@ const Tablero = (() => {
     let h = `<h3>Pareto de artículos — ${rotulaRango(sel)}${rotuloTono()}</h3>` +
       '<p class="sc8-tab-desc">Ordenados por participación en los kg procesados del periodo. ' +
       'La línea marca el grupo que acumula ~80% de la producción (foco de gestión).</p>' +
-      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla sin-orden"><thead><tr>' +
-      '<th>#</th><th class="txt">Artículo</th>';
+      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla sc8-tab-pareto sin-orden"><thead><tr>' +
+      '<th>#</th><th class="txt sc8-tab-col-articulo">Artículo</th>';
     if (mostrarPeriodos) periodos.forEach(p => { h += `<th>${esc(rotuloPeriodo(p))}</th>`; });
-    h += '<th>Total kg</th><th>%</th><th>% acum.</th><th class="participacion">Participación</th></tr></thead><tbody>';
+    h += '<th>Total kg</th><th>%</th><th>% acum.</th><th class="participacion" title="Participación" aria-label="Participación">Part.</th></tr></thead><tbody>';
     const mayor = lista[0].m.kg;
     lista.forEach((x, i) => {
       const pct = 100 * x.m.kg / total;
       acum += pct;
       const sep = (!corte && acum >= 80) ? ' class="corte-pareto"' : '';
-      h += `<tr${sep}><td class="sc8-tab-nd">${i + 1}</td><td class="txt">${rotuloArticulo(x.nombre)}</td>`;
+      h += `<tr${sep}><td class="sc8-tab-nd">${i + 1}</td><td class="txt sc8-tab-col-articulo">${rotuloArticulo(x.nombre)}</td>`;
       if (mostrarPeriodos) periodos.forEach(p => {
         const m = agg({ a: p.a, b: p.b }, x.nombre);
         h += m.kg ? `<td>${fmt.kg(m.kg)}</td>` : '<td class="sc8-tab-nd">—</td>';
@@ -998,11 +998,11 @@ const Tablero = (() => {
       `<p class="sc8-tab-desc">Ponderado por kg procesados. Semáforo: ≥${obj}% verde · ` +
       `${obj - 5}–${obj}% amarillo · ${obj - 10}–${obj - 5}% naranja · &lt;${obj - 10}% rojo. ` +
       'Clic en cualquier encabezado ordena la tabla; segundo clic invierte el orden.</p>' +
-      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla"><thead><tr><th>Artículo</th>';
+      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla"><thead><tr><th class="sc8-tab-col-articulo">Artículo</th>';
     periodos.forEach(p => { h += `<th>${esc(rotuloPeriodo(p))}</th>`; });
     h += '<th>Prom. pond.</th></tr></thead><tbody>';
     lista.forEach(({ nombre, m }) => {
-      h += `<tr><td>${rotuloArticulo(nombre)}</td>`;
+      h += `<tr><td class="sc8-tab-col-articulo">${rotuloArticulo(nombre)}</td>`;
       periodos.forEach(p => {
         const c = agg({ a: p.a, b: p.b }, nombre);
         if (!c.kg) { h += '<td class="sc8-tab-nd">N/A</td>'; return; }
@@ -1090,17 +1090,18 @@ const Tablero = (() => {
     let h0 = `<h3>Resumen: tela reprocesada por tipo de defecto — ${rotulaRango(sel)}${rotuloTono()}</h3>` +
       '<p class="sc8-tab-desc">Todos los kg reprocesados del periodo agrupados por tipo de defecto, ' +
       'de mayor a menor. Es el punto de partida: primero qué defecto pesa más; abajo, en qué artículo vive.</p>' +
-      '<div class="responsive-table-wrap"><table class="sc8-table sc8-tab-tabla"><thead><tr>' +
+      '<div class="responsive-table-wrap"><table class="sc8-table sc8-tab-tabla sc8-tab-resumen-defectos"><thead><tr>' +
       '<th>#</th><th class="txt">Tipo de defecto</th><th>Kg reproc.</th><th>% del reproc. total</th>' +
       '<th>% de kg procesados</th><th>Cargas</th><th>Partidas</th><th>Costo</th>' +
-      '<th class="txt">Artículo más afectado</th><th class="participacion">Peso</th></tr></thead><tbody>';
+      '<th class="txt sc8-tab-col-articulo">Artículo más afectado</th><th class="participacion">Peso</th></tr></thead><tbody>';
     const mayorTipo = tipos.length ? tipos[0].kg : 1;
     tipos.forEach((t, i) => {
       h0 += `<tr><td class="sc8-tab-nd">${i + 1}</td><td class="txt"><b>${esc(t.defecto)}</b></td>` +
         `<td><b>${fmt.kg(t.kg)}</b></td><td>${fmt.n(t.pctRep, 1)}%</td>` +
         `<td>${fmt.n(t.pctProc, 2)}%</td><td>${t.cargas}</td><td>${t.partidas}</td>` +
         `<td>${fmt.usd(t.costo)}</td>` +
-        `<td class="txt">${rotuloArticulo(t.topArt, 40)} <span class="nota">(${fmt.n(100 * t.topKg / (t.kg || 1), 0)}%)</span></td>` +
+        `<td class="txt sc8-tab-col-articulo"><div class="sc8-tab-art-bloque">${rotuloArticulo(t.topArt)}` +
+        `<span class="nota">(${fmt.n(100 * t.topKg / (t.kg || 1), 0)}%)</span></div></td>` +
         `<td class="participacion"><div class="sc8-tab-barra-part" style="width:${(100 * t.kg / mayorTipo).toFixed(1)}%"></div></td></tr>`;
     });
     h0 += '</tbody></table></div>';
@@ -1122,22 +1123,22 @@ const Tablero = (() => {
       '(kg reprocesados / kg procesados de la planta). La columna “% del artículo” muestra el control ' +
       'técnico: <b>≥ 5%</b> del artículo reprocesándose se considera problema abierto. ' +
       '“Cargas / partida” = cargas de reproceso que costó resolver cada partida afectada.</p>' +
-      '<div class="responsive-table-wrap"><table class="sc8-table sc8-tab-tabla"><thead><tr>' +
-      '<th>#</th><th class="txt">Artículo · Defecto</th><th>Kg reproc.</th><th>% sobre planta</th>' +
-      '<th>% del artículo</th><th>Cargas / partida</th><th>Costo</th><th class="txt">Estado</th>' +
+      '<div class="responsive-table-wrap"><table class="sc8-table sc8-tab-tabla sc8-tab-ranking-defectos"><thead><tr>' +
+      '<th>#</th><th class="txt sc8-tab-col-articulo">Artículo · Defecto</th><th>Kg reproc.</th><th>% sobre planta</th>' +
+      '<th>% del artículo</th><th>Cargas / partida</th><th>Costo</th><th class="txt sc8-tab-col-estado">Estado</th>' +
       '</tr></thead><tbody>';
     const principales = items.slice(0, 15);
     principales.forEach((it, i) => {
       const alerta = it.pctArt >= 5;
       h1 += '<tr class="sc8-tab-fila-enlace">' +
         `<td class="sc8-tab-nd">${i + 1}</td>` +
-        `<td class="txt"><button type="button" class="sc8-tab-art sc8-tab-art-enlace" ` +
+        `<td class="txt sc8-tab-col-articulo"><div class="sc8-tab-art-bloque"><button type="button" class="sc8-tab-art sc8-tab-art-enlace" ` +
         `title="${esc(it.articulo)}" aria-label="Ver detalle por artículo de ${esc(it.articulo)}">` +
-        `${esc(Utils.truncar(it.articulo, 44))}</button> <b>· ${esc(it.defecto)}</b></td>` +
+        `${esc(it.articulo)}</button><b>· ${esc(it.defecto)}</b></div></td>` +
         `<td>${fmt.kg(it.kg)}</td><td><b>${fmt.n(it.pctProc, 2)}%</b></td>` +
         `<td class="${alerta ? 'sem-r' : 'sem-g'}">${fmt.n(it.pctArt, 1)}%</td>` +
         `<td>${fmt.n(it.cargasPorPartida, 1)}</td><td>${fmt.usd(it.costo)}</td>` +
-        `<td class="txt">${alerta
+        `<td class="txt sc8-tab-col-estado">${alerta
           ? '<span class="sc8-badge danger">Fuera de control</span>'
           : '<span class="sc8-badge success">Bajo control</span>'}</td></tr>`;
     });
@@ -1170,11 +1171,11 @@ const Tablero = (() => {
       'ranking anterior (allá cada fila es un defecto específico; aquí el artículo completo): úsala para ' +
       'decidir en qué artículo intervenir, y la anterior para decidir qué causa atacar primero.</p>' +
       '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla"><thead><tr>' +
-      '<th>#</th><th class="txt">Artículo</th><th>Kg reproc.</th><th>Partidas afectadas</th>' +
+      '<th>#</th><th class="txt sc8-tab-col-articulo">Artículo</th><th>Kg reproc.</th><th>Partidas afectadas</th>' +
       '<th>% sobre planta</th><th>% del artículo</th><th>Cargas / partida</th>' +
       '<th>Costo</th><th class="txt">Defecto principal</th></tr></thead><tbody>';
     arts.forEach((it, i) => {
-      h2 += `<tr><td class="sc8-tab-nd">${i + 1}</td><td class="txt">${rotuloArticulo(it.articulo)}</td>` +
+      h2 += `<tr><td class="sc8-tab-nd">${i + 1}</td><td class="txt sc8-tab-col-articulo">${rotuloArticulo(it.articulo)}</td>` +
         `<td><b>${fmt.kg(it.kg)}</b></td><td>${it.partidas}</td>` +
         `<td>${fmt.n(it.pctProc, 2)}%</td>` +
         `<td class="${it.pctArt >= 5 ? 'sem-r' : it.pctArt >= 3 ? 'sem-y' : 'sem-g'}">${fmt.n(it.pctArt, 1)}%</td>` +
@@ -1521,11 +1522,11 @@ const Tablero = (() => {
     let h = '<h3>% de tela lavada (sobre peso crudo) — por artículo</h3>' +
       '<p class="sc8-tab-desc">Peso kg crudo con ruta final LAVADA dividido entre el peso kg crudo total. ' +
       'La semana se obtiene de la fecha de embalaje. Esta fuente no contiene tono, por lo que ese filtro no aplica.</p>' +
-      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla"><thead><tr><th>Artículo</th>';
+      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla"><thead><tr><th class="sc8-tab-col-articulo">Artículo</th>';
     periodos.forEach(p => { h += `<th>${esc(rotuloPeriodo(p))}</th>`; });
     h += '<th>Var. vs prom. 6 previos</th></tr></thead><tbody>';
     lista.forEach(x => {
-      h += `<tr><td>${rotuloArticulo(x.nombre)}</td>`;
+      h += `<tr><td class="sc8-tab-col-articulo">${rotuloArticulo(x.nombre)}</td>`;
       periodos.forEach((p, i) => {
         h += celdaTelaLavada(x.clave, periodos, i, aggTelaLavada(p, x.clave));
       });
@@ -1575,11 +1576,11 @@ const Tablero = (() => {
     }
     let h = `<h3>${opciones.titulo}${rotuloTono()}</h3>` +
       `<p class="sc8-tab-desc">${opciones.desc}</p>` +
-      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla"><thead><tr><th>Artículo</th>';
+      '<div class="responsive-table-wrap sc8-tab-scroll"><table class="sc8-table sc8-tab-tabla"><thead><tr><th class="sc8-tab-col-articulo">Artículo</th>';
     periodos.forEach(p => { h += `<th>${esc(rotuloPeriodo(p))}</th>`; });
     h += '<th>Var. vs prom. 6 previos</th></tr></thead><tbody>';
     lista.forEach(({ nombre }) => {
-      h += `<tr><td>${rotuloArticulo(nombre)}</td>`;
+      h += `<tr><td class="sc8-tab-col-articulo">${rotuloArticulo(nombre)}</td>`;
       periodos.forEach((p, i) => {
         const r = agg({ a: p.a, b: p.b }, nombre);
         h += !r.kg ? '<td class="sc8-tab-nd">N/A</td>'
