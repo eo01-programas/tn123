@@ -7,7 +7,7 @@
     // historico completo se carga bajo demanda (Stock, Reporte, Maestro) y las
     // partidas ya embaladas se traen puntualmente al buscar una OP-PTDA.
     const ACTIVE_SCOPE_COLUMN = 'embalaje_estado';
-    const ACTIVE_SCOPE_DONE_VALUE = 'OK';
+    const ACTIVE_SCOPE_HIDDEN_VALUES = ['OK', 'TELA 2DA'];
     const OP_COLUMN = 'op_tela';
     const PARTIDA_COLUMN = 'partida';
 
@@ -561,7 +561,10 @@
             return '';
         }
 
-        return `select * where (${letter} is null or ${letter} <> '${ACTIVE_SCOPE_DONE_VALUE}')`;
+        const hiddenConditions = ACTIVE_SCOPE_HIDDEN_VALUES
+            .map((value) => `${letter} <> '${value}'`)
+            .join(' and ');
+        return `select * where (${letter} is null or (${hiddenConditions}))`;
     }
 
     function gvizCellToDisplayValue(cell) {
@@ -727,7 +730,9 @@
                     ...cached,
                     scope: 'active',
                     records: cached.records.filter((record) => (
-                        String(record[ACTIVE_SCOPE_COLUMN] || '').trim() !== ACTIVE_SCOPE_DONE_VALUE
+                        !ACTIVE_SCOPE_HIDDEN_VALUES.includes(
+                            String(record[ACTIVE_SCOPE_COLUMN] || '').trim().toUpperCase()
+                        )
                     ))
                 };
             }
