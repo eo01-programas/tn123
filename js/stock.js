@@ -122,6 +122,7 @@
                 return isReadyForCalidad(record)
                     && !String(record.calidad_inicio || '').trim()
                     && normalizeCalidadState(record.calidad_estado) !== 'OK'
+                    && normalizeCalidadState(record.calidad_estado) !== 'TELA 2DA'
                     && !isCalidadRejected(record);
             },
             isProgrammed() { return false; }
@@ -143,6 +144,7 @@
                 return isReadyForCalidad(record)
                     && Boolean(String(record.calidad_inicio || '').trim())
                     && normalizeProcessState(record.calidad_estado) !== 'OK'
+                    && normalizeCalidadState(record.calidad_estado) !== 'TELA 2DA'
                     && !isCalidadRejected(record);
             },
             isProgrammed(record) {
