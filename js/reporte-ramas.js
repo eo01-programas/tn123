@@ -620,10 +620,26 @@
 
     function toDetailItem(record, source, field) {
         const cols = (DETAIL_TURNO_FIELDS[source] || {})[field] || {};
+        const tipo = source === 'daily'
+            ? (field === 'termofijado' || field === 'humectado' ? 'CRUDO' : 'ACABADO')
+            : '';
+        const supportsMotivo = field === 'acabado' || field === 'reproceso';
+
+        // A diferencia de turno/maquina, motivo puede guardar un pase vacio
+        // (por ejemplo SECADO). Se conserva esa ultima posicion para no tomar
+        // accidentalmente el motivo de un pase anterior.
+        function lastOptionalPassValue(value) {
+            const values = TintoreriaUtils.parsePassValues(value);
+            return values.length ? values[values.length - 1] : '';
+        }
+
         return {
             record,
             turno: cols.turno ? TintoreriaUtils.lastPassValue(record[cols.turno]) : '',
-            maquina: cols.maquina ? TintoreriaUtils.lastPassValue(record[cols.maquina]) : ''
+            maquina: cols.maquina ? TintoreriaUtils.lastPassValue(record[cols.maquina]) : '',
+            tipo,
+            motivo: supportsMotivo ? lastOptionalPassValue(record.rama_tenido_motivo) : '',
+            subMotivo: supportsMotivo ? lastOptionalPassValue(record.rama_tenido_sub_motivo) : ''
         };
     }
 
@@ -686,7 +702,7 @@
             }).join('');
     }
 
-    function renderDetailHead(showTurno, showMaquina, showCalidad) {
+    function renderDetailHead(showTurno, showMaquina, showTipo, showMotivo, showSubMotivo, showCalidad) {
         return `
             ${showTurno ? '<th style="width: 60px;">turno</th>' : ''}
             ${showMaquina ? '<th style="width: 90px;">maquina</th>' : ''}
@@ -695,6 +711,9 @@
             <th style="width: 120px;">OP-PTDA</th>
             <th style="width: 190px;">color</th>
             <th style="min-width: 150px;">articulo</th>
+            ${showTipo ? '<th style="width: 82px;">Tipo</th>' : ''}
+            ${showMotivo ? '<th style="min-width: 130px;">Motivo</th>' : ''}
+            ${showSubMotivo ? '<th style="min-width: 140px;">Subr-motivo</th>' : ''}
             <th style="width: 88px;">kg(crudo)</th>
             <th style="width: 108px;">#rollos/cntd</th>
             ${showCalidad ? '<th class="rr-detail-sep" style="width: 56px; text-align:center;">Ruta</th>' : ''}
@@ -739,8 +758,14 @@
         `;
     }
 
-    function renderDetailRows(items, showQualityEye, showTurno, showMaquina, showCalidad) {
-        const colCount = 7 + (showTurno ? 1 : 0) + (showMaquina ? 1 : 0) + (showCalidad ? 3 : 0);
+    function renderDetailRows(items, showQualityEye, showTurno, showMaquina, showTipo, showMotivo, showSubMotivo, showCalidad) {
+        const colCount = 7
+            + (showTurno ? 1 : 0)
+            + (showMaquina ? 1 : 0)
+            + (showTipo ? 1 : 0)
+            + (showMotivo ? 1 : 0)
+            + (showSubMotivo ? 1 : 0)
+            + (showCalidad ? 3 : 0);
         if (!items.length) {
             return `<tr><td colspan="${colCount}" class="rr-no-data">Sin registros.</td></tr>`;
         }
@@ -779,6 +804,9 @@
                 </td>
                 <td class="rr-detail-color-cell">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatColorLabel(record.color))}</td>
                 <td><span class="cell-text" title="${TintoreriaUtils.escapeHtml(record.articulo || '')}">${TintoreriaUtils.escapeHtml(record.articulo || '')}</span></td>
+                ${showTipo ? `<td style="text-align:center"><strong>${TintoreriaUtils.escapeHtml(item.tipo)}</strong></td>` : ''}
+                ${showMotivo ? `<td>${item.motivo ? `<span class="cell-text">${TintoreriaUtils.escapeHtml(item.motivo)}</span>` : '<span class="rr-empty">—</span>'}</td>` : ''}
+                ${showSubMotivo ? `<td>${item.subMotivo ? `<span class="cell-text">${TintoreriaUtils.escapeHtml(item.subMotivo)}</span>` : '<span class="rr-empty">—</span>'}</td>` : ''}
                 <td style="text-align:right">${TintoreriaUtils.escapeHtml(TintoreriaUtils.formatNumber(record.peso_kg_crudo))}</td>
                 <td style="text-align:center">${TintoreriaUtils.escapeHtml(record.cantidad_crudo || '0')}</td>
                 ${showCalidad ? `<td class="rr-detail-sep" style="text-align:center">${renderRutaTelaMarkup(record)}</td>` : ''}
@@ -791,13 +819,13 @@
         }).join('');
     }
 
-    function openDetailModal(titleText, items, { showQualityEye, showTurno, showMaquina, showCalidad }) {
+    function openDetailModal(titleText, items, { showQualityEye, showTurno, showMaquina, showTipo, showMotivo, showSubMotivo, showCalidad }) {
         const { modal, title, pills, headRow, tbody } = getDetailModalElements();
         if (!modal) return;
         if (title) title.textContent = titleText;
         if (pills) pills.innerHTML = renderDetailPills(items, showTurno, showMaquina);
-        if (headRow) headRow.innerHTML = renderDetailHead(showTurno, showMaquina, showCalidad);
-        if (tbody) tbody.innerHTML = renderDetailRows(items, showQualityEye, showTurno, showMaquina, showCalidad);
+        if (headRow) headRow.innerHTML = renderDetailHead(showTurno, showMaquina, showTipo, showMotivo, showSubMotivo, showCalidad);
+        if (tbody) tbody.innerHTML = renderDetailRows(items, showQualityEye, showTurno, showMaquina, showTipo, showMotivo, showSubMotivo, showCalidad);
         modal.classList.remove('hidden');
     }
 
@@ -815,9 +843,22 @@
         const showQualityEye = source === 'process' && field === 'embalaje';
         const showTurno = source === 'daily' || (source === 'process' && field !== 'embalaje');
         const showMaquina = source === 'daily';
+        const showTipo = source === 'daily';
+        // Motivo y Subr-motivo pertenecen a Rama Acabado. Cada columna solo se
+        // agrega cuando el detalle abierto contiene al menos un valor real.
+        const showMotivo = showTipo && items.some(item => Boolean(item.motivo));
+        const showSubMotivo = showTipo && items.some(item => Boolean(item.subMotivo));
         // Ruta / #R / Quien aprobo solo aplican al detalle de Embalaje.
         const showCalidad = showQualityEye;
-        openDetailModal(`${label} · ${formatDateLabel(day)}`, items, { showQualityEye, showTurno, showMaquina, showCalidad });
+        openDetailModal(`${label} · ${formatDateLabel(day)}`, items, {
+            showQualityEye,
+            showTurno,
+            showMaquina,
+            showTipo,
+            showMotivo,
+            showSubMotivo,
+            showCalidad
+        });
     }
 
     function handleDetailQualityEyeClick(event) {
