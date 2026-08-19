@@ -1936,6 +1936,50 @@ select.sc8-pxmaq-select {
 .sc8-tab-tabla th.participacion,
 .sc8-tab-tabla td.participacion { text-align: left; min-width: 110px; }
 
+/* En Pareto la barra es solo una referencia visual: 44 px equivalen al
+   40% de los 110 px usados por la columna Participación general. */
+.sc8-tab-pareto th.participacion,
+.sc8-tab-pareto td.participacion {
+  box-sizing: border-box;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+/* "Peso" en el resumen por defecto: 50% de los 110 px generales. */
+.sc8-tab-resumen-defectos th.participacion,
+.sc8-tab-resumen-defectos td.participacion {
+  box-sizing: border-box;
+  width: 55px;
+  min-width: 55px;
+  max-width: 55px;
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+/* "Estado" muestra la etiqueta completa dentro de una insignia compacta. */
+.sc8-tab-ranking-defectos th.sc8-tab-col-estado,
+.sc8-tab-ranking-defectos td.sc8-tab-col-estado {
+  box-sizing: border-box;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  padding-right: 0;
+  padding-left: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+.sc8-tab-ranking-defectos .sc8-tab-col-estado .sc8-badge {
+  width: 80px;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-content: center;
+  padding: 2px 3px;
+  font-size: 9px;
+}
+
 .sc8-tab-tabla tbody tr { cursor: default; }
 .sc8-tab-tabla tbody tr:hover td { background: #fff; }
 .sc8-tab-tabla tbody tr:nth-child(even):hover td { background: #f9fbf5; }
@@ -1956,10 +2000,50 @@ select.sc8-pxmaq-select {
 .sc8-tab-tabla th.txt,
 .sc8-tab-tabla td.txt { text-align: left; white-space: normal; }
 
-/* El artículo es la descripción real de la hoja ("Descripcion Art. 1" +
-   "Descripcion Art. 2"): se recorta en la celda y el texto completo va
-   en el title. */
-.sc8-tab-art { cursor: help; border-bottom: 1px dotted var(--sc8-border-strong); }
+/* El artículo ocupa el ancho útil de su columna. La elipsis se calcula en
+   el borde real, no por una cantidad fija de caracteres. */
+.sc8-tab-tabla th.sc8-tab-col-articulo,
+.sc8-tab-tabla td.sc8-tab-col-articulo {
+  width: clamp(320px, 42vw, 560px);
+  min-width: 320px;
+  max-width: 560px;
+  text-align: left;
+}
+
+/* Los indicadores numéricos ocupan únicamente lo que necesitan. Así el
+   espacio sobrante de la tabla queda disponible para la descripción del
+   artículo. Las columnas de texto (.txt) y barras se conservan flexibles. */
+.sc8-tab-tabla th:not(.sc8-tab-col-articulo):not(.txt):not(.participacion) {
+  width: 1%;
+  padding-right: 7px;
+  padding-left: 7px;
+  white-space: nowrap;
+}
+.sc8-tab-tabla td:not(.sc8-tab-col-articulo):not(.txt):not(.participacion) {
+  padding-right: 7px;
+  padding-left: 7px;
+}
+.sc8-tab-art {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-bottom: 1px dotted var(--sc8-border-strong);
+  cursor: help;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sc8-tab-art-bloque {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  min-width: 0;
+}
+.sc8-tab-art-bloque > b,
+.sc8-tab-art-bloque > .nota {
+  display: block;
+  min-width: 0;
+}
 .sc8-tab-art-enlace,
 .sc8-tab-color-enlace {
   padding: 0;
