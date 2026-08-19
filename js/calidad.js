@@ -107,6 +107,10 @@
         return String(record.calidad_estado || '').trim().toUpperCase();
     }
 
+    function isTelaSegundaRecord(record) {
+        return normalizeCalidadState(record) === 'TELA 2DA';
+    }
+
     function getDisplayCalidadState(record) {
         const state = normalizeCalidadState(record);
 
@@ -160,22 +164,24 @@
 
     function getAuditadasStatusOrder(record) {
         const state = normalizeCalidadState(record);
-        if (state === '7MO RECHAZO') return 0;
-        if (state === '6TO RECHAZO') return 1;
-        if (state === '5TO RECHAZO') return 2;
-        if (state === '4TO RECHAZO') return 3;
-        if (state === '3ER RECHAZO') return 4;
-        if (state === '2DO RECHAZO') return 5;
+        if (state === 'TELA 2DA') return 0;
+        if (state === '7MO RECHAZO') return 1;
+        if (state === '6TO RECHAZO') return 2;
+        if (state === '5TO RECHAZO') return 3;
+        if (state === '4TO RECHAZO') return 4;
+        if (state === '3ER RECHAZO') return 5;
+        if (state === '2DO RECHAZO') return 6;
         // RECHAZADO stored as '1ER RECHAZO' or 'RECHAZADO' — both map to 1er RECHAZO display
-        if (state === 'RECHAZADO' || state === '1ER RECHAZO') return 6;
-        if (state === 'OK') return 7;
-        return 8;
+        if (state === 'RECHAZADO' || state === '1ER RECHAZO') return 7;
+        if (state === 'OK') return 8;
+        return 9;
     }
 
     function getRejectedRecords(records) {
         const rejected = getEligibleRecords(records).filter((record) => isRejectedRecord(record));
         const approved = records.filter((record) => normalizeCalidadState(record) === 'OK');
-        return [...rejected, ...approved].sort((a, b) => {
+        const telaSegunda = records.filter((record) => isTelaSegundaRecord(record));
+        return [...telaSegunda, ...rejected, ...approved].sort((a, b) => {
             const orderDiff = getAuditadasStatusOrder(a) - getAuditadasStatusOrder(b);
             if (orderDiff !== 0) return orderDiff;
 
@@ -406,17 +412,21 @@
     }
 
     function getFechaRegistroRawDate(record) {
+        if (isTelaSegundaRecord(record)) return record && record.embalaje_fecha;
         if (normalizeCalidadState(record) === 'OK') return record && record.calidad_fin;
         const n = parseInt(record && record.cantidad_rechazos, 10);
         return (n >= 1 && n <= 7) ? (record && record[`fecha_rechazo_${n}`]) : null;
     }
 
     function getFechaRegistroDate(record) {
-        return getAdjustedFechaRegistroDate(getFechaRegistroRawDate(record));
+        const rawDate = getFechaRegistroRawDate(record);
+        return isTelaSegundaRecord(record)
+            ? TintoreriaUtils.parseDateish(rawDate)
+            : getAdjustedFechaRegistroDate(rawDate);
     }
 
     function getFechaRegistroExportLabel(record) {
-        return TintoreriaUtils.formatDateDayMonth(getAdjustedFechaRegistroDate(getFechaRegistroRawDate(record))) || '--';
+        return TintoreriaUtils.formatDateDayMonth(getFechaRegistroDate(record)) || '--';
     }
 
     function shouldHighlightEnCalidadExportRow(record) {
@@ -712,7 +722,9 @@
     function buildFechaRegistroCell(record) {
         const rawDate = getFechaRegistroRawDate(record);
         const isAprobado = normalizeCalidadState(record) === 'OK';
-        const adjustedDate = getAdjustedFechaRegistroDate(rawDate);
+        const adjustedDate = isTelaSegundaRecord(record)
+            ? TintoreriaUtils.parseDateish(rawDate)
+            : getAdjustedFechaRegistroDate(rawDate);
         const dateLabel = TintoreriaUtils.escapeHtml(TintoreriaUtils.formatDateDayMonth(adjustedDate) || '');
 
         if (!rawDate) {
@@ -819,6 +831,7 @@
 
         tbody.innerHTML = filtered.map((record) => {
             const isAprobado = currentFilter === 'REJECTED' && normalizeCalidadState(record) === 'OK';
+            const isTelaSegunda = currentFilter === 'REJECTED' && isTelaSegundaRecord(record);
             const rowClasses = [];
             if (TintoreriaUtils.isUrgentPriority(record.calidad_p)) rowClasses.push('urgent-row');
             if (currentFilter === 'ACTIVE' && String(record.cal_situacion || '').trim()) rowClasses.push('situacion-frozen-row');
@@ -840,9 +853,11 @@
             const finDateLabel = TintoreriaUtils.escapeHtml(TintoreriaUtils.formatDateDayMonth(record.calidad_fin) || '');
             const tdFin = `<td data-fin-date="${finDateLabel}">${renderFinishMarkup(record, isReadonly)}</td>`;
             const tdSituacion = `<td><select class="${selectClass}" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="cal_situacion"${readonlyAttrs}>${optionMarkup(record.cal_situacion || '', TintoreriaConfig.CALIDAD_SITUACION_OPTIONS, 'Selecciona')}</select></td>`;
-            const tdStatus = isAprobado
-                ? `<td><span class="process-pill process-pill-finished">APROBADO</span></td>`
-                : `<td><select class="${selectClass}" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="calidad_estado"${readonlyAttrs}>${optionMarkup(getDisplayCalidadState(record), currentFilter === 'REJECTED' ? TintoreriaConfig.CALIDAD_ESTADO_RECHAZADAS_OPTIONS : TintoreriaConfig.CALIDAD_ESTADO_OPTIONS, 'AUDITANDO')}</select></td>`;
+            const tdStatus = isTelaSegunda
+                ? `<td><span class="process-pill process-pill-danger">TELA 2DA</span></td>`
+                : (isAprobado
+                    ? `<td><span class="process-pill process-pill-finished">APROBADO</span></td>`
+                    : `<td><select class="${selectClass}" data-record-id="${TintoreriaUtils.escapeHtml(record.id_registro)}" data-field="calidad_estado"${readonlyAttrs}>${optionMarkup(getDisplayCalidadState(record), currentFilter === 'REJECTED' ? TintoreriaConfig.CALIDAD_ESTADO_RECHAZADAS_OPTIONS : TintoreriaConfig.CALIDAD_ESTADO_OPTIONS, 'AUDITANDO')}</select></td>`);
 
             const tdFechaRegistro = buildFechaRegistroCell(record);
             const tdRutaTela = renderRutaTelaCell(record);
@@ -1628,6 +1643,10 @@
             return 'Pendiente';
         }
 
+        if (isTelaSegundaRecord(record)) {
+            return 'YA FUE REGISTRADO: TELA 2DA';
+        }
+
         if (normalizeCalidadState(record) === 'OK') {
             return 'YA FUE REGISTRADO: APROBADO';
         }
@@ -1977,9 +1996,15 @@
         count(records) {
             return getEligibleRecords(records).length;
         },
+        openInfo(recordId) {
+            const record = TintoreriaApp.findRecord(String(recordId || '').trim());
+            if (record) {
+                openInfoModal(record);
+            }
+        },
         locateRecord(record, state) {
             const calState = normalizeCalidadState(record);
-            if (calState === 'OK' || isRejectedRecord(record)) {
+            if (calState === 'OK' || isRejectedRecord(record) || isTelaSegundaRecord(record)) {
                 return { filter: 'REJECTED' };
             }
             if (!getEligibleRecords([record]).length) return null;
