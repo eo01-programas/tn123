@@ -1,4 +1,14 @@
 (() => {
+    const TENIDO_SHEET_ID = '1WW7l1SEds-XKuQyUjQrFlBLBPvcqBXxYiJSDU042Bn8';
+    // El Sheet es privado. Se consulta mediante la misma API desplegada que
+    // alimenta dashboard_teñido, cuyo codigo.gs abre TENIDO_SHEET_ID.
+    const TENIDO_API_URL = 'https://script.google.com/macros/s/AKfycbyudB265GH3quvMKhh_2_TyesRxjNmfpbIRob1hgsB8ZDkDkjRay4EyVZjZY2m1hEbAkA/exec?accion=datos';
+    const TENIDO_CACHE_KEY = `reporte-ramas-tenido-${TENIDO_SHEET_ID}-v1`;
+    const TENIDO_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
+
+    let tenidoRecords = [];
+    let tenidoLoadState = 'loading';
+
     // ── helpers de fecha diaria ──────────────────────────────────────────────
 
     function dateKey(date) {
@@ -29,6 +39,119 @@
     function toDateKey(value) {
         const d = toBusinessDate(value);
         return d ? dateKey(d) : null;
+    }
+
+    // dashboard_teñido devuelve Hora Fin como MM/DD/YYYY HH:mm:ss. Se parsea
+    // de forma explicita para no confundir dias y meses menores o iguales a 12.
+    function parseTenidoDate(value) {
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+            return new Date(value.getTime());
+        }
+
+        const raw = String(value == null ? '' : value).trim();
+        const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+        if (!match) return null;
+
+        const year = Number(match[3]);
+        const month = Number(match[1]) - 1;
+        const day = Number(match[2]);
+        const date = new Date(
+            year,
+            month,
+            day,
+            Number(match[4] || 0),
+            Number(match[5] || 0),
+            Number(match[6] || 0)
+        );
+        if (
+            Number.isNaN(date.getTime()) ||
+            date.getFullYear() !== year ||
+            date.getMonth() !== month ||
+            date.getDate() !== day
+        ) return null;
+        return date;
+    }
+
+    function toTenidoDateKey(value) {
+        const d = parseTenidoDate(value);
+        if (!d) return null;
+        if (d.getHours() < 7) d.setDate(d.getDate() - 1);
+        return dateKey(d);
+    }
+
+    function normalizeTenidoRecords(records) {
+        return (records || []).map(record => ({
+            horaFin: record['Hora Fin'],
+            kgCarga: record['Kg Carga'],
+            tipoRecetas: record['Tipo Recetas']
+        })).filter(record => record.horaFin && TintoreriaUtils.toNumber(record.kgCarga));
+    }
+
+    function readTenidoCache() {
+        try {
+            const cached = JSON.parse(localStorage.getItem(TENIDO_CACHE_KEY) || 'null');
+            if (
+                cached &&
+                Array.isArray(cached.records) &&
+                Date.now() - Number(cached.savedAt || 0) <= TENIDO_CACHE_MAX_AGE_MS
+            ) return cached.records;
+
+            // Reutiliza el cache del dashboard cuando el usuario ya lo abrio
+            // en este navegador; ambas paginas viven en el mismo origen.
+            const dashboardCache = JSON.parse(localStorage.getItem('dashboard_tenido_appscript_cache_v1') || 'null');
+            if (
+                dashboardCache &&
+                Array.isArray(dashboardCache.registros) &&
+                Date.now() - Number(dashboardCache.guardadoEn || 0) <= TENIDO_CACHE_MAX_AGE_MS
+            ) return normalizeTenidoRecords(dashboardCache.registros);
+
+            return [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function writeTenidoCache(records) {
+        try {
+            localStorage.setItem(TENIDO_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), records }));
+        } catch (error) {
+            console.warn('No se pudo guardar el cache del reporte de Teñido.', error);
+        }
+    }
+
+    function refreshReportAfterTenidoLoad() {
+        if (document.body.dataset.activeView === 'reporte-ramas') {
+            TintoreriaApp.refreshVisibleState({ preserveInteraction: false });
+        }
+    }
+
+    async function loadTenidoRecords() {
+        const cached = readTenidoCache();
+        if (cached.length) {
+            tenidoRecords = cached;
+            tenidoLoadState = 'loaded';
+        }
+
+        try {
+            const response = await fetch(TENIDO_API_URL, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const payload = await response.json();
+            if (!payload || !payload.ok || !Array.isArray(payload.registros)) {
+                throw new Error((payload && payload.error) || 'Respuesta invalida');
+            }
+
+            tenidoRecords = normalizeTenidoRecords(payload.registros);
+            tenidoLoadState = 'loaded';
+            writeTenidoCache(tenidoRecords);
+            refreshReportAfterTenidoLoad();
+        } catch (error) {
+            if (!cached.length) {
+                tenidoLoadState = 'error';
+                refreshReportAfterTenidoLoad();
+            }
+            console.warn('No se pudieron cargar los datos de Teñido para Reporte de Produccion.', error);
+        }
     }
 
     const MONTHS_ABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -206,6 +329,20 @@
         if (!value) return '<span class="rr-empty">—</span>';
         const inner = `<strong>${TintoreriaUtils.formatNumber(value)}</strong><span class="rr-unit"> kg</span>`;
         return cellButton(inner, source, day, field);
+    }
+
+    function fmtTenido(value, total = 0, showParticipation = false) {
+        if (tenidoLoadState === 'loading') {
+            return '<span class="rr-loading" title="Cargando datos de Teñido">Cargando…</span>';
+        }
+        if (tenidoLoadState === 'error') {
+            return '<span class="rr-load-error" title="No se pudieron cargar los datos de Teñido">Sin conexión</span>';
+        }
+        if (!value) return '<span class="rr-empty">—</span>';
+        const participation = showParticipation && total > 0
+            ? ` (${Math.round((value / total) * 100)}%)`
+            : '';
+        return `<strong>${TintoreriaUtils.formatNumber(value)}</strong><span class="rr-unit"> kg${participation}</span>`;
     }
 
     function fmtPct(value, total, source, day, field) {
@@ -503,12 +640,12 @@
 
     // ── tabla de procesos generales ──────────────────────────────────────────
 
-    function buildProcessReport(records) {
+    function buildProcessReport(records, dyeRecords = tenidoRecords) {
         const days = getLast7DayKeys(7);
         const map = {};
         const recordsIndex = {};
         days.forEach(d => {
-            map[d] = { plegado: 0, preparado: 0, abridora: 0, secado: 0, acabEspec: 0, embalaje: 0 };
+            map[d] = { plegado: 0, preparado: 0, tenidoProd: 0, tenidoReproc: 0, abridora: 0, secado: 0, acabEspec: 0, embalaje: 0 };
             recordsIndex[d] = { plegado: [], preparado: [], abridora: [], secado: [], acabEspec: [], embalaje: [] };
         });
 
@@ -549,6 +686,17 @@
             }
         });
 
+        dyeRecords.forEach(record => {
+            const kg = TintoreriaUtils.toNumber(record.kgCarga);
+            const key = toTenidoDateKey(record.horaFin);
+            if (!kg || !key || !map[key]) return;
+
+            const field = String(record.tipoRecetas || '').toUpperCase().includes('REPROCESO')
+                ? 'tenidoReproc'
+                : 'tenidoProd';
+            map[key][field] += kg;
+        });
+
         return { rows: days.map(key => ({ key, ...map[key] })), recordsIndex };
     }
 
@@ -557,7 +705,7 @@
         if (!tbody) return;
 
         if (rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="rr-no-data">Sin datos en los últimos 7 días.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="rr-no-data">Sin datos en los últimos 7 días.</td></tr>';
             return;
         }
 
@@ -566,6 +714,8 @@
                 <td class="rr-fecha">${formatDateLabel(row.key)}</td>
                 <td class="rr-value">${fmt(row.plegado, 'process', row.key, 'plegado')}</td>
                 <td class="rr-value">${fmt(row.preparado, 'process', row.key, 'preparado')}</td>
+                <td class="rr-value rr-tenido-prod">${fmtTenido(row.tenidoProd)}</td>
+                <td class="rr-value rr-tenido-reproc">${fmtTenido(row.tenidoReproc, row.tenidoProd + row.tenidoReproc, true)}</td>
                 <td class="rr-value">${fmt(row.abridora, 'process', row.key, 'abridora')}</td>
                 <td class="rr-value">${fmt(row.secado, 'process', row.key, 'secado')}</td>
                 <td class="rr-value">${fmt(row.acabEspec, 'process', row.key, 'acabEspec')}</td>
@@ -1029,6 +1179,7 @@
             bindChartMenus();
             bindClienteMenus();
             bindChartTooltips();
+            loadTenidoRecords();
         },
         render
     });
