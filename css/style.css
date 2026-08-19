@@ -1392,6 +1392,19 @@ main.content {
     outline-offset: 3px;
 }
 
+.quality-export-button.tela-segunda-button {
+    background: linear-gradient(135deg, #c24141, var(--danger));
+    box-shadow: 0 16px 28px rgba(182, 91, 91, 0.24);
+}
+
+.quality-export-button.tela-segunda-button:hover {
+    box-shadow: 0 18px 32px rgba(182, 91, 91, 0.32);
+}
+
+.quality-export-button.tela-segunda-button:focus-visible {
+    outline-color: rgba(182, 91, 91, 0.28);
+}
+
 /* Boton circular pequeno de exportacion Excel (vistas de proceso) */
 .process-export-circle-button {
     width: 30px;
@@ -3269,6 +3282,71 @@ table.quality-table .ruta-tela-pill {
     justify-content: flex-end;
     gap: 8px;
     margin-top: 16px;
+}
+
+.tela-segunda-modal-card {
+    width: min(960px, 96vw);
+}
+
+.tela-segunda-search-section {
+    margin: 16px 0;
+}
+
+.tela-segunda-search-section > label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--gray-500);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.tela-segunda-search-row {
+    display: flex;
+    gap: 10px;
+}
+
+.tela-segunda-search-row .table-input {
+    flex: 1;
+}
+
+.tela-segunda-table-container {
+    max-height: 340px;
+}
+
+table.tela-segunda-table {
+    min-width: 900px;
+}
+
+table.tela-segunda-table th:nth-child(1) { width: 50px; }
+table.tela-segunda-table th:nth-child(2) { width: 90px; }
+table.tela-segunda-table th:nth-child(3) { width: 120px; }
+table.tela-segunda-table th:nth-child(4) { width: 45px; text-align: center; }
+table.tela-segunda-table th:nth-child(5) { width: 65px; }
+table.tela-segunda-table th:nth-child(6) { width: 120px; }
+table.tela-segunda-table th:nth-child(7) { width: 250px; }
+table.tela-segunda-table th:nth-child(8) { width: 80px; }
+table.tela-segunda-table th:nth-child(9) { width: 80px; }
+
+.tela-segunda-check-column,
+.tela-segunda-table td:first-child {
+    width: 50px;
+    text-align: center;
+}
+
+.tela-segunda-confirm-button,
+.tela-segunda-confirm-button:hover {
+    border-color: var(--danger);
+    background: var(--danger);
+}
+
+.tela-segunda-confirm-button:hover:not(:disabled) {
+    background: #9f4545;
+    border-color: #9f4545;
+}
+
+.tela-segunda-confirm-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
 }
 
 @keyframes spin {
