@@ -726,6 +726,10 @@
                             <i class="ph ph-file-xls" aria-hidden="true"></i>
                             <span>Excel</span>
                         </button>
+                        <button class="quality-export-button tela-segunda-button" id="btn-embalaje-tela-segunda" type="button" title="Registrar tela de segunda" aria-label="Registrar tela de segunda">
+                            <i class="ph ph-warning-circle" aria-hidden="true"></i>
+                            <span>Tela 2da</span>
+                        </button>
                     </div>
                 </div>
 
@@ -1103,6 +1107,55 @@
             <div class="modal-actions">
                 <button class="ghost-button" id="tenido-detail-clear" type="button">Limpiar</button>
                 <button class="primary-button" id="tenido-detail-save" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="embalaje-tela-segunda-modal">
+        <div class="modal-card modal-card-form tela-segunda-modal-card">
+            <div class="modal-card-head">
+                <div>
+                    <h3>Tela 2da</h3>
+                    <p class="modal-subtitle">Selecciona las partidas que se registraran como tela perdida.</p>
+                </div>
+                <button class="modal-close-button" id="embalaje-tela-segunda-close" type="button" aria-label="Cerrar">x</button>
+            </div>
+
+            <div class="modal-search-section tela-segunda-search-section">
+                <label for="embalaje-tela-segunda-search">Buscar OP-PTDA</label>
+                <div class="tela-segunda-search-row">
+                    <input type="text" id="embalaje-tela-segunda-search" class="table-input" placeholder="Ingresar OP-PTDA" autocomplete="off">
+                    <button type="button" id="embalaje-tela-segunda-search-btn" class="primary-button">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <span>Buscar</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container tela-segunda-table-container">
+                <table class="data-table tela-segunda-table">
+                    <thead>
+                        <tr>
+                            <th class="tela-segunda-check-column"><input type="checkbox" id="embalaje-tela-segunda-select-all" aria-label="Seleccionar todos"></th>
+                            <th>cliente</th>
+                            <th>OP-PTDA</th>
+                            <th>#R</th>
+                            <th>tela</th>
+                            <th>color</th>
+                            <th>articulo</th>
+                            <th>kg(crudo)</th>
+                            <th>#rollos/cntd</th>
+                        </tr>
+                    </thead>
+                    <tbody id="embalaje-tela-segunda-tbody">
+                        <tr class="empty-state"><td colspan="9">Realiza una busqueda para ver resultados.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-actions">
+                <button class="ghost-button" id="embalaje-tela-segunda-cancel" type="button">Cancelar</button>
+                <button class="primary-button tela-segunda-confirm-button" id="embalaje-tela-segunda-save" type="button" disabled>Enviar a Tela 2da</button>
             </div>
         </div>
     </div>
