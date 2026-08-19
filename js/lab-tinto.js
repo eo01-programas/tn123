@@ -59,7 +59,7 @@
     function getEligibleRecords(records) {
         return records.filter((record) => (
             String(record.f_solicitud_receta_lab_tinto || '').trim() !== '' &&
-            String(record.embalaje_estado || '').trim() !== 'OK'
+            !['OK', 'TELA 2DA'].includes(String(record.embalaje_estado || '').trim().toUpperCase())
         ));
     }
 
