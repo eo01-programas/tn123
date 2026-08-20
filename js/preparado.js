@@ -43,13 +43,11 @@
         return inicios > fines;
     }
 
-    // "Terminado/PROCESADO": estado OK y con al menos un tipo de cierre
-    // (COSIDO, COS-REPROCESO o cualquiera de los combinados/legacy).
+    // El estado persistido es la fuente de verdad para separar los subtabs.
+    // La validacion del tipo parcial se aplica al intentar marcar OK desde esta
+    // vista, pero un registro que ya llega en OK no debe volver a "Por procesar".
     function isPreparadoDone(record) {
-        if (normalizePreparadoState(record) !== 'OK') {
-            return false;
-        }
-        return !hasOnlyPartialPreparadoTipos(record);
+        return normalizePreparadoState(record) === 'OK';
     }
 
     function getEligibleRecords(records) {
