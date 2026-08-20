@@ -1,6 +1,28 @@
 (() => {
     let maestroImportInProgress = false;
 
+    // Deja respirar al navegador para que llegue a pintar el loader antes de
+    // entrar en un tramo sincrono pesado (XLSX.read de un archivo grande
+    // congela el hilo principal y sin esto el circulo no alcanza a aparecer).
+    function nextFrame() {
+        return new Promise((resolve) => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => setTimeout(resolve, 0));
+            } else {
+                setTimeout(resolve, 16);
+            }
+        });
+    }
+
+    function setImportUiBusy(isBusy) {
+        ['btn-open-excel', 'btn-open-entrega-excel'].forEach((buttonId) => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = isBusy;
+            }
+        });
+    }
+
     function normalizeSourceRow(row) {
         return Object.entries(row).reduce((accumulator, [key, value]) => {
             accumulator[TintoreriaUtils.normalizeHeader(key)] = value;
@@ -262,28 +284,37 @@
         };
     }
 
-    async function applyColorUpdates(colorUpdates) {
-        let updatedCount = 0;
+    // Antes esto mandaba un POST por color y en serie: con un Excel grande eran
+    // cientos de peticiones, varios minutos sin ninguna senal en pantalla y los
+    // fallos se tragaban en silencio. Ahora va por lotes y devuelve el detalle.
+    async function applyColorUpdates(colorUpdates, onProgress) {
+        const updates = colorUpdates
+            .map((update) => {
+                const targetId = String(update.record.id_registro || '').trim();
+                if (!targetId) {
+                    return null;
+                }
 
-        for (const update of colorUpdates) {
-            const targetId = String(update.record.id_registro || '').trim();
-            if (!targetId) {
-                continue;
-            }
-
-            try {
-                await TintoreriaAPI.updateRecord(targetId, { color: update.color }, {
+                return {
+                    id_registro: targetId,
+                    changes: { color: update.color },
                     match: {
                         record_key: TintoreriaUtils.buildRecordMatchKey(update.record)
                     }
-                });
-                updatedCount += 1;
-            } catch (error) {
-                console.error(error);
-            }
+                };
+            })
+            .filter(Boolean);
+
+        if (!updates.length) {
+            return { updatedCount: 0, failedCount: 0 };
         }
 
-        return updatedCount;
+        const result = await TintoreriaAPI.updateRecordsBatch(updates, { onProgress });
+
+        return {
+            updatedCount: result.updatedCount || 0,
+            failedCount: result.failedCount || 0
+        };
     }
 
     function transformEntregaRow(row) {
@@ -319,49 +350,92 @@
             return;
         }
 
+        if (maestroImportInProgress) {
+            event.target.value = '';
+            TintoreriaApp.showToast('Espera a que termine la carga en curso.', 'error', 'Carga en proceso');
+            return;
+        }
+
         if (!window.XLSX) {
             TintoreriaApp.showToast('La libreria XLSX no esta disponible.', 'error', 'Importacion fallida');
             return;
         }
 
+        maestroImportInProgress = true;
+        setImportUiBusy(true);
+
         try {
-            const buffer = await file.arrayBuffer();
-            const workbook = XLSX.read(buffer, {
-                type: 'array',
-                cellDates: true
+            await TintoreriaApp.runBlockingTask('Leyendo el archivo...', async ({ setMessage }) => {
+                await nextFrame();
+
+                const buffer = await file.arrayBuffer();
+                const workbook = XLSX.read(buffer, {
+                    type: 'array',
+                    cellDates: true
+                });
+
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(worksheet, {
+                    defval: '',
+                    raw: false,
+                    dateNF: 'yyyy-mm-dd hh:mm:ss'
+                });
+
+                const updates = rows
+                    .map(transformEntregaRow)
+                    .filter((update) => Boolean(update && update.fecha_entrega_tela_acabada));
+
+                if (!updates.length) {
+                    TintoreriaApp.showToast('El archivo no contiene filas validas con fecha de entrega.', 'error', 'Archivo vacio');
+                    return;
+                }
+
+                setMessage(`Actualizando ${updates.length} fechas de entrega...`);
+                const result = await TintoreriaAPI.updateFechaEntregaTelaAcabada(updates);
+
+                setMessage('Sincronizando con la hoja...');
+                await TintoreriaApp.refreshData({ silent: true });
+
+                const parts = [`${result.updatedCount} registros actualizados.`];
+                if (result.unmatchedCount > 0) {
+                    parts.push(`${result.unmatchedCount} sin coincidencia.`);
+                }
+                TintoreriaApp.showToast(parts.join(' '), 'success', 'Fecha entrega actualizada');
             });
-
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const rows = XLSX.utils.sheet_to_json(worksheet, {
-                defval: '',
-                raw: false,
-                dateNF: 'yyyy-mm-dd hh:mm:ss'
-            });
-
-            const updates = rows
-                .map(transformEntregaRow)
-                .filter((update) => Boolean(update && update.fecha_entrega_tela_acabada));
-
-            if (!updates.length) {
-                TintoreriaApp.showToast('El archivo no contiene filas validas con fecha de entrega.', 'error', 'Archivo vacio');
-                return;
-            }
-
-            const result = await TintoreriaAPI.updateFechaEntregaTelaAcabada(updates);
-            await TintoreriaApp.refreshData({ silent: true });
-
-            const parts = [`${result.updatedCount} registros actualizados.`];
-            if (result.unmatchedCount > 0) {
-                parts.push(`${result.unmatchedCount} sin coincidencia.`);
-            }
-            TintoreriaApp.showToast(parts.join(' '), 'success', 'Fecha entrega actualizada');
         } catch (error) {
             console.error(error);
             TintoreriaApp.showToast(error.message || 'No se pudo procesar el archivo.', 'error', 'Error al cargar');
         } finally {
+            maestroImportInProgress = false;
+            setImportUiBusy(false);
             event.target.value = '';
         }
+    }
+
+    // Cuenta cuantas identidades del archivo quedaron realmente en la hoja. Es
+    // la unica forma honesta de saber si "se escapo" alguna fila: los contadores
+    // que devuelve el servidor pueden quedarse cortos si un bloque se reenvio
+    // despues de un timeout (la fila ya estaba escrita y el reintento la ve
+    // como duplicada).
+    function countMissingIdentities(fileIdentities) {
+        const present = new Set();
+
+        TintoreriaApp.getRecords().forEach((record) => {
+            const key = buildImportIdentityKey(record);
+            if (key) {
+                present.add(key);
+            }
+        });
+
+        let missing = 0;
+        fileIdentities.forEach((key) => {
+            if (!present.has(key)) {
+                missing += 1;
+            }
+        });
+
+        return missing;
     }
 
     async function handleExcelSelection(event) {
@@ -382,78 +456,145 @@
         }
 
         maestroImportInProgress = true;
+        setImportUiBusy(true);
 
         try {
-            const buffer = await file.arrayBuffer();
-            const workbook = XLSX.read(buffer, {
-                type: 'array',
-                cellDates: true
-            });
+            await TintoreriaApp.runBlockingTask('Leyendo el archivo...', async ({ setMessage }) => {
+                // Sin este respiro el XLSX.read de un archivo grande arranca
+                // antes de que el navegador pinte el loader.
+                await nextFrame();
 
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const rows = XLSX.utils.sheet_to_json(worksheet, {
-                defval: '',
-                raw: false,
-                dateNF: 'yyyy-mm-dd hh:mm:ss'
-            });
+                const buffer = await file.arrayBuffer();
+                const workbook = XLSX.read(buffer, {
+                    type: 'array',
+                    cellDates: true
+                });
 
-            const transformed = rows
-                .map(transformSourceRow)
-                .filter(Boolean);
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(worksheet, {
+                    defval: '',
+                    raw: false,
+                    dateNF: 'yyyy-mm-dd hh:mm:ss'
+                });
 
-            if (!transformed.length) {
-                TintoreriaApp.showToast('El archivo no contiene filas validas para importar.', 'error', 'Importacion vacia');
-                return;
-            }
+                setMessage(`Preparando ${rows.length} filas...`);
+                await nextFrame();
 
-            await TintoreriaApp.refreshData({ silent: true });
+                const transformed = rows
+                    .map(transformSourceRow)
+                    .filter(Boolean);
 
-            const {
-                recordsToImport,
-                colorUpdates,
-                collapsedInFile
-            } = planImportedRecords(transformed, TintoreriaApp.getRecords());
+                if (!transformed.length) {
+                    TintoreriaApp.showToast('El archivo no contiene filas validas para importar.', 'error', 'Importacion vacia');
+                    return;
+                }
 
-            const colorUpdatedCount = await applyColorUpdates(colorUpdates);
-
-            let appended = [];
-            if (recordsToImport.length) {
-                appended = await TintoreriaApp.importRecords(recordsToImport);
-            }
-
-            if (colorUpdatedCount > 0) {
-                await TintoreriaApp.refreshData({ silent: true });
-            }
-
-            renderMetrics(getVisibleRecords(TintoreriaApp.getRecords()));
-
-            if (!appended.length && !colorUpdatedCount) {
-                TintoreriaApp.showToast(
-                    'No hubo cambios: las partidas del archivo ya estaban registradas con el mismo color.',
-                    'error',
-                    'Importacion sin cambios'
+                const fileIdentities = new Set(
+                    transformed.map(buildImportIdentityKey).filter(Boolean)
                 );
-                return;
-            }
 
-            const messageParts = [];
-            if (appended.length) {
-                messageParts.push(`Se importaron ${appended.length} filas.`);
-            }
-            if (colorUpdatedCount > 0) {
-                messageParts.push(`${colorUpdatedCount} colores actualizados (ultimo ingresado).`);
-            }
-            if (collapsedInFile > 0) {
-                messageParts.push(`${collapsedInFile} duplicados en el archivo colapsados.`);
-            }
+                // Scope 'all' explicito: la deduplicacion y el recuento final
+                // se comparan contra el historico completo. Con el scope activo
+                // una partida ya embalada no se veria y se contaria como
+                // perdida aunque estuviera en la hoja.
+                setMessage('Consultando lo que ya esta en la hoja...');
+                await TintoreriaApp.refreshData({ silent: true, scope: 'all' });
 
-            TintoreriaApp.showToast(messageParts.join(' '), 'success', 'Importacion completada');
+                const {
+                    recordsToImport,
+                    colorUpdates,
+                    collapsedInFile
+                } = planImportedRecords(transformed, TintoreriaApp.getRecords());
+
+                let colorUpdatedCount = 0;
+                let colorFailedCount = 0;
+
+                if (colorUpdates.length) {
+                    setMessage(`Actualizando ${colorUpdates.length} colores...`);
+                    const colorResult = await applyColorUpdates(colorUpdates, (progress) => {
+                        setMessage(`Actualizando colores ${progress.processed} de ${progress.total}...`);
+                    });
+                    colorUpdatedCount = colorResult.updatedCount;
+                    colorFailedCount = colorResult.failedCount;
+                }
+
+                let appended = [];
+                let appendFailedCount = 0;
+                const appendErrors = [];
+
+                if (recordsToImport.length) {
+                    setMessage(`Subiendo 0 de ${recordsToImport.length} filas...`);
+
+                    const importResult = await TintoreriaApp.importRecords(recordsToImport, {
+                        message: `Subiendo 0 de ${recordsToImport.length} filas...`,
+                        onProgress: (progress) => {
+                            if (progress.retrying) {
+                                setMessage(`Reintentando bloque ${progress.chunkIndex + 1} de ${progress.chunkCount}...`);
+                                return;
+                            }
+                            setMessage(`Subiendo ${progress.processed} de ${progress.total} filas...`);
+                        }
+                    });
+
+                    appended = importResult.records || [];
+                    appendFailedCount = importResult.failedCount || 0;
+                    (importResult.errors || []).forEach((message) => appendErrors.push(message));
+                }
+
+                setMessage('Verificando que todo quedo guardado...');
+                await TintoreriaApp.refreshData({ silent: true, scope: 'all' });
+
+                const missing = countMissingIdentities(fileIdentities);
+
+                renderMetrics(getVisibleRecords(TintoreriaApp.getRecords()));
+
+                if (appendFailedCount > 0 || colorFailedCount > 0 || missing > 0) {
+                    const failParts = [];
+                    if (missing > 0) {
+                        failParts.push(`${missing} de ${fileIdentities.size} partidas del archivo NO quedaron guardadas.`);
+                    }
+                    if (colorFailedCount > 0) {
+                        failParts.push(`${colorFailedCount} colores no se pudieron actualizar.`);
+                    }
+                    if (appended.length) {
+                        failParts.push(`Si se guardaron ${appended.length} filas.`);
+                    }
+                    failParts.push('Vuelve a cargar el mismo archivo para completar lo que falta.');
+
+                    console.error('Errores de importacion:', appendErrors);
+                    TintoreriaApp.showToast(failParts.join(' '), 'error', 'Importacion incompleta');
+                    return;
+                }
+
+                if (!appended.length && !colorUpdatedCount) {
+                    TintoreriaApp.showToast(
+                        'No hubo cambios: las partidas del archivo ya estaban registradas con el mismo color.',
+                        'error',
+                        'Importacion sin cambios'
+                    );
+                    return;
+                }
+
+                const messageParts = [];
+                if (appended.length) {
+                    messageParts.push(`Se importaron ${appended.length} filas.`);
+                }
+                if (colorUpdatedCount > 0) {
+                    messageParts.push(`${colorUpdatedCount} colores actualizados (ultimo ingresado).`);
+                }
+                if (collapsedInFile > 0) {
+                    messageParts.push(`${collapsedInFile} duplicados en el archivo colapsados.`);
+                }
+
+                TintoreriaApp.showToast(messageParts.join(' '), 'success', 'Importacion completada');
+            });
         } catch (error) {
             console.error(error);
             TintoreriaApp.showToast(error.message || 'No se pudo procesar el archivo Excel.', 'error', 'Importacion fallida');
         } finally {
             maestroImportInProgress = false;
+            setImportUiBusy(false);
             event.target.value = '';
         }
     }
