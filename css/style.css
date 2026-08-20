@@ -3045,13 +3045,32 @@ table.quality-table .ruta-tela-pill {
 .loader {
     position: fixed;
     inset: 0;
-    background: rgba(248, 250, 252, 0.72);
+    background: rgba(248, 250, 252, 0.82);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    z-index: 200;
+    /* Por encima de menus flotantes (1400) y tooltips (2000): mientras hay una
+       carga en curso nada de lo que hay debajo debe poder tocarse. */
+    z-index: 5000;
+    pointer-events: auto;
+}
+
+/* Durante una tarea bloqueante tambien se corta el scroll y el foco por
+   teclado, para que la importacion no se interrumpa a medias. */
+body.is-busy {
+    overflow: hidden;
+}
+
+.loader.loader-blocking {
+    cursor: progress;
+}
+
+.loader span[data-loader-message] {
+    max-width: min(420px, calc(100vw - 48px));
+    text-align: center;
+    line-height: 1.45;
 }
 
 .spinner {
