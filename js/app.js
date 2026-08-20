@@ -1593,13 +1593,101 @@
         return JSON.stringify(normalizedLeft) === JSON.stringify(normalizedRight);
     }
 
-    function setLoading(isLoading) {
+    // El loader se manejaba con un booleano suelto: cualquier tarea anidada que
+    // terminara (un refreshData interno, por ejemplo) lo apagaba aunque la tarea
+    // principal siguiera corriendo. Por eso el circulo desaparecia a media
+    // importacion y parecia que la carga se habia interrumpido. Ahora se cuenta
+    // cuantas tareas lo tienen pedido y solo se apaga cuando no queda ninguna.
+    let loadingDepth = 0;
+    let loadingMessage = '';
+    let blockingTasks = 0;
+
+    const DEFAULT_LOADING_MESSAGE = 'Cargando informacion...';
+
+    function paintLoader() {
         const loader = document.getElementById('app-loader');
         if (!loader) {
             return;
         }
 
-        loader.classList.toggle('hidden', !isLoading);
+        const isVisible = loadingDepth > 0;
+        loader.classList.toggle('hidden', !isVisible);
+        loader.classList.toggle('loader-blocking', blockingTasks > 0);
+        loader.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+        document.body.classList.toggle('is-busy', isVisible);
+
+        const label = loader.querySelector('[data-loader-message]') || loader.querySelector('span');
+        if (label) {
+            label.textContent = loadingMessage || DEFAULT_LOADING_MESSAGE;
+        }
+    }
+
+    function setLoading(isLoading, message) {
+        if (isLoading) {
+            loadingDepth += 1;
+            if (message) {
+                loadingMessage = message;
+            }
+        } else {
+            loadingDepth = Math.max(0, loadingDepth - 1);
+            if (loadingDepth === 0) {
+                loadingMessage = '';
+            }
+        }
+
+        paintLoader();
+    }
+
+    function setLoadingMessage(message) {
+        if (loadingDepth <= 0) {
+            return;
+        }
+
+        loadingMessage = message || DEFAULT_LOADING_MESSAGE;
+        paintLoader();
+    }
+
+    // Red de seguridad: si por lo que sea el contador quedara descuadrado, esto
+    // devuelve la interfaz a un estado usable sin recargar la pagina.
+    function forceClearLoading() {
+        loadingDepth = 0;
+        blockingTasks = 0;
+        loadingMessage = '';
+        paintLoader();
+    }
+
+    function handleBeforeUnload(event) {
+        if (blockingTasks <= 0) {
+            return undefined;
+        }
+
+        event.preventDefault();
+        event.returnValue = '';
+        return '';
+    }
+
+    // Envuelve una operacion larga: mantiene el loader encendido de principio a
+    // fin (pase lo que pase por dentro), bloquea la interaccion y avisa si se
+    // intenta cerrar la pestana a mitad de la carga.
+    async function runBlockingTask(message, task) {
+        blockingTasks += 1;
+        setLoading(true, message);
+
+        if (blockingTasks === 1) {
+            window.addEventListener('beforeunload', handleBeforeUnload);
+        }
+
+        try {
+            return await task({
+                setMessage: setLoadingMessage
+            });
+        } finally {
+            blockingTasks = Math.max(0, blockingTasks - 1);
+            if (blockingTasks === 0) {
+                window.removeEventListener('beforeunload', handleBeforeUnload);
+            }
+            setLoading(false);
+        }
     }
 
     function showToast(message, type = 'success', title = null) {
@@ -2273,18 +2361,20 @@
         return getRecords();
     }
 
-    async function importRecords(records) {
+    async function importRecords(records, options = {}) {
         if (!canAccessView('maestro')) {
             throw new Error('Tu usuario no tiene permisos para importar registros en Maestro.');
         }
 
-        setLoading(true);
+        setLoading(true, options.message || 'Importando registros...');
 
         try {
-            const result = await TintoreriaAPI.appendRecords(records);
+            const result = await TintoreriaAPI.appendRecords(records, {
+                onProgress: options.onProgress
+            });
             (result.records || []).forEach((record) => upsertRecord(record));
             refreshVisibleState();
-            return result.records || [];
+            return result;
         } catch (error) {
             console.error(error);
             showToast(error.message || 'No se pudieron importar los registros.', 'error', 'Importacion fallida');
@@ -2524,6 +2614,9 @@
         fetchRecordsForSearch,
         dropSearchExtras,
         importRecords,
+        runBlockingTask,
+        setLoadingMessage,
+        forceClearLoading,
         saveRecordChanges,
         showToast,
         confirmAction,
