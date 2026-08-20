@@ -378,7 +378,16 @@
         });
     }
 
-    async function parseJsonResponse(response) {
+    // El backend marca success:false tambien cuando solo falla PARTE de un lote
+    // (updateRecords). Tratar eso como excepcion tiraba a la basura los
+    // registros que si se guardaron, asi que con allowPartial se devuelve el
+    // resultado y quien llama decide, siempre que venga con forma de resultado
+    // y no de error duro.
+    function isPartialResult(data) {
+        return data && (data.updatedCount !== undefined || Array.isArray(data.records));
+    }
+
+    async function parseJsonResponse(response, options = {}) {
         if (!response.ok) {
             throw new Error(`La API respondio con HTTP ${response.status}.`);
         }
@@ -393,25 +402,136 @@
         }
 
         if (!data.success) {
+            if (options.allowPartial && isPartialResult(data)) {
+                return data;
+            }
             throw new Error(data.message || 'La API devolvio un error.');
         }
 
         return data;
     }
 
-    async function postPayload(payload) {
+    // Apps Script corta las peticiones largas sin cerrar la conexion TCP: sin
+    // timeout la promesa del fetch se queda colgada para siempre, el `finally`
+    // de quien la llamo nunca corre y la vista queda con el flag de "carga en
+    // proceso" encendido de forma permanente. De ahi que reintentar la carga
+    // dijera que ya habia una importacion en curso.
+    const POST_TIMEOUT_MS = 120000;
+    const POST_RETRY_DELAYS_MS = [1500, 4000, 9000];
+
+    function waitMs(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    // Solo se reintenta lo que puede arreglarse solo: cortes de red, timeouts,
+    // 5xx y cuotas. Un error de negocio del Apps Script se propaga tal cual.
+    function isRetriablePostError(error) {
+        if (!error) {
+            return false;
+        }
+
+        if (error.name === 'AbortError' || error.name === 'TypeError') {
+            return true;
+        }
+
+        return /HTTP (429|5\d\d)|no es JSON valido|Failed to fetch|NetworkError|Load failed/i
+            .test(String(error.message || ''));
+    }
+
+    async function postPayloadOnce(payload, timeoutMs, parseOptions) {
         const formData = new URLSearchParams();
         formData.set('payload', JSON.stringify(payload));
         if (payload && payload.action) {
             formData.set('action', String(payload.action));
         }
 
-        const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            body: formData
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        const timeoutId = controller
+            ? setTimeout(() => controller.abort(), timeoutMs)
+            : null;
+
+        try {
+            const response = await fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: formData,
+                signal: controller ? controller.signal : undefined
+            });
+
+            return await parseJsonResponse(response, parseOptions);
+        } finally {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        }
+    }
+
+    // Todas las acciones POST de este backend son idempotentes: appendRecords
+    // deduplica por identidad contra la hoja y los updates reescriben el mismo
+    // valor. Por eso reintentar es seguro y nunca duplica filas.
+    async function postPayload(payload, options = {}) {
+        const timeoutMs = options.timeoutMs || POST_TIMEOUT_MS;
+        const maxRetries = options.retries === undefined ? POST_RETRY_DELAYS_MS.length : options.retries;
+        let lastError = null;
+
+        for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+            try {
+                return await postPayloadOnce(payload, timeoutMs, {
+                    allowPartial: Boolean(options.allowPartial)
+                });
+            } catch (error) {
+                lastError = error;
+
+                if (attempt >= maxRetries || !isRetriablePostError(error)) {
+                    break;
+                }
+
+                if (typeof options.onRetry === 'function') {
+                    options.onRetry({ attempt: attempt + 1, maxRetries, error });
+                }
+
+                await waitMs(POST_RETRY_DELAYS_MS[Math.min(attempt, POST_RETRY_DELAYS_MS.length - 1)]);
+            }
+        }
+
+        if (lastError && lastError.name === 'AbortError') {
+            throw new Error('La conexion con la hoja tardo demasiado y se cancelo. Revisa tu red e intentalo de nuevo.');
+        }
+
+        throw lastError || new Error('No se pudo contactar con la hoja de calculo.');
+    }
+
+    // Cada registro tiene 242 columnas. Enviar el Excel entero en un solo POST
+    // genera cuerpos de varios MB que Apps Script trunca o rechaza, y ese era
+    // el motivo real de que "se escaparan" filas: el lote entero se perdia.
+    // Se manda por bloques, cada uno una transaccion independiente en la hoja.
+    // 200 es el punto medio: el cuerpo queda en ~100 KB (holgado para Apps
+    // Script) y se reduce a la mitad el numero de lecturas completas de la hoja
+    // que el backend hace en cada peticion para deduplicar.
+    const BATCH_CHUNK_SIZE = 200;
+
+    // El servidor rellena con '' toda cabecera ausente (normalizeRecord_), asi
+    // que mandar los ~226 campos vacios de una fila de Maestro solo infla el
+    // cuerpo del POST. Quitarlos reduce el payload mas de un 90%.
+    function stripEmptyFields(record) {
+        const trimmed = {};
+
+        Object.keys(record || {}).forEach((key) => {
+            const value = record[key];
+            if (value === '' || value === null || value === undefined) {
+                return;
+            }
+            trimmed[key] = value;
         });
 
-        return parseJsonResponse(response);
+        return trimmed;
+    }
+
+    function chunkList(items, size) {
+        const chunks = [];
+        for (let index = 0; index < items.length; index += size) {
+            chunks.push(items.slice(index, index + size));
+        }
+        return chunks;
     }
 
     async function listRemoteRecords() {
@@ -797,12 +917,17 @@
             return (records || []).map((record) => TintoreriaUtils.defaultRecord(record));
         },
 
-        async appendRecords(records) {
+        async appendRecords(records, options = {}) {
+            const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+
             if (!Array.isArray(records) || records.length === 0) {
                 return {
                     success: true,
                     source: TintoreriaUtils.hasConfiguredWebAppUrl() ? 'remote' : 'local',
-                    records: []
+                    records: [],
+                    failedCount: 0,
+                    failedRecords: [],
+                    errors: []
                 };
             }
 
@@ -836,25 +961,147 @@
                 return {
                     success: true,
                     source: 'local',
-                    records: appended
+                    records: appended,
+                    failedCount: 0,
+                    failedRecords: [],
+                    errors: []
                 };
             }
 
-            const data = await postPayload({
-                action: 'appendRecords',
-                records: prepared
-            });
-            const appended = (data.records || []).map((record) => TintoreriaUtils.defaultRecord(record));
+            const chunks = chunkList(prepared, BATCH_CHUNK_SIZE);
+            const appended = [];
+            const failedRecords = [];
+            const errors = [];
+            let processed = 0;
+
+            const report = (extra) => {
+                if (!onProgress) {
+                    return;
+                }
+                onProgress(Object.assign({
+                    processed,
+                    total: prepared.length,
+                    chunkCount: chunks.length,
+                    appended: appended.length
+                }, extra || {}));
+            };
+
+            report({ chunkIndex: 0 });
+
+            for (let index = 0; index < chunks.length; index += 1) {
+                const chunk = chunks[index];
+
+                try {
+                    const data = await postPayload({
+                        action: 'appendRecords',
+                        records: chunk.map(stripEmptyFields)
+                    }, {
+                        onRetry: (info) => report({
+                            chunkIndex: index,
+                            retrying: true,
+                            attempt: info.attempt
+                        })
+                    });
+
+                    (data.records || []).forEach((record) => {
+                        appended.push(TintoreriaUtils.defaultRecord(record));
+                    });
+                } catch (error) {
+                    // Un bloque caido no puede llevarse por delante al resto:
+                    // se anota, se sigue con los demas y se informa al final.
+                    console.error('Fallo un bloque de la importacion.', error);
+                    chunk.forEach((record) => failedRecords.push(record));
+                    errors.push(error.message || 'Error desconocido al enviar un bloque.');
+                }
+
+                processed += chunk.length;
+                report({ chunkIndex: index + 1 });
+            }
+
             const cached = getRemoteCacheInMemory();
-            if (cached) {
+            if (cached && appended.length) {
                 updateRemoteCache(mergeRecordsById(cached.records, appended), cached.scope);
             }
 
             return {
-                success: true,
+                success: failedRecords.length === 0,
                 source: 'remote',
-                records: appended
+                records: appended,
+                failedCount: failedRecords.length,
+                failedRecords,
+                errors
             };
+        },
+
+        // Actualiza muchos registros en una sola ida y vuelta por bloque. Antes
+        // Maestro mandaba un POST por cada color a corregir, lo que en un Excel
+        // grande eran cientos de peticiones en serie.
+        async updateRecordsBatch(updates, options = {}) {
+            const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+
+            if (!Array.isArray(updates) || updates.length === 0) {
+                return { updatedCount: 0, failedCount: 0, records: [], errors: [] };
+            }
+
+            if (!TintoreriaUtils.hasConfiguredWebAppUrl()) {
+                let updatedCount = 0;
+                const current = loadLocalRecords();
+
+                updates.forEach((update) => {
+                    const index = current.findIndex((record) => matchesRecord(record, update.id_registro, update.match || null));
+                    if (index === -1) {
+                        return;
+                    }
+                    current[index] = TintoreriaUtils.defaultRecord({
+                        ...current[index],
+                        ...(update.changes || {})
+                    });
+                    updatedCount += 1;
+                });
+
+                updateLocalModeSnapshot(current);
+                return { updatedCount, failedCount: 0, records: current, errors: [] };
+            }
+
+            const chunks = chunkList(updates, BATCH_CHUNK_SIZE);
+            const updatedRecords = [];
+            const errors = [];
+            let updatedCount = 0;
+            let failedCount = 0;
+            let processed = 0;
+
+            for (let index = 0; index < chunks.length; index += 1) {
+                const chunk = chunks[index];
+
+                try {
+                    const data = await postPayload({
+                        action: 'updateRecords',
+                        updates: chunk
+                    }, { allowPartial: true });
+
+                    updatedCount += data.updatedCount || 0;
+                    failedCount += data.failedCount || 0;
+                    (data.records || []).forEach((record) => {
+                        updatedRecords.push(TintoreriaUtils.defaultRecord(record));
+                    });
+                } catch (error) {
+                    console.error('Fallo un bloque de actualizaciones.', error);
+                    failedCount += chunk.length;
+                    errors.push(error.message || 'Error desconocido al actualizar un bloque.');
+                }
+
+                processed += chunk.length;
+                if (onProgress) {
+                    onProgress({ processed, total: updates.length, chunkIndex: index + 1, chunkCount: chunks.length });
+                }
+            }
+
+            const cached = getRemoteCacheInMemory();
+            if (cached && updatedRecords.length) {
+                updateRemoteCache(mergeRecordsById(cached.records, updatedRecords), cached.scope);
+            }
+
+            return { updatedCount, failedCount, records: updatedRecords, errors };
         },
 
         async updateFechaEntregaTelaAcabada(updates) {
