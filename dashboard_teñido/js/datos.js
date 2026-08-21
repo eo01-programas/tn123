@@ -415,7 +415,7 @@ const Datos = (() => {
     const setProc = new Set(), setRep = new Set();
     let kgProc = 0, kgRep = 0, horasPerdidas = 0;
     for (const r of base) {
-      kgProc += r.kgCarga;
+      if (!r.esReproceso) kgProc += r.kgCarga;
       r.partidas.forEach(p => setProc.add(p));
     }
     for (const r of reprocesos) {
@@ -491,7 +491,7 @@ const Datos = (() => {
       for (const r of base) {
         if (clavePeriodo(r) !== k) continue;
         r.partidas.forEach(p => sp.add(p));
-        kgP += r.kgCarga;
+        if (!r.esReproceso) kgP += r.kgCarga;
         // Usa la colección ya filtrada por defecto y máquinas. Así la
         // tendencia, los KPIs y el resumen gerencial siempre cuadran.
         if (reprocesosFiltrados.has(r)) {
