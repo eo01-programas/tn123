@@ -288,6 +288,10 @@ const UI = (() => {
     return normalizada || '—';
   }
 
+  function opPartidaAuditable(r) {
+    return r.opPartida || r.opPartidaCorta || '—';
+  }
+
   function modalRegistros(titulo, registros, opciones) {
     // opciones.litros: el drill-down de la vista H2O añade la columna
     // "Vol Lt" y suma los litros en el pie del modal.
@@ -328,8 +332,7 @@ const UI = (() => {
         <tr>
           <td>${Utils.escapeHtml(r.cliente || '—')}</td>
           <td>${Utils.escapeHtml(tipoOpPartida(r.opPartida))}</td>
-          <td title="${Utils.escapeHtml(r.opPartida)}">${Utils.escapeHtml(
-            normalizarOpPartidaDetalle(r.opPartida))}</td>
+          <td>${Utils.escapeHtml(opPartidaAuditable(r))}</td>
           <td class="sc8-col-num">${Utils.fmtDecimal(r.kgCarga, 1)}</td>
           <td>${Utils.escapeHtml(r.tipoProcesos || '—')}</td>
         </tr>` : conProgramacion ? (() => {
@@ -367,8 +370,7 @@ const UI = (() => {
         </tr>` : conCosto ? `
         <tr>
           <td>${Utils.escapeHtml(r.fechaTxt || '—')}</td>
-          <td title="${Utils.escapeHtml(r.opPartida)}">${Utils.escapeHtml(
-            r.opPartidaCorta || r.opPartida || '—')}</td>
+          <td>${Utils.escapeHtml(opPartidaAuditable(r))}</td>
           <td title="${Utils.escapeHtml(r.tipoProcesoOrigen || '')}">${Utils.escapeHtml(
             r.tipoTenidoOrigen || 'Sin registro')}</td>
           <td>${Utils.escapeHtml(r.maqOrigen || 'Sin registro')}</td>
@@ -380,7 +382,7 @@ const UI = (() => {
         </tr>` : `
         <tr>
           <td>${Utils.escapeHtml(r.clienteCorto || r.cliente || '—')}</td>
-          <td title="${Utils.escapeHtml(r.opPartida)}">${Utils.escapeHtml(r.opPartidaCorta || r.opPartida || '—')}</td>
+          <td>${Utils.escapeHtml(opPartidaAuditable(r))}</td>
           <td>${celdaMultilinea(r.descArts, r.descArt)}</td>
           <td>${celdaMultilinea(r.coloresList, r.color1)}</td>
           <td class="sc8-col-num">${Utils.fmtDecimal(r.kgCarga, 1)}</td>
