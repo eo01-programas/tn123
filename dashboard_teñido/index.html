@@ -764,8 +764,8 @@
             <strong>Información</strong> (la ficha de referencia: cómo leer
             los colores, de dónde sale cada indicador y qué no está en la
             hoja). El
-            <strong>artículo</strong> es la descripción real de la hoja
-            (<code>Descripcion Art. 1</code> + <code>Descripcion Art. 2</code>),
+            <strong>artículo</strong> sale de <code>Descripcion Art.</code>,
+            cuyos valores se separan por <code>" | "</code>,
             no la familia de la columna <code>Articulo</code>. El
             <strong>tono</strong> (Blanco, Claros, Oscuros, Negro) se deduce
             del texto de la columna <code>Colores</code> y se ajusta en
@@ -777,9 +777,9 @@
             la barra superior lee el archivo Excel, lo guarda en la hoja
             (las cargas existentes actualizan su costo sin duplicarse) y recarga
             el dashboard desde la base de datos.</li>
-        <li><strong>Campos compuestos:</strong> Cod. Art. y Colores se separan por
-            <code>" | "</code> y Descripción Art. por doble espacio; la hoja
-            guarda tanto el valor original como los valores divididos.</li>
+        <li><strong>Campos compuestos:</strong> Cod. Art., Descripción Art. y
+            Colores se separan por <code>" | "</code> y se guardan únicamente
+            en sus respectivas columnas combinadas.</li>
         <li><strong>Costo de reproceso:</strong> se calcula para cada carga como
             <code>Kg Carga × Costo US$ / kg</code> y luego se suman los resultados.</li>
       </ol>
